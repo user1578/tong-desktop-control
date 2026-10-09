@@ -15,7 +15,11 @@ const INBOUND_KEEP_ALIVE_TIMEOUT_MS = 15_000;
 const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
 const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects"]);
-const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...METADATA_TOOLS]);
+const AGENT_TOOLS = new Set([
+  "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs",
+  "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
+]);
+const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...METADATA_TOOLS, ...AGENT_TOOLS]);
 const MCP_METHODS = new Set([
   "initialize",
   "notifications/initialized",
@@ -372,6 +376,7 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
 
   // The authenticated DevSpace tool handler owns metadata path and project policy.
   if (METADATA_TOOLS.has(name)) return null;
+  if (AGENT_TOOLS.has(name)) return validateAgentToolArguments(name, args);
 
   if (name === "open_workspace") {
     const path = args.path;
@@ -393,6 +398,50 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
     return { code: -32602, message: "File path must stay inside the demo workspace and avoid links" };
   }
   return null;
+}
+
+function validateAgentToolArguments(name, args) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const projectId = /^[a-z][a-z0-9-]{1,39}$/;
+  const keys = Object.keys(args);
+  const exact = (allowed, required = []) => keys.every((key) => allowed.includes(key))
+    && required.every((key) => Object.hasOwn(args, key));
+  const invalid = { code: -32602, message: "Invalid agent task arguments" };
+  if (name === "tong_agent_start") {
+    if (!exact(["projectId", "agent", "task", "scope", "idempotencyKey", "timeoutSeconds"],
+      ["projectId", "agent", "task", "scope", "idempotencyKey"])
+        || typeof args.projectId !== "string" || !projectId.test(args.projectId)
+        || args.agent !== "codex"
+        || typeof args.task !== "string" || args.task.trim().length < 1 || args.task.length > 16_000 || /\0/.test(args.task)
+        || typeof args.scope !== "string" || args.scope.trim().length < 1 || args.scope.length > 2_000 || /\0/.test(args.scope)
+        || typeof args.idempotencyKey !== "string" || args.idempotencyKey.length < 16 || args.idempotencyKey.length > 128
+        || /[\x00-\x20]/.test(args.idempotencyKey)
+        || (args.timeoutSeconds !== undefined && (!Number.isInteger(args.timeoutSeconds)
+          || args.timeoutSeconds < 1 || args.timeoutSeconds > 3_600))) return invalid;
+    return null;
+  }
+  if (name === "tong_agent_list") {
+    return exact(["limit", "cursor"])
+      && (args.limit === undefined || (Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 100))
+      && (args.cursor === undefined || (typeof args.cursor === "string" && args.cursor.length <= 256)) ? null : invalid;
+  }
+  if (name === "tong_agent_logs") {
+    return exact(["taskId", "limit", "cursor"], ["taskId"])
+      && typeof args.taskId === "string" && uuid.test(args.taskId)
+      && (args.limit === undefined || (Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 100))
+      && (args.cursor === undefined || (typeof args.cursor === "string" && args.cursor.length <= 256)) ? null : invalid;
+  }
+  if (name === "tong_agent_resume") {
+    return exact(["taskId", "message"], ["taskId"])
+      && typeof args.taskId === "string" && uuid.test(args.taskId)
+      && (args.message === undefined || (typeof args.message === "string" && args.message.trim().length > 0
+        && args.message.length <= 2_000 && !/\0/.test(args.message))) ? null : invalid;
+  }
+  if (["tong_agent_status", "tong_agent_cancel", "tong_agent_result"].includes(name)) {
+    return exact(["taskId"], ["taskId"]) && typeof args.taskId === "string" && uuid.test(args.taskId)
+      ? null : invalid;
+  }
+  return invalid;
 }
 
 function transformSseToolList(body) {

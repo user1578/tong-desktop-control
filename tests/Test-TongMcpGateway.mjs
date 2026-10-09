@@ -23,6 +23,13 @@ const toolsList = {
       { name: "tong_list_drives" },
       { name: "tong_scan_directory" },
       { name: "tong_list_projects" },
+      { name: "tong_agent_start" },
+      { name: "tong_agent_status" },
+      { name: "tong_agent_list" },
+      { name: "tong_agent_logs" },
+      { name: "tong_agent_cancel" },
+      { name: "tong_agent_resume" },
+      { name: "tong_agent_result" },
       { name: "bash" },
       { name: "exec_command" },
       { name: "write_stdin" },
@@ -35,7 +42,8 @@ const toolsList = {
 const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
-  ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"],
+  ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects",
+    "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -62,6 +70,27 @@ assert.deepEqual(await validateAllowedToolCall(blocked), {
   code: -32602,
   message: "Tool not found: bash",
 });
+const validTask = { projectId: "project-1", agent: "codex", task: "Make a small change", scope: "project files and tests",
+  idempotencyKey: "gateway-client-request-001" };
+assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start", arguments: validTask } }), null);
+for (const injected of [
+  { ...validTask, executable: "powershell.exe" },
+  { ...validTask, command: "whoami" },
+  { ...validTask, agent: "other-agent" },
+  { ...validTask, idempotencyKey: "short" },
+  { ...validTask, task: "task\u0000injection" },
+  { ...validTask, scope: "scope\u0000injection" },
+]) {
+  assert.ok(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start", arguments: injected } }),
+    "Gateway must reject arbitrary executable, shell, agent, and weak idempotency parameters");
+}
+assert.ok(await validateAllowedToolCall({ method: "tools/call", params: {
+  name: "tong_agent_status", arguments: { taskId: "../../outside" },
+} }));
+assert.ok(await validateAllowedToolCall({ method: "tools/call", params: {
+  name: "tong_agent_resume", arguments: { taskId: "123e4567-e89b-42d3-a456-426614174000", message: "invalid\u0000message" },
+} }));
+assert.ok(findDisallowedToolCall({ method: "tools/call", params: { name: "exec_command", arguments: {} } }));
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), "tong-gateway-boundary-"));
 const workspaceRoot = join(temporaryRoot, "workspace");
@@ -102,8 +131,9 @@ try {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
 
-console.log("PASS: gateway exposes the four file tools and three metadata tools in JSON and SSE tool lists.");
+console.log("PASS: gateway exposes the four file tools, three metadata tools, and seven constrained agent task tools in JSON and SSE lists.");
 console.log("PASS: gateway detects direct and batched calls to disallowed tools.");
+console.log("PASS: gateway rejects agent executable injection and malformed task identifiers while retaining the Shell deny list.");
 console.log("PASS: gateway restricts workspace opening and blocks traversal/junction paths.");
 
 const upstreamPaths = [];

@@ -4,7 +4,7 @@ const access = new TongProjectAccess();
 const [command, ...args] = process.argv.slice(2);
 
 function usage() {
-  throw new Error("Usage: node scripts/TongProjects.mjs list | add --id ID --name NAME --path DIRECTORY --permission metadata|read|write | disable ID | revoke ID");
+  throw new Error("Usage: node scripts/TongProjects.mjs list | add --id ID --name NAME --path DIRECTORY --permission metadata|read|write | disable ID | revoke ID | grant-agent ID | revoke-agent ID");
 }
 function options(values) {
   const result = {};
@@ -32,6 +32,12 @@ try {
   } else if (command === "revoke" && args.length === 1) {
     await access.revokeProject(args[0]);
     console.log(`Revoked ${args[0]}.`);
+  } else if (command === "grant-agent" && args.length === 1) {
+    await access.grantAgentExecution(args[0]);
+    console.log(`Granted agent.execute to ${args[0]}.`);
+  } else if (command === "revoke-agent" && args.length === 1) {
+    await access.revokeAgentExecution(args[0]);
+    console.log(`Revoked agent.execute from ${args[0]}.`);
   } else usage();
 } catch (error) {
   console.error(error instanceof Error ? error.message : "Project operation failed");

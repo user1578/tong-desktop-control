@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_REGISTRY = join(projectRoot, "runtime", "project-access.json");
+const DEFAULT_AGENT_ACCESS = join(projectRoot, "runtime", "agent-execution.json");
 const DEFAULT_DEMO = join(projectRoot, "demo-workspace");
 const LEVELS = new Set(["metadata", "read", "write"]);
 const STATUSES = new Set(["enabled", "disabled", "revoked"]);
@@ -109,10 +110,11 @@ function validateRecord(record) {
 }
 
 export class TongProjectAccess {
-  constructor({ registryPath = DEFAULT_REGISTRY, demoRoot = DEFAULT_DEMO,
+  constructor({ registryPath = DEFAULT_REGISTRY, agentAccessPath = DEFAULT_AGENT_ACCESS, demoRoot = DEFAULT_DEMO,
     scanRoots = process.platform === "win32" ? ["C:\\", "D:\\"] : [],
     now = () => performance.now(), scanBudgetMs = 1_500 } = {}) {
     this.registryPath = registryPath;
+    this.agentAccessPath = agentAccessPath;
     this.demoRoot = resolve(demoRoot);
     this.scanRoots = scanRoots.map(validateSyntax);
     this.now = now;
@@ -150,8 +152,52 @@ export class TongProjectAccess {
     catch (error) { throw new Error(`Could not save registry: ${error.code ?? "unknown"}`); }
   }
 
+  async readAgentAccess() {
+    let document;
+    try { document = JSON.parse(await readFile(this.agentAccessPath, "utf8")); }
+    catch (error) {
+      if (error?.code === "ENOENT") return { schemaVersion: 1, projects: [] };
+      throw new Error("Invalid agent access registry");
+    }
+    if (document?.schemaVersion !== 1 || !Array.isArray(document.projects)
+        || document.projects.some((id) => !/^[a-z][a-z0-9-]{1,39}$/.test(id))
+        || new Set(document.projects).size !== document.projects.length) {
+      throw new Error("Invalid agent access registry");
+    }
+    return document;
+  }
+
+  async writeAgentAccess(document) {
+    await mkdir(dirname(this.agentAccessPath), { recursive: true });
+    const temporary = `${this.agentAccessPath}.${randomUUID()}.tmp`;
+    const handle = await open(temporary, "wx", 0o600);
+    try { await handle.writeFile(`${JSON.stringify(document, null, 2)}\n`, "utf8"); }
+    finally { await handle.close(); }
+    try { await rename(temporary, this.agentAccessPath); }
+    catch (error) { throw new Error(`Could not save agent access registry: ${error.code ?? "unknown"}`); }
+  }
+
+  async grantAgentExecution(id) {
+    if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) throw new Error("Invalid project id");
+    const project = (await this.listProjects()).find((entry) => entry.id === id && entry.status === "enabled" && entry.available);
+    if (!project) throw new Error("Project must exist, be enabled, and be available before granting agent execution");
+    const document = await this.readAgentAccess();
+    if (!document.projects.includes(id)) document.projects.push(id);
+    document.projects.sort();
+    await this.writeAgentAccess(document);
+  }
+
+  async revokeAgentExecution(id) {
+    if (typeof id !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(id)) throw new Error("Invalid project id");
+    const document = await this.readAgentAccess();
+    document.projects = document.projects.filter((projectId) => projectId !== id);
+    await this.writeAgentAccess(document);
+  }
+
   async listProjects() {
     const document = await this.readRegistry();
+    const agentAccess = await this.readAgentAccess();
+    const agentProjects = new Set(agentAccess.projects);
     const records = [{ id: "demo", name: "Demo workspace", root: this.demoRoot,
       permission: "write", status: "enabled", createdAt: null, updatedAt: null },
     ...document.projects.filter((item) => item.status !== "revoked")];
@@ -161,8 +207,8 @@ export class TongProjectAccess {
       return { ...record, available,
         effectiveCapabilities: record.status === "enabled" && available
           ? record.id === "demo"
-            ? ["project.metadata", "project.read", "project.write"]
-            : ["project.metadata"]
+            ? ["project.metadata", "project.read", "project.write", ...(agentProjects.has(record.id) ? ["agent.execute"] : [])]
+            : ["project.metadata", ...(agentProjects.has(record.id) ? ["agent.execute"] : [])]
           : [],
       };
     }));
@@ -170,8 +216,8 @@ export class TongProjectAccess {
 
   async authorize(capability, projectId) {
     if (capability === "disk.metadata") return true;
-    if (capability === "agent.execute" || capability === "system.admin") return false;
-    if (!["project.metadata", "project.read", "project.write"].includes(capability)) return false;
+    if (capability === "system.admin") return false;
+    if (!["project.metadata", "project.read", "project.write", "agent.execute"].includes(capability)) return false;
     const project = (await this.listProjects()).find((entry) => entry.id === projectId);
     return Boolean(project?.effectiveCapabilities.includes(capability));
   }

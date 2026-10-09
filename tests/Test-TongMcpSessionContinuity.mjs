@@ -84,7 +84,9 @@ const upstream = createServer((req, res) => {
       res.end(JSON.stringify({
         jsonrpc: "2.0",
         id: request.id,
-        result: { tools: ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects", "bash"].map((name) => ({ name })) },
+        result: { tools: ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects",
+          "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume",
+          "tong_agent_result", "bash"].map((name) => ({ name })) },
       }));
       return;
     }
@@ -225,7 +227,8 @@ try {
   assert.deepEqual(upstreamConnectionHeaders.slice(0, 2), ["close", "close"]);
   const listed = await send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, sessionHeaders);
   assert.deepEqual(listed.body.result.tools.map(({ name }) => name),
-    ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);
+    ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects",
+      "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
 
   const denied = await send({
     jsonrpc: "2.0",

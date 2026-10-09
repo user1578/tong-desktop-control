@@ -7,7 +7,7 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 - Local MCP gateway: `http://127.0.0.1:7676/mcp`
 - DevSpace upstream (loopback only): `http://127.0.0.1:7677/mcp`
 - Public MCP: `https://your-ngrok-domain.ngrok-free.dev/mcp`
-- Public tool allowlist: `open_workspace`, `read`, `write`, `edit`, `tong_list_drives`, `tong_scan_directory`, `tong_list_projects`
+- Public tool allowlist: the four workspace/file tools, three metadata tools, and seven `tong_agent_*` task tools
 - Workspace allowed by DevSpace file tools: `demo-workspace`
 - DevSpace user config: `%USERPROFILE%\.devspace\config.json`
 - Owner Password file: `%USERPROFILE%\.devspace\auth.json` (keep private; never paste it into chat)
@@ -43,7 +43,29 @@ node .\scripts\TongProjects.mjs disable sample
 node .\scripts\TongProjects.mjs revoke sample
 ```
 
-The `add` command also accepts `read` or `write` as a recorded permission level, but this phase grants real projects only effective `project.metadata`. `tong_list_projects` shows registered projects and their effective capabilities after OAuth. Only the built-in `demo` project is available to `open_workspace`, `read`, `write`, and `edit`. `agent.execute` and `system.admin` remain disabled. No remote MCP tool can register, disable, revoke, or change a project's permission.
+The `add` command also accepts `read` or `write` as a recorded permission level, but this phase grants real projects only effective `project.metadata`. `tong_list_projects` shows registered projects and their effective capabilities after OAuth. Only the built-in `demo` project is available to `open_workspace`, `read`, `write`, and `edit`. `agent.execute` is stored independently from project metadata/read/write permission. No remote MCP tool can register, disable, revoke, or change a project's permission.
+
+## Codex task management (P2)
+
+The restricted MCP registers these lifecycle tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `tong_agent_start` | Queue a Codex request for a registered project, with `projectId`, `agent: "codex"`, `task`, `scope`, `idempotencyKey`, and optional `timeoutSeconds` (1–3600). |
+| `tong_agent_status` | Read one task's state, timestamps, runtime, error and saved Codex thread ID. |
+| `tong_agent_list` | Page through persisted tasks (`limit` up to 100). |
+| `tong_agent_logs` | Page through task logs (`limit` up to 100). |
+| `tong_agent_cancel` | Cancel one queued/running task and interrupt its associated Codex turn. |
+| `tong_agent_resume` | Continue an interrupted saved Codex thread. It does not create a replacement session. |
+| `tong_agent_result` | Read the final agent summary, changed-file list, Git diff summary, and observed test command events. |
+
+Task state is atomically saved in ignored `runtime\agent-tasks.json`. The manager defaults to two concurrent tasks and does not run two tasks against the same project at once. A required client idempotency key maps retries to the existing task. Logs are capped at 256 KiB per task, each entry is capped at 8 KiB, and token-like strings are redacted before persistence and paging.
+
+`agent.execute` grants are stored separately in ignored `runtime\agent-execution.json`. A local administrator can grant or revoke this app-level permission with `node .\scripts\TongProjects.mjs grant-agent <project-id>` and `revoke-agent <project-id>`. Project read/write registration does not imply this grant.
+
+**Real Codex execution is disabled in the MCP manager.** A valid `agent.execute` grant still receives an explicit disabled response. No public request can choose an executable, shell command, model, or raw CLI argument. The adapter uses the local Codex App Server JSON-RPC interface (`initialize`, `thread/start`, `turn/start`, `turn/completed`, `thread/resume`, and `turn/interrupt`) and keeps process launch arguments fixed. The installed CLI inspected for P2 is `codex-cli 0.154.0`; its App Server is marked experimental.
+
+The local Windows probe showed that Codex's `:workspace` sandbox could read and write a synthetic file under `%TEMP%` outside the project root. This does not isolate project files from the current Windows account. Real execution stays disabled until a separate low-privilege identity or an equivalent OS boundary is configured and verified against project and private-file canaries. No Windows account or ACL changes were made.
 
 The gateway stdout log contains redacted JSON request traces. Correlate `requestId` across `request_start`, `mcp_request`, `upstream_*`, and `request_finish`; pair the upstream interval with DevSpace's request log by UTC time, method, path, and status. `http_client_error` records HTTP parser rejects that never reach the gateway request handler. Gateway traces omit authorization values, cookies, request/response bodies, tool arguments, and raw MCP session IDs; session IDs appear only as short hashes in those traces.
 
@@ -59,21 +81,18 @@ Edit only `config\tong.config.json` and change `publicOrigin` to the new HTTPS o
 & '.\tests\Test-TongConfiguration.ps1'
 & '.\tests\Test-TongPortListenerArray.ps1'
 pwsh -NoProfile -ExecutionPolicy Bypass -File '.\tests\Test-TongEndpoints.ps1'
-node '.\tests\Test-TongMcpGateway.mjs'
-node '.\tests\Test-TongToolBoundaries.mjs'
-node '.\tests\Test-TongProjectAccess.mjs'
-node '.\tests\Test-TongMcpMetadataTools.mjs'
+node --test
 & '.\node_modules\.bin\devspace.cmd' doctor
 & '<path-to-ngrok.exe>' config check --config "$env:LOCALAPPDATA\ngrok\ngrok.yml"
 ```
 
-The doctor checks the installed Node, Git, Git Bash, SQLite binding, configured URLs, roots, and allowed hosts. The gateway test confirms that only the seven listed tools are exposed, workspace opening is pinned to `demo-workspace`, and file paths through traversal or a junction are rejected. The endpoint test uses PowerShell 7 because Windows PowerShell 5.1 reports inconsistent public 401 status codes through its legacy `HttpClient`.
+The doctor checks the installed Node, Git, Git Bash, SQLite binding, configured URLs, roots, and allowed hosts. The tests confirm the 14-tool allowlist, strict task arguments, authorization, persistence, bounded logs, adapter lifecycle, workspace pinning, and path traversal protection. The endpoint test uses PowerShell 7 because Windows PowerShell 5.1 reports inconsistent public 401 status codes through its legacy `HttpClient`.
 
 ## Connect ChatGPT
 
-The existing ChatGPT MCP connection and OAuth authorization are preserved. Open the existing **Tong Desktop Control** connection in ChatGPT web and refresh or reconnect it so ChatGPT reloads the tool list. Do not create a duplicate connection. The public list should contain the four existing file tools plus `tong_list_drives`, `tong_scan_directory`, and `tong_list_projects`; Bash and other tools remain unavailable.
+The existing ChatGPT MCP connection and OAuth authorization are preserved. Open the existing **Tong Desktop Control** connection in ChatGPT web and refresh or reconnect it so ChatGPT reloads the tool list. Do not create a duplicate connection. The public list should contain the four existing file tools, three metadata tools, and seven `tong_agent_*` task tools. Bash and other unsafe tools remain unavailable.
 
-After reconnecting, call `tong_list_drives`, then scan a small directory with `maxDepth: 0` and `limit: 5`, request its next page if offered, and call `tong_list_projects`. Then use `demo-workspace` for the existing open → read → write → read → edit → read smoke test with synthetic content. Check that Bash and remote project registration are absent.
+After reconnecting, call `tong_list_drives`, then scan a small directory with `maxDepth: 0` and `limit: 5`, request its next page if offered, and call `tong_list_projects`. Call `tong_agent_list`, verify `tong_agent_start` on an ungranted project returns an `agent.execute` denial, and check that a request containing an `executable` or `command` field is rejected by the Gateway. With the current build, a granted task also returns the real-execution-disabled message. Then use `demo-workspace` for the existing open → read → write → read → edit → read smoke test with synthetic content. Check that Bash and remote project registration are absent.
 
 ## Security status (2026-10-09)
 
@@ -107,7 +126,7 @@ Runtime logs are excluded from source control. Shell command previews are disabl
 
 ### Shell isolation decision
 
-The public MCP uses the restricted gateway and restricted DevSpace instance: four file/workspace tools and three read-only metadata tools are exposed. Shell, process-control, remote project registration, Agent execution, and administrative tools are denied. This does not isolate the DevSpace process from the Windows account. A dedicated standard account with scoped ACLs is a future prerequisite for an operating-system boundary and requires separate authorization; no such Windows changes were made here.
+The public MCP uses the restricted gateway and restricted DevSpace instance. The four file/workspace tools and three metadata tools keep their existing policy. Seven task-management tools are exposed, with `agent.execute` authorization checked separately and real Codex execution disabled. Shell, process-control, remote project registration, and administrative tools remain unavailable. This does not isolate the DevSpace process from the Windows account. A dedicated standard account with scoped ACLs is a future prerequisite for an operating-system boundary and requires separate authorization; no such Windows changes were made here.
 
 ### Before expanding access
 

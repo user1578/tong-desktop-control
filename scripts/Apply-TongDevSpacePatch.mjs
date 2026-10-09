@@ -21,18 +21,24 @@ function replaceOnce(source, before, after, name) {
 }
 
 function extendRestrictedServer(source) {
-  source = replaceOnce(source,
-    'import { assertTongRestrictedConfig, assertTongWorkspaceRoot } from "../../../../scripts/TongSafeFilePath.mjs";',
-    'import { assertTongRestrictedConfig, assertTongWorkspaceRoot } from "../../../../scripts/TongSafeFilePath.mjs";\nimport { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";',
-    "metadata tool import");
-  source = replaceOnce(source,
-    'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);',
-    'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);',
-    "metadata tool registration guard");
-  source = replaceOnce(source,
-    '    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
-    '    registerTongMcpTools(server, registerAppTool, z);\n    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
-    "metadata tool registration");
+  const toolImport = 'import { assertTongRestrictedConfig, assertTongWorkspaceRoot } from "../../../../scripts/TongSafeFilePath.mjs";';
+  if (!source.includes('import { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";')) {
+    source = replaceOnce(source, toolImport,
+      `${toolImport}\nimport { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";`,
+      "agent task tool import");
+  }
+  const baseToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);';
+  const metadataToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);';
+  const restrictedToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);';
+  source = source.includes(metadataToolSet)
+    ? replaceOnce(source, metadataToolSet, restrictedToolSet, "agent task tool registration guard")
+    : replaceOnce(source, baseToolSet, restrictedToolSet, "agent task tool registration guard");
+  if (!source.includes("registerTongMcpTools(server, registerAppTool, z)")) {
+    source = replaceOnce(source,
+      '    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
+      '    registerTongMcpTools(server, registerAppTool, z);\n    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
+      "agent task tool registration");
+  }
   return source;
 }
 
@@ -69,7 +75,8 @@ const files = [
     name: "server.js",
     originalHash: "bf3db902241b631d7c6fbaf12385243b46b4f2d4bb776b6ea7ca6c9d429a3263",
     previousHash: "7102a8c4feec229cf0853de87bfa31065763afeef04c818786b7ccf3f9b4c9b0",
-    patchedHash: "6e5ca5457de4c6da8bdcfda02f2f254a9e42c8f59bee32a1ea495c948f595646",
+    previousHash2: "6e5ca5457de4c6da8bdcfda02f2f254a9e42c8f59bee32a1ea495c948f595646",
+    patchedHash: "ea21bce39c54f32ddd966840dbeb3d87bc2fe117619f5ac517a31d9528f7fc67",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -124,8 +131,8 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
-  const patched = hash === file.previousHash ? file.upgrade(source) : file.transform(source);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}`);
   await writeFile(target, patched, "utf8");
   process.stdout.write(`Patched ${file.name}: ${sha256(patched)}\n`);

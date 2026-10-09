@@ -8,6 +8,7 @@ const scanRoot = join(temp, "scan");
 const outside = join(temp, "outside");
 const demo = join(temp, "demo");
 const registryPath = join(temp, "private-registry.json");
+const agentAccessPath = join(temp, "agent-execution.json");
 await mkdir(join(scanRoot, "code"), { recursive: true });
 await mkdir(outside);
 await mkdir(demo);
@@ -25,7 +26,7 @@ try {
 }
 
 try {
-  const access = new TongProjectAccess({ registryPath, demoRoot: demo, scanRoots: [scanRoot] });
+  const access = new TongProjectAccess({ registryPath, agentAccessPath, demoRoot: demo, scanRoots: [scanRoot] });
   const first = await access.scanDirectory({ path: scanRoot, maxDepth: 2, limit: 1 });
   assert.equal(first.entries.length, 1);
   assert.ok(first.nextCursor);
@@ -72,6 +73,15 @@ try {
   assert.equal(await access.authorize("project.metadata", "synthetic"), true);
   assert.equal(await access.authorize("project.read", "synthetic"), false);
   assert.equal(await access.authorize("project.write", "synthetic"), false);
+  assert.equal(await access.authorize("agent.execute", "synthetic"), false,
+    "project registration and file permissions must not imply agent.execute");
+  await access.grantAgentExecution("synthetic");
+  assert.equal(await access.authorize("agent.execute", "synthetic"), true);
+  assert.ok((await access.listProjects()).find((project) => project.id === "synthetic")
+    .effectiveCapabilities.includes("agent.execute"));
+  const reloadedAccess = new TongProjectAccess({ registryPath, agentAccessPath, demoRoot: demo, scanRoots: [scanRoot] });
+  assert.equal(await reloadedAccess.authorize("agent.execute", "synthetic"), true,
+    "agent execution grants must persist independently of project registrations");
   await assert.rejects(access.addProject({ id: "synthetic", name: "Duplicate", root: scanRoot, permission: "metadata" }), /duplicate/i);
   await assert.rejects(access.addProject({ id: "demo", name: "Shadow", root: scanRoot, permission: "metadata" }), /duplicate/i);
   await assert.rejects(access.addProject({ id: "duplicate-root", name: "Duplicate", root: outside, permission: "metadata" }), /duplicate/i);
@@ -83,6 +93,11 @@ try {
   assert.equal(await access.authorize("project.metadata", "synthetic"), false);
   await access.disableProject("synthetic");
   assert.equal(await access.authorize("project.metadata", "synthetic"), false);
+  assert.equal(await access.authorize("agent.execute", "synthetic"), false,
+    "disabled projects must not remain executable");
+  await access.revokeAgentExecution("synthetic");
+  assert.equal(await access.authorize("agent.execute", "synthetic"), false);
+  await assert.rejects(access.grantAgentExecution("missing-project"), /project/i);
   await access.revokeProject("synthetic");
   assert.equal((await access.listProjects()).length, 1);
   const persisted = JSON.parse(await readFile(registryPath, "utf8"));
