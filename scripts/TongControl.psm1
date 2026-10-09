@@ -172,6 +172,9 @@ function Start-TongDevSpace {
     }
 
     $paths = Get-TongDevSpacePaths
+    $httpDiagnostics = Join-Path $script:ProjectRoot 'scripts\TongDevSpaceHttpDiagnostics.mjs'
+    if (-not (Test-Path -LiteralPath $httpDiagnostics)) { throw 'DevSpace HTTP diagnostics script is missing.' }
+    $httpDiagnosticsUrl = ([uri]$httpDiagnostics).AbsoluteUri
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $stdout = Join-Path $script:LogPath "devspace-$stamp.stdout.log"
     $stderr = Join-Path $script:LogPath "devspace-$stamp.stderr.log"
@@ -184,7 +187,7 @@ function Start-TongDevSpace {
         $env:DEVSPACE_SUBAGENTS = '0'
         $env:PORT = [string]$Settings.DevSpacePort
         $env:HOST = '127.0.0.1'
-        $process = Start-Process -FilePath $paths.Node -ArgumentList @($paths.Cli, 'serve') `
+        $process = Start-Process -FilePath $paths.Node -ArgumentList @('--import', $httpDiagnosticsUrl, $paths.Cli, 'serve') `
             -WorkingDirectory $script:ProjectRoot -RedirectStandardOutput $stdout `
             -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
     }

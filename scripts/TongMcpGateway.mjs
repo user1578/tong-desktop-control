@@ -32,6 +32,10 @@ const HOP_BY_HOP_HEADERS = new Set([
   "transfer-encoding",
   "upgrade",
 ]);
+const inboundSockets = new WeakMap();
+const upstreamSockets = new WeakMap();
+let nextInboundSocketId = 0;
+let nextUpstreamSocketId = 0;
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -75,6 +79,7 @@ function emitDiagnostic(settings, context, event, fields = {}) {
     ...(context
       ? {
           requestId: context.requestId,
+          socketId: context.socketId,
           method: context.method,
           path: context.path,
           ...(context.mcpMethods ? { mcpMethods: context.mcpMethods } : {}),
@@ -94,11 +99,62 @@ function emitDiagnostic(settings, context, event, fields = {}) {
   }
 }
 
+function inboundSocketInfo(socket, settings) {
+  let info = inboundSockets.get(socket);
+  if (info) return info;
+  info = {
+    socketId: `${process.pid}-i${++nextInboundSocketId}`,
+    startedAt: performance.now(),
+    lastRequestId: null,
+  };
+  inboundSockets.set(socket, info);
+  emitDiagnostic(settings, null, "inbound_socket_open", { socketId: info.socketId });
+  socket.once("close", (hadError) => emitDiagnostic(settings, null, "inbound_socket_close", {
+    socketId: info.socketId,
+    lastRequestId: info.lastRequestId,
+    hadError,
+    lifetimeMs: Math.max(0, Math.round(performance.now() - info.startedAt)),
+  }));
+  return info;
+}
+
+function observeUpstreamSocket(request, context, settings) {
+  request.once("socket", (socket) => {
+    let info = upstreamSockets.get(socket);
+    if (!info) {
+      info = {
+        socketId: `${process.pid}-u${++nextUpstreamSocketId}`,
+        startedAt: performance.now(),
+        lastContext: context,
+      };
+      upstreamSockets.set(socket, info);
+      socket.once("close", (hadError) => emitDiagnostic(settings, info.lastContext, "upstream_socket_close", {
+        upstreamSocketId: info.socketId,
+        localPort: socket.localPort ?? null,
+        hadError,
+        lifetimeMs: Math.max(0, Math.round(performance.now() - info.startedAt)),
+      }));
+      if (socket.connecting) socket.once("connect", () => emitDiagnostic(settings, context, "upstream_socket_connected", {
+        upstreamSocketId: info.socketId,
+        localPort: socket.localPort ?? null,
+      }));
+    }
+    info.lastContext = context;
+    emitDiagnostic(settings, context, "upstream_socket_assigned", {
+      upstreamSocketId: info.socketId,
+      reusedSocket: request.reusedSocket,
+      localPort: socket.localPort ?? null,
+    });
+  });
+}
+
 function createRequestContext(req, res, settings) {
   const requestUrl = typeof req.url === "string" ? req.url : "/";
   const inboundSessionTag = sessionTag(req.headers["mcp-session-id"]);
+  const inboundSocket = inboundSocketInfo(req.socket, settings);
   const context = {
     requestId: randomUUID(),
+    socketId: inboundSocket.socketId,
     method: req.method,
     path: safePath(requestUrl),
     startedAt: performance.now(),
@@ -109,6 +165,7 @@ function createRequestContext(req, res, settings) {
     mcpMethods: undefined,
     toolNames: undefined,
   };
+  inboundSocket.lastRequestId = context.requestId;
 
   emitDiagnostic(settings, context, "request_start", {
     httpVersion: req.httpVersion,
@@ -524,6 +581,7 @@ function proxyStreaming(req, res, upstreamPort, context, settings) {
     res.writeHead(upstreamResponse.statusCode ?? 502, filteredHeaders(upstreamResponse.headers));
     upstreamResponse.pipe(res);
   });
+  observeUpstreamSocket(upstream, context, settings);
   upstream.once("finish", () => emitDiagnostic(settings, context, "upstream_request_sent"));
   upstream.on("error", (error) => {
     emitDiagnostic(settings, context, error?.code === "ETIMEDOUT" ? "upstream_timeout" : "upstream_error", {
@@ -560,6 +618,7 @@ async function proxyBuffered(req, body, res, upstreamPort, filterToolList, conte
         res.end("MCP upstream response unavailable");
       });
   });
+  observeUpstreamSocket(upstream, context, settings);
   upstream.once("finish", () => emitDiagnostic(settings, context, "upstream_request_sent"));
   upstream.on("error", (error) => {
     emitDiagnostic(settings, context, error?.code === "ETIMEDOUT" ? "upstream_timeout" : "upstream_error", {
@@ -599,6 +658,7 @@ async function authorizeDeniedCall(req, probeBody, deniedCall, denial, res, upst
         res.end("MCP upstream response unavailable");
       });
   });
+  observeUpstreamSocket(upstream, context, settings);
   upstream.once("finish", () => emitDiagnostic(settings, context, "upstream_request_sent"));
   upstream.on("error", (error) => {
     emitDiagnostic(settings, context, error?.code === "ETIMEDOUT" ? "upstream_timeout" : "upstream_error", {
