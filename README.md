@@ -7,7 +7,7 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 - Local MCP gateway: `http://127.0.0.1:7676/mcp`
 - DevSpace upstream (loopback only): `http://127.0.0.1:7677/mcp`
 - Public MCP: `https://your-ngrok-domain.ngrok-free.dev/mcp`
-- Public tool allowlist: `open_workspace`, `read`, `write`, `edit`
+- Public tool allowlist: `open_workspace`, `read`, `write`, `edit`, `tong_list_drives`, `tong_scan_directory`, `tong_list_projects`
 - Workspace allowed by DevSpace file tools: `demo-workspace`
 - DevSpace user config: `%USERPROFILE%\.devspace\config.json`
 - Owner Password file: `%USERPROFILE%\.devspace\auth.json` (keep private; never paste it into chat)
@@ -30,6 +30,21 @@ Restart both processes:
 
 The scripts start hidden DevSpace, gateway, and ngrok processes; keep PID records under `runtime\`; and write logs under `logs\`. ngrok forwards to the gateway on port 7676. DevSpace listens on loopback port 7677. Stop only targets processes whose PID and command match those records. If another process owns either port, startup reports it and leaves it alone.
 
+## Disk metadata and project registration
+
+`tong_list_drives` returns C/D capacity and free space. `tong_scan_directory` accepts an absolute C/D directory `path`, optional `maxDepth` (0–3), `limit` (1–200), and a returned `cursor` for the next page. It returns names, types, sizes, modification times, bounded counts, and possible project directories. The scan reads no file content; each call has time, entry, directory, and response size limits. It skips protected system and credential paths and does not follow junctions or symbolic links. Results can be partial (`truncated: true`), and pagination may change if a directory changes during scanning.
+
+Local project authorizations are stored in ignored `runtime\project-access.json`, outside `demo-workspace`. Manage them **locally**, not through MCP:
+
+```powershell
+node .\scripts\TongProjects.mjs list
+node .\scripts\TongProjects.mjs add --id sample --name 'Sample project' --path 'D:\path\to\project' --permission metadata
+node .\scripts\TongProjects.mjs disable sample
+node .\scripts\TongProjects.mjs revoke sample
+```
+
+The `add` command also accepts `read` or `write` as a recorded permission level, but this phase grants real projects only effective `project.metadata`. `tong_list_projects` shows registered projects and their effective capabilities after OAuth. Only the built-in `demo` project is available to `open_workspace`, `read`, `write`, and `edit`. `agent.execute` and `system.admin` remain disabled. No remote MCP tool can register, disable, revoke, or change a project's permission.
+
 The gateway stdout log contains redacted JSON request traces. Correlate `requestId` across `request_start`, `mcp_request`, `upstream_*`, and `request_finish`; pair the upstream interval with DevSpace's request log by UTC time, method, path, and status. `http_client_error` records HTTP parser rejects that never reach the gateway request handler. Gateway traces omit authorization values, cookies, request/response bodies, tool arguments, and raw MCP session IDs; session IDs appear only as short hashes in those traces.
 
 When the shell inherits HTTP proxy variables, the launcher clears them only in the ngrok child process because this ngrok free endpoint rejects proxy connections. The parent environment and ngrok config remain unchanged.
@@ -46,17 +61,19 @@ Edit only `config\tong.config.json` and change `publicOrigin` to the new HTTPS o
 pwsh -NoProfile -ExecutionPolicy Bypass -File '.\tests\Test-TongEndpoints.ps1'
 node '.\tests\Test-TongMcpGateway.mjs'
 node '.\tests\Test-TongToolBoundaries.mjs'
+node '.\tests\Test-TongProjectAccess.mjs'
+node '.\tests\Test-TongMcpMetadataTools.mjs'
 & '.\node_modules\.bin\devspace.cmd' doctor
 & '<path-to-ngrok.exe>' config check --config "$env:LOCALAPPDATA\ngrok\ngrok.yml"
 ```
 
-The doctor checks the installed Node, Git, Git Bash, SQLite binding, configured URLs, roots, and allowed hosts. The gateway test confirms that only the four listed file/workspace tools are exposed, workspace opening is pinned to `demo-workspace`, and file paths through traversal or a junction are rejected. The endpoint test uses PowerShell 7 because Windows PowerShell 5.1 reports inconsistent public 401 status codes through its legacy `HttpClient`.
+The doctor checks the installed Node, Git, Git Bash, SQLite binding, configured URLs, roots, and allowed hosts. The gateway test confirms that only the seven listed tools are exposed, workspace opening is pinned to `demo-workspace`, and file paths through traversal or a junction are rejected. The endpoint test uses PowerShell 7 because Windows PowerShell 5.1 reports inconsistent public 401 status codes through its legacy `HttpClient`.
 
 ## Connect ChatGPT
 
-The existing ChatGPT MCP connection and OAuth authorization are preserved. Open the existing **Tong Desktop Control** connection in ChatGPT web and refresh or reconnect it so ChatGPT reloads the tool list. Do not create a duplicate connection. The public list should contain only `open_workspace`, `read`, `write`, and `edit`; Bash and other tools are intentionally unavailable through this endpoint.
+The existing ChatGPT MCP connection and OAuth authorization are preserved. Open the existing **Tong Desktop Control** connection in ChatGPT web and refresh or reconnect it so ChatGPT reloads the tool list. Do not create a duplicate connection. The public list should contain the four existing file tools plus `tong_list_drives`, `tong_scan_directory`, and `tong_list_projects`; Bash and other tools remain unavailable.
 
-After reconnecting, use `demo-workspace` to open the workspace. Ask ChatGPT to read this README, create and edit a synthetic `mcp-smoke.txt`, and read it back. Bash is not part of the public tool surface.
+After reconnecting, call `tong_list_drives`, then scan a small directory with `maxDepth: 0` and `limit: 5`, request its next page if offered, and call `tong_list_projects`. Then use `demo-workspace` for the existing open → read → write → read → edit → read smoke test with synthetic content. Check that Bash and remote project registration are absent.
 
 ## Security status (2026-10-09)
 
@@ -82,15 +99,15 @@ The aggregate npm report counts packages, not unique advisories. The public MCP 
 
 The DevSpace process runs with a medium-integrity, non-elevated Windows token. The account is in the local Administrators group with that group disabled in this process token, but its own ACL still grants access to its profile and DevSpace authentication data. This is not a separate low-privilege service account or a filesystem sandbox.
 
-DevSpace 1.0.8 has no official Bash command allowlist; its Bash tool remains available on the local upstream but is not exposed by the public gateway. The gateway exposes only `open_workspace`, `read`, `write`, and `edit`, pins `open_workspace` to the test workspace, and rejects traversal and paths that cross symlinks or junctions. Synthetic tests against DevSpace itself confirmed that its native file-root check alone can still be bypassed through a Windows junction; no private files were read. The gateway path check is defense in depth and remains subject to local-process races. It is not an OS permission boundary.
+DevSpace 1.0.8 has no official Bash command allowlist. The pinned, repeatable restricted-instance patch omits Bash and other dangerous tool registrations, rejects direct Shell execution, and checks real filesystem paths before file operations. The gateway independently restricts its public tool list and keeps the four file tools pinned to `demo-workspace`. Synthetic tests cover traversal, junctions and hard links; a file symlink test could not run where Windows denied creating that link. These checks still have a check-to-use race and are not an OS permission boundary.
 
-ngrok targets only gateway port 7676. DevSpace port 7677 is bound to loopback and still has its full upstream tool set behind OAuth; a local process with valid DevSpace authorization can bypass the public gateway policy. Do not treat this design as isolation from other processes running under the same Windows account.
+ngrok targets only gateway port 7676. DevSpace port 7677 is bound to loopback, requires OAuth for MCP, and uses the restricted tool registration even when called directly. A process running as the same Windows account can still modify local runtime files or race path checks. Do not treat this design as isolation from that account.
 
 Runtime logs are excluded from source control. Shell command previews are disabled by default and were not enabled.
 
 ### Shell isolation decision
 
-The public MCP uses the restricted gateway (option 2): only the four file/workspace tools are exposed, and shell, process-control, and other tools are denied. This reduces remote capability without changing the existing OAuth or ngrok configuration, but it does not isolate the DevSpace process from the Windows account. A dedicated standard account with scoped ACLs (option 1) is the required next step for an operating-system boundary; it needs explicit authorization because it changes Windows accounts/ACLs and requires carefully granting that identity access to the existing DevSpace and ngrok credential files. A separate local service for individually approved high-risk actions (option 3) is a higher-maintenance follow-up if such operations are needed later.
+The public MCP uses the restricted gateway and restricted DevSpace instance: four file/workspace tools and three read-only metadata tools are exposed. Shell, process-control, remote project registration, Agent execution, and administrative tools are denied. This does not isolate the DevSpace process from the Windows account. A dedicated standard account with scoped ACLs is a future prerequisite for an operating-system boundary and requires separate authorization; no such Windows changes were made here.
 
 ### Before expanding access
 

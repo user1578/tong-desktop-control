@@ -14,7 +14,8 @@ const MAX_FILTERED_RESPONSE_BYTES = 2 * 1024 * 1024;
 const INBOUND_KEEP_ALIVE_TIMEOUT_MS = 15_000;
 const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
-const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);
+const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects"]);
+const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...METADATA_TOOLS]);
 const MCP_METHODS = new Set([
   "initialize",
   "notifications/initialized",
@@ -368,6 +369,9 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
 
   const args = request?.params?.arguments;
   if (!isObject(args)) return { code: -32602, message: "Invalid tool arguments" };
+
+  // The authenticated DevSpace tool handler owns metadata path and project policy.
+  if (METADATA_TOOLS.has(name)) return null;
 
   if (name === "open_workspace") {
     const path = args.path;

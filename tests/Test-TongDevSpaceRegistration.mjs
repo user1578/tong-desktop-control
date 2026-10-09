@@ -39,11 +39,13 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   const names = (await client.listTools()).tools.map(({ name }) => name);
-  assert.deepEqual(names, ["open_workspace", "read", "write", "edit"]);
+  assert.deepEqual(names, ["open_workspace", "read", "write", "edit",
+    "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);
   const deniedCalls = await Promise.allSettled([
     client.callTool({ name: "bash", arguments: { workspaceId: "synthetic", command: "cat ../outside/canary.txt" } }),
     client.callTool({ name: "exec_command", arguments: { workspaceId: "synthetic", command: "cat ../outside/canary.txt" } }),
     client.callTool({ name: "write_stdin", arguments: { workspaceId: "synthetic", chars: "blocked" } }),
+    client.callTool({ name: "tong_add_project", arguments: { path: workspaceRoot, permission: "write" } }),
   ]);
   assert.ok(deniedCalls.every(({ status, value }) => status === "rejected" || value?.isError === true));
   const outsideOpen = await client.callTool({ name: "open_workspace", arguments: {
@@ -70,7 +72,7 @@ try {
   const linkedWorkspace = await new WorkspaceRegistry(config).openWorkspace({ path: workspaceRoot, mode: "checkout" });
   assert.doesNotMatch(JSON.stringify(linkedWorkspace.agentsFiles), /synthetic outside instructions/);
   assert.deepEqual(linkedWorkspace.availableAgentsFiles, []);
-  console.log("PASS: restricted DevSpace registers only four tools and rejects Shell aliases and unauthorized workspace modes.");
+  console.log("PASS: restricted DevSpace registers four file tools plus three metadata tools and rejects Shell aliases and unauthorized workspace modes.");
 } finally {
   await client.close();
   await server.close();

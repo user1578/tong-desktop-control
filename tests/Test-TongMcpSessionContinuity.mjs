@@ -84,7 +84,7 @@ const upstream = createServer((req, res) => {
       res.end(JSON.stringify({
         jsonrpc: "2.0",
         id: request.id,
-        result: { tools: ["open_workspace", "read", "write", "edit", "bash"].map((name) => ({ name })) },
+        result: { tools: ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects", "bash"].map((name) => ({ name })) },
       }));
       return;
     }
@@ -95,6 +95,12 @@ const upstream = createServer((req, res) => {
     }
     if (method === "tools/call") {
       upstreamCalls.push(String(params.name));
+      if (params.name === "tong_scan_directory") {
+        res.writeHead(200, { "content-type": "application/json", "mcp-session-id": sessionId });
+        res.end(JSON.stringify({ jsonrpc: "2.0", id: request.id,
+          result: { content: [{ type: "text", text: "Path not permitted" }], isError: true } }));
+        return;
+      }
       if (params.name === "open_workspace") {
         res.writeHead(200, { "content-type": "application/json", "mcp-session-id": sessionId });
         res.end(JSON.stringify({ jsonrpc: "2.0", id: request.id, result: { content: [{ type: "text", text: "workspace opened" }] } }));
@@ -218,7 +224,8 @@ try {
   );
   assert.deepEqual(upstreamConnectionHeaders.slice(0, 2), ["close", "close"]);
   const listed = await send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, sessionHeaders);
-  assert.deepEqual(listed.body.result.tools.map(({ name }) => name), ["open_workspace", "read", "write", "edit"]);
+  assert.deepEqual(listed.body.result.tools.map(({ name }) => name),
+    ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);
 
   const denied = await send({
     jsonrpc: "2.0",
@@ -249,9 +256,11 @@ try {
   assert.equal((await call(7, "read", { path: "continuity.txt" })).body.result.structuredContent.result, "before edit");
   assert.equal((await call(8, "edit", { path: "continuity.txt", edits: [{ oldText: "before", newText: "after" }] })).status, 200);
   assert.equal((await call(9, "read", { path: "continuity.txt" })).body.result.structuredContent.result, "after edit");
-  assert.deepEqual(upstreamCalls.filter((name) => ["open_workspace", "read", "write", "edit", "bash"].includes(name)), ["open_workspace", "read", "write", "read", "edit", "read"]);
+  assert.equal((await call(12, "tong_scan_directory", { path: "Z:\\synthetic-denied" })).body.result.isError, true);
+  assert.equal((await call(13, "read", { path: "continuity.txt" })).body.result.structuredContent.result, "after edit");
+  assert.deepEqual(upstreamCalls.filter((name) => ["open_workspace", "read", "write", "edit", "bash"].includes(name)), ["open_workspace", "read", "write", "read", "edit", "read", "read"]);
   const flowSockets = gatewayRequestSockets.slice(flowSocketStart);
-  assert.equal(flowSockets.length, 10);
+  assert.equal(flowSockets.length, 12);
   assert.equal(new Set(flowSockets).size, 1, "all MCP requests in one client flow must use the same inbound HTTP connection");
   assert.ok((await call(10, "read", { path: "continuity.txt" })).eventStream);
 
@@ -373,7 +382,7 @@ console.log("PASS: every Gateway to DevSpace request uses a fresh TCP socket whi
 const callResponses = diagnostics.filter(
   (entry) => entry.event === "upstream_response" && entry.mcpMethods?.includes("tools/call"),
 );
-assert.equal(callResponses.length, 18);
+assert.equal(callResponses.length, 20);
 assert.ok(callResponses.every((entry) => entry.sessionIdPresent && entry.sessionIdMatched === true));
 assert.ok(callResponses.every((entry) => entry.durationMs >= 0 && entry.status === 200));
 assert.ok(diagnostics.some(

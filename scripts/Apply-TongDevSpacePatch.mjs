@@ -20,6 +20,22 @@ function replaceOnce(source, before, after, name) {
   return source.slice(0, first) + after + source.slice(first + before.length);
 }
 
+function extendRestrictedServer(source) {
+  source = replaceOnce(source,
+    'import { assertTongRestrictedConfig, assertTongWorkspaceRoot } from "../../../../scripts/TongSafeFilePath.mjs";',
+    'import { assertTongRestrictedConfig, assertTongWorkspaceRoot } from "../../../../scripts/TongSafeFilePath.mjs";\nimport { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";',
+    "metadata tool import");
+  source = replaceOnce(source,
+    'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);',
+    'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);',
+    "metadata tool registration guard");
+  source = replaceOnce(source,
+    '    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
+    '    registerTongMcpTools(server, registerAppTool, z);\n    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
+    "metadata tool registration");
+  return source;
+}
+
 const files = [
   {
     name: "pi-tools.js",
@@ -52,7 +68,9 @@ const files = [
   {
     name: "server.js",
     originalHash: "bf3db902241b631d7c6fbaf12385243b46b4f2d4bb776b6ea7ca6c9d429a3263",
-    patchedHash: "7102a8c4feec229cf0853de87bfa31065763afeef04c818786b7ccf3f9b4c9b0",
+    previousHash: "7102a8c4feec229cf0853de87bfa31065763afeef04c818786b7ccf3f9b4c9b0",
+    patchedHash: "6e5ca5457de4c6da8bdcfda02f2f254a9e42c8f59bee32a1ea495c948f595646",
+    upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
         'import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE, } from "@modelcontextprotocol/ext-apps/server";',
@@ -74,7 +92,7 @@ const files = [
         'export function createServer(config = loadConfig(), options = {}) {\n    const incomingArtifactAdapters',
         'export function createServer(config = loadConfig(), options = {}) {\n    assertTongRestrictedConfig(config);\n    const incomingArtifactAdapters',
         "restricted startup guard");
-      return source;
+      return extendRestrictedServer(source);
     },
   },
   {
@@ -106,9 +124,9 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
-  const patched = file.transform(source);
-  if (sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  const patched = hash === file.previousHash ? file.upgrade(source) : file.transform(source);
+  if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}`);
   await writeFile(target, patched, "utf8");
   process.stdout.write(`Patched ${file.name}: ${sha256(patched)}\n`);
 }

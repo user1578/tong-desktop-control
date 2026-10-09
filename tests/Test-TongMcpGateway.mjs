@@ -20,6 +20,9 @@ const toolsList = {
       { name: "read" },
       { name: "write" },
       { name: "edit" },
+      { name: "tong_list_drives" },
+      { name: "tong_scan_directory" },
+      { name: "tong_list_projects" },
       { name: "bash" },
       { name: "exec_command" },
       { name: "write_stdin" },
@@ -32,7 +35,7 @@ const toolsList = {
 const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
-  ["open_workspace", "read", "write", "edit"],
+  ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -52,6 +55,8 @@ assert.ok(sseResponse.toString("utf8").includes('"name":"read"'));
 const blocked = { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "bash", arguments: {} } };
 assert.equal(findDisallowedToolCall(blocked), blocked);
 assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "read" } }), undefined);
+assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_scan_directory" } }), undefined);
+assert.ok(findDisallowedToolCall({ ...blocked, params: { name: "tong_add_project" } }));
 assert.equal(findDisallowedToolCall([blocked, { ...blocked, id: 10, params: { name: "read" } }]), blocked);
 assert.deepEqual(await validateAllowedToolCall(blocked), {
   code: -32602,
@@ -79,6 +84,10 @@ try {
   }, workspaceRoot));
   assert.equal(await validateAllowedToolCall({
     method: "tools/call",
+    params: { name: "tong_scan_directory", arguments: { path: "C:\\" } },
+  }, workspaceRoot), null);
+  assert.equal(await validateAllowedToolCall({
+    method: "tools/call",
     params: { name: "read", arguments: { workspaceId: "test", path: "inside.txt" } },
   }, workspaceRoot), null);
   assert.ok(await validateAllowedToolCall({
@@ -93,7 +102,7 @@ try {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
 
-console.log("PASS: gateway exposes only open_workspace/read/write/edit in JSON and SSE tool lists.");
+console.log("PASS: gateway exposes the four file tools and three metadata tools in JSON and SSE tool lists.");
 console.log("PASS: gateway detects direct and batched calls to disallowed tools.");
 console.log("PASS: gateway restricts workspace opening and blocks traversal/junction paths.");
 

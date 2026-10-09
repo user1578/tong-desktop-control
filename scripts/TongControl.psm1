@@ -166,7 +166,7 @@ function Start-TongDevSpace {
             throw 'The managed DevSpace process uses the public gateway port. Run Restart-TongDesktopControl.ps1 to move it behind the gateway.'
         }
         $patchProperty = $existing.Record.PSObject.Properties['securityPatchVersion']
-        if ($null -ne $patchProperty -and $patchProperty.Value -eq 'tong-1.0.8-v1') {
+        if ($null -ne $patchProperty -and $patchProperty.Value -eq 'tong-1.0.8-p1-v2') {
             Wait-TongPort -Port $Settings.DevSpacePort -ProcessId $existing.Process.ProcessId -Service 'DevSpace'
             Write-Output "DevSpace already running (PID $($existing.Process.ProcessId)) on port $($Settings.DevSpacePort)."
             return
@@ -229,7 +229,7 @@ function Start-TongDevSpace {
         commandMarker = $paths.Cli
         publicOrigin = $Settings.PublicOrigin
         port = $Settings.DevSpacePort
-        securityPatchVersion = 'tong-1.0.8-v1'
+        securityPatchVersion = 'tong-1.0.8-p1-v2'
         startedAt = (Get-Date).ToString('o')
         stdoutLog = $stdout
         stderrLog = $stderr
@@ -244,7 +244,9 @@ function Start-TongGateway {
 
     $existing = Get-TongManagedProcess 'gateway'
     if ($existing) {
-        if ($existing.Record.publicOrigin -ne $Settings.PublicOrigin -or [int]$existing.Record.port -ne $Settings.Port) {
+        $gatewayVersion = $existing.Record.PSObject.Properties['toolPolicyVersion']
+        if ($existing.Record.publicOrigin -ne $Settings.PublicOrigin -or [int]$existing.Record.port -ne $Settings.Port -or
+            $null -eq $gatewayVersion -or $gatewayVersion.Value -ne 'tong-p1-tools-v1') {
             Stop-TongManagedProcess 'gateway'
         }
         else {
@@ -277,6 +279,7 @@ function Start-TongGateway {
         commandMarker = $gatewayScript
         publicOrigin = $Settings.PublicOrigin
         port = $Settings.Port
+        toolPolicyVersion = 'tong-p1-tools-v1'
         startedAt = (Get-Date).ToString('o')
         stdoutLog = $stdout
         stderrLog = $stderr

@@ -86,6 +86,14 @@ $requestId = 1
         }
         $requestId++
         Write-Output "PASS: unauthenticated Bash call is rejected before gateway policy at $baseUrl."
+
+        $unauthorizedScan = Send-TongHttpRequest -BaseUrl $baseUrl -Path '/mcp' -Method 'POST' `
+            -Body ('{"jsonrpc":"2.0","id":' + $requestId + ',"method":"tools/call","params":{"name":"tong_scan_directory","arguments":{"path":"C:\\"}}}')
+        if ($unauthorizedScan.Status -ne 401 -or -not $unauthorizedScan.HasWwwAuthenticate) {
+            throw "Unauthenticated metadata scan was not rejected by OAuth at $baseUrl (HTTP $($unauthorizedScan.Status))."
+        }
+        $requestId++
+        Write-Output "PASS: unauthenticated metadata scan is rejected at $baseUrl."
     }
 
     $badHost = Send-TongHttpRequest -BaseUrl "http://127.0.0.1:$($settings.Port)" `
