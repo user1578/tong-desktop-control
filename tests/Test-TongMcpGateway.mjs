@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -6,6 +7,7 @@ import {
   filterToolListResponse,
   filterAllowedTools,
   findDisallowedToolCall,
+  startMcpGateway,
   validateAllowedToolCall,
 } from "../scripts/TongMcpGateway.mjs";
 
@@ -94,3 +96,37 @@ try {
 console.log("PASS: gateway exposes only open_workspace/read/write/edit in JSON and SSE tool lists.");
 console.log("PASS: gateway detects direct and batched calls to disallowed tools.");
 console.log("PASS: gateway restricts workspace opening and blocks traversal/junction paths.");
+
+const upstreamPaths = [];
+const upstream = createServer((req, res) => {
+  upstreamPaths.push(req.url);
+  res.writeHead(200, { "content-type": "application/json" });
+  res.end(JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} }));
+});
+await new Promise((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+const gateway = startMcpGateway({ listenPort: 0, upstreamPort: upstream.address().port, logSink: () => {} });
+try {
+  await new Promise((resolve) => gateway.once("listening", resolve));
+  const base = `http://127.0.0.1:${gateway.address().port}`;
+  const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "ping" });
+  for (const path of ["/mcp/", "/MCP", "/MCP/"]) {
+    const response = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    assert.equal(response.status, 404, `${path} must not bypass MCP policy`);
+    assert.deepEqual(upstreamPaths, [], `${path} must not reach DevSpace`);
+  }
+  const canonical = await fetch(`${base}/mcp`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+  });
+  assert.equal(canonical.status, 200);
+  assert.deepEqual(upstreamPaths, ["/mcp"]);
+} finally {
+  await new Promise((resolve) => gateway.close(resolve));
+  await new Promise((resolve) => upstream.close(resolve));
+}
+console.log("PASS: noncanonical MCP paths cannot bypass Gateway tool policy.");

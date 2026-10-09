@@ -617,6 +617,17 @@ function isMcpPost(req) {
 }
 
 async function handleRequest(req, res, settings, context) {
+  // Express accepts case and trailing-slash variants of /mcp. Never proxy them
+  // through the unrestricted route used for OAuth and metadata requests.
+  if (context.path !== "/mcp" && /^\/mcp\/?$/i.test(context.path)) {
+    emitDiagnostic(settings, context, "request_reject", {
+      status: 404,
+      reason: "noncanonical_mcp_path",
+    });
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end("Not found");
+    return;
+  }
   if (!isMcpPost(req)) {
     proxyStreaming(req, res, settings.upstreamPort, context, settings);
     return;
