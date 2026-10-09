@@ -1,0 +1,22 @@
+Source: tests/Test-TongNativeWorkerSupervisor.ps1 synthetic roots; each entry has original-acl.txt and bin\policy.json with syntheticOnly=true and syntheticRoot matching the path.
+Created local time | exact path
+2026-10-10 01:42:26 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-046f6a8d96cd4c788d625f7a035ca2e6
+2026-10-10 01:40:55 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-09b30949b42d4cbcbb702bbdeadbb9b2
+2026-10-10 01:45:17 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-10a525bcb3da40df814344ee98ba573e
+2026-10-10 01:46:32 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-1877ae6ba18c4d91bae867ec467c174e
+2026-10-10 01:41:44 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-1f13a4735285423389fdc24647c89d0c
+2026-10-10 01:43:29 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-30387e24b8c54a5ca619ad45f169b8f0
+2026-10-10 01:49:24 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-35479ca0ac5e4042a102cb1478f7667c
+2026-10-10 00:23:04 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-69766f4ee8e54698acd7cf3077513f12
+2026-10-10 01:31:08 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-6ff34b2b266b4ec7b7184ae85938273c
+2026-10-10 01:41:20 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-83d6af249f2d4a3690ec0ff44f7b5446
+2026-10-10 01:37:08 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-89b7018839bb4644a5d8a52057108063
+2026-10-10 01:48:11 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-9b04bcf248b047be9d80e65696388a6f
+2026-10-10 01:44:05 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-b1fd022bbe7143869b6749d237625d73
+2026-10-10 00:24:00 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-bc59928437e54d43a2614ea15dcaf720
+2026-10-10 01:45:59 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-bce1bbd4765646e78cee1950f809c916
+2026-10-10 00:24:31 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-da79b5d405f7462087473ee7554c02f1
+2026-10-10 01:44:58 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-db153a9b077b45be8d66d74980386201
+2026-10-10 00:24:57 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-e401c62fbe26484ca291fcd1e6f61beb
+2026-10-10 01:34:03 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-e73fed1fcd6945fd876b2105496f7da9
+2026-10-10 01:32:28 | C:\Users\Rune\AppData\Local\Temp\TongNativeWorker-fd4ecb4678aa4de4ae8210383c64f495

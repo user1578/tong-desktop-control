@@ -1,7 +1,21 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync,
+  writeFileSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { performance } from "node:perf_hooks";
 import { createInterface } from "node:readline";
+
+function redactDiagnostic(value) {
+  let text = String(value);
+  for (const name of ["TONG_WORKER_BOOTSTRAP", "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN",
+    "TONG_SYNTHETIC_SECRET_CANARY"]) {
+    const secret = process.env[name];
+    if (secret?.length >= 8) text = text.split(secret).join("[redacted]");
+  }
+  return text.replace(/\bBearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9_-]{8,})\b/g, "[redacted]")
+    .replace(/((?:token|secret|password|api[_-]?key)\s*[=:]\s*)[^\s,]+/gi, "$1[redacted]");
+}
 
 function tryFile(path, operation) {
   try {
@@ -54,16 +68,79 @@ if (process.argv[2] === "--linger") {
     process.stderr.write("fixture: completed filesystem probes\n");
     process.stderr.write("fixture: starting child process probe\n");
     const child = await new Promise((resolve) => {
-      const launched = spawn(process.execPath, [process.argv[1], "--child", project],
-        { stdio: "ignore", windowsHide: true });
+      const started = performance.now();
+      const diagnostics = { pid: null, events: [{ name: "launch", elapsedMs: 0 }],
+        stderr: "", stderrBytes: 0, stderrTruncated: false, startupError: null,
+        stderrCaptureError: null, stderrCaptureMode: "synthetic-file" };
+      const event = (name) => {
+        const elapsedMs = Math.round(performance.now() - started);
+        diagnostics.events.push({ name, elapsedMs });
+        process.stderr.write(`fixture: child event ${name} ${elapsedMs}ms\n`);
+      };
+      const stderrLimit = 8192;
+      const stderrPath = join(project, "child-probe.stderr");
+      let launched;
+      let stderrFd;
+      try {
+        stderrFd = openSync(stderrPath, "wx+");
+        process.stderr.write("fixture: child spawn call\n");
+        launched = spawn(process.execPath, [process.argv[1], "--child", project],
+          { stdio: ["ignore", "ignore", stderrFd], windowsHide: true });
+        process.stderr.write(`fixture: child spawn returned pid=${launched.pid || "none"}\n`);
+      } catch (error) {
+        event("startup-exception");
+        diagnostics.startupError = { code: error.code || null,
+          message: redactDiagnostic(error.message).slice(0, 1024) };
+        if (stderrFd !== undefined) closeSync(stderrFd);
+        resolve({ status: null, error: "startup exception", diagnostics });
+        return;
+      }
+      closeSync(stderrFd);
+      diagnostics.pid = launched.pid || null;
       let settled = false;
-      const finish = (result) => { if (!settled) { settled = true; clearTimeout(timer); resolve(result); } };
-      const timer = setTimeout(() => { launched.kill(); finish({ status: null, error: "child process timed out" }); }, 10_000);
-      launched.once("error", (error) => finish({ status: null, error: error.message }));
-      launched.once("close", (status) => finish({ status, error: null }));
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try {
+          const fd = openSync(stderrPath, "r");
+          try {
+            diagnostics.stderrBytes = fstatSync(fd).size;
+            const prefix = Buffer.alloc(Math.min(stderrLimit, diagnostics.stderrBytes));
+            let bytesRead = 0;
+            while (bytesRead < prefix.length) {
+              const count = readSync(fd, prefix, bytesRead, prefix.length - bytesRead, bytesRead);
+              if (count === 0) break;
+              bytesRead += count;
+            }
+            diagnostics.stderr = redactDiagnostic(prefix.subarray(0, bytesRead).toString("utf8"));
+            diagnostics.stderrTruncated = diagnostics.stderrBytes > stderrLimit;
+          } finally { closeSync(fd); }
+        } catch (error) {
+          diagnostics.stderrCaptureError = { code: error.code || null,
+            message: redactDiagnostic(error.message).slice(0, 1024) };
+        }
+        try { unlinkSync(stderrPath); } catch { /* temporary test root is removed in the harness */ }
+        resolve({ ...result, diagnostics });
+      };
+      const timer = setTimeout(() => {
+        event("timeout");
+        launched.kill();
+        finish({ status: null, error: "child process timed out" });
+      }, 10_000);
+      launched.once("spawn", () => event("spawn"));
+      launched.once("error", (error) => {
+        event("startup-error");
+        diagnostics.startupError = { code: error.code || null,
+          message: redactDiagnostic(error.message).slice(0, 1024) };
+        finish({ status: null, error: "startup error" });
+      });
+      launched.once("exit", () => event("exit"));
+      launched.once("close", (status) => { event("close"); finish({ status, error: null }); });
     });
-    process.stderr.write(`fixture: child ${child.status} ${child.error || ""}\n`);
+    process.stderr.write(`fixture: child ${child.status} ${child.error || ""} ${JSON.stringify(child.diagnostics)}\n`);
     results.childExitCode = child.status;
+    results.childDiagnostic = child.diagnostics;
     results.child = existsSync(join(project, "child.json"))
       ? JSON.parse(readFileSync(join(project, "child.json"), "utf8")) : null;
     const version = (executable, args) => new Promise((resolve) => {

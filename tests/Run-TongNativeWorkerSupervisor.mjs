@@ -30,7 +30,7 @@ assert.equal(session.isolation.workerTokenVerified, true);
 assert.equal(session.isolation.jobObjectKillOnClose, true);
 assert.equal(session.isolation.appContainerBoundary, true);
 assert.match(session.isolation.appContainerSid, /^S-1-15-2-/);
-console.log(JSON.stringify({ broadAclAccess: {
+console.log(JSON.stringify({ childDiagnostic: canary.childDiagnostic, broadAclAccess: {
   everyone: { read: canary.everyoneread, write: canary.everyonewrite, delete: canary.everyonedelete },
   users: { read: canary.usersread, write: canary.userswrite, delete: canary.usersdelete },
   authenticatedUsers: { read: canary.authread, write: canary.authwrite, delete: canary.authdelete },
@@ -50,7 +50,7 @@ for (const name of ["other", "private", "auth", "everyone", "users", "all-app-pa
 }
 assert.equal(canary.junctionRead, "denied");
 assert.equal(canary.environmentSecretAbsent, true);
-assert.equal(canary.childExitCode, 0);
+assert.equal(canary.childExitCode, 0, `child process diagnostics: ${JSON.stringify(canary.childDiagnostic)}`);
 assert.deepEqual(canary.child, { project: "allowed", other: "denied" });
 await delay(500);
 try { process.kill(canary.lingerPid, 0); assert.fail("Job descendant remained alive"); }

@@ -1,0 +1,48 @@
+{"childDiagnostic":{"pid":41700,"events":[{"name":"launch","elapsedMs":0},{"name":"spawn","elapsedMs":7},{"name":"exit","elapsedMs":49},{"name":"close","elapsedMs":50}],"stderr":"node:fs:2734\r\n    const out = binding.lstat(base, false, undefined, true /* throwIfNoEntry */);\r\n                        ^\r\n\r\nError: EPERM: operation not permitted, lstat 'C:\\'\r\n    at Object.realpathSync (node:fs:2734:25)\r\n    at toRealPath (node:internal/modules/helpers:63:13)\r\n    at Module._findPath (node:internal/modules/cjs/loader:781:22)\r\n    at resolveMainPath (node:internal/modules/run_main:35:21)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:146:20)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  errno: -4048,\r\n  code: 'EPERM',\r\n  syscall: 'lstat',\r\n  path: 'C:\\\\'\r\n}\r\n\r\nNode.js v24.15.0\r\n","stderrBytes":647,"stderrTruncated":false,"startupError":null,"stderrCaptureError":null,"stderrCaptureMode":"synthetic-file"},"broadAclAccess":{"everyone":{"read":"denied","write":"denied","delete":"denied"},"users":{"read":"denied","write":"denied","delete":"denied"},"authenticatedUsers":{"read":"denied","write":"denied","delete":"denied"},"allApplicationPackages":{},"allRestrictedApplicationPackages":{}}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: child process diagnostics: {"pid":41700,"events":[{"name":"launch","elapsedMs":0},{"name":"spawn","elapsedMs":7},{"name":"exit","elapsedMs":49},{"name":"close","elapsedMs":50}],"stderr":"node:fs:2734\r\n    const out = binding.lstat(base, false, undefined, true /* throwIfNoEntry */);\r\n                        ^\r\n\r\nError: EPERM: operation not permitted, lstat 'C:\\'\r\n    at Object.realpathSync (node:fs:2734:25)\r\n    at toRealPath (node:internal/modules/helpers:63:13)\r\n    at Module._findPath (node:internal/modules/cjs/loader:781:22)\r\n    at resolveMainPath (node:internal/modules/run_main:35:21)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:146:20)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  errno: -4048,\r\n  code: 'EPERM',\r\n  syscall: 'lstat',\r\n  path: 'C:\\\\'\r\n}\r\n\r\nNode.js v24.15.0\r\n","stderrBytes":647,"stderrTruncated":false,"startupError":null,"stderrCaptureError":null,"stderrCaptureMode":"synthetic-file"}
+
+1 !== 0
+
+    at file:///D:/tong-desktop-control/tests/Run-TongNativeWorkerSupervisor.mjs:53:8
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.15.0
+Native Supervisor stderr: fixture: request received
+fixture: wrote project canary
+fixture: completed filesystem probes
+fixture: starting child process probe
+fixture: child spawn call
+fixture: child spawn returned pid=41700
+fixture: child event spawn 7ms
+fixture: child event exit 49ms
+fixture: child event close 50ms
+fixture: child 1  {"pid":41700,"events":[{"name":"launch","elapsedMs":0},{"name":"spawn","elapsedMs":7},{"name":"exit","elapsedMs":49},{"name":"close","elapsedMs":50}],"stderr":"node:fs:2734\r\n    const out = binding.lstat(base, false, undefined, true /* throwIfNoEntry */);\r\n                        ^\r\n\r\nError: EPERM: operation not permitted, lstat 'C:\\'\r\n    at Object.realpathSync (node:fs:2734:25)\r\n    at toRealPath (node:internal/modules/helpers:63:13)\r\n    at Module._findPath (node:internal/modules/cjs/loader:781:22)\r\n    at resolveMainPath (node:internal/modules/run_main:35:21)\r\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:146:20)\r\n    at node:internal/main/run_main_module:33:47 {\r\n  errno: -4048,\r\n  code: 'EPERM',\r\n  syscall: 'lstat',\r\n  path: 'C:\\\\'\r\n}\r\n\r\nNode.js v24.15.0\r\n","stderrBytes":647,"stderrTruncated":false,"startupError":null,"stderrCaptureError":null,"stderrCaptureMode":"synthetic-file"}
+fixture: starting runtime node
+fixture: runtime spawned pid=35796
+fixture: node 0
+fixture: starting runtime git
+fixture: runtime spawned pid=45360
+fixture: git 0
+fixture: starting runtime python
+fixture: runtime spawned pid=32936
+fixture: python 0
+fixture: starting runtime codex
+fixture: runtime spawned pid=27564
+fixture: codex 0
+
+Exception: D:\tong-desktop-control\tests\Test-TongNativeWorkerSupervisor.ps1:155
+Line |
+ 155 |  … DE -ne 0) { throw "Native Supervisor Node integration failed ($LASTEX …
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Native Supervisor Node integration failed (1).

@@ -1,0 +1,19 @@
+file:///D:/tong-desktop-control/scripts/TongWorkerStdio.mjs:120
+      this.current?.reject(new Error("Worker process exited before returning a result"));
+                           ^
+
+Error: Worker process exited before returning a result
+    at TongWorkerStdioSession.readResponses (file:///D:/tong-desktop-control/scripts/TongWorkerStdio.mjs:120:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.15.0
+Native Supervisor stderr: fixture: request received
+fixture: wrote project canary
+fixture: completed filesystem probes
+fixture: starting child process probe
+
+Exception: D:\tong-desktop-control\tests\Test-TongNativeWorkerSupervisor.ps1:155
+Line |
+ 155 |  … DE -ne 0) { throw "Native Supervisor Node integration failed ($LASTEX …
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Native Supervisor Node integration failed (1).
