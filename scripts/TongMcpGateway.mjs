@@ -11,6 +11,7 @@ const UPSTREAM_HOST = "127.0.0.1";
 const UPSTREAM_PORT = 7677;
 const MAX_JSON_REQUEST_BYTES = 100 * 1024;
 const MAX_FILTERED_RESPONSE_BYTES = 2 * 1024 * 1024;
+const INBOUND_KEEP_ALIVE_TIMEOUT_MS = 15_000;
 const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
 const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);
@@ -711,6 +712,8 @@ export function startMcpGateway(options = {}) {
       res.end("MCP gateway error");
     });
   });
+  // Keep pooled MCP client sockets open through the ten-second continuity window.
+  server.keepAliveTimeout = INBOUND_KEEP_ALIVE_TIMEOUT_MS;
   server.on("clientError", (error, socket) => {
     emitDiagnostic(settings, null, "http_client_error", {
       requestId: randomUUID(),

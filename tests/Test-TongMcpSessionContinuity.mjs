@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import { Agent, createServer, request as httpRequest } from "node:http";
 import { connect } from "node:net";
 import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -17,6 +17,16 @@ let forwardedForStripped = false;
 const upstreamCalls = [];
 const forwardedForHeaders = [];
 const diagnostics = [];
+const gatewayRequestSockets = [];
+const agents = new Set();
+const continuityAgent = new Agent({ keepAlive: true, maxSockets: 1 });
+agents.add(continuityAgent);
+
+function createKeepAliveAgent() {
+  const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+  agents.add(agent);
+  return agent;
+}
 const upstream = createServer((req, res) => {
   void (async () => {
     if (req.method === "GET" && req.url === "/authorize") {
@@ -67,6 +77,11 @@ const upstream = createServer((req, res) => {
       }));
       return;
     }
+    if (method === "ping") {
+      res.writeHead(200, { "content-type": "application/json", "mcp-session-id": sessionId });
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: request.id, result: {} }));
+      return;
+    }
     if (method === "tools/call") {
       upstreamCalls.push(String(params.name));
       if (params.name === "open_workspace") {
@@ -77,12 +92,13 @@ const upstream = createServer((req, res) => {
       if (params.name === "write") content = String(params.arguments.content);
       if (params.name === "edit") content = content.replace(params.arguments.edits[0].oldText, params.arguments.edits[0].newText);
       const result = params.name === "read" ? content : params.name === "edit" ? content : "ok";
-      res.writeHead(200, { "content-type": "application/json", "mcp-session-id": sessionId });
-      res.end(JSON.stringify({
+      const response = JSON.stringify({
         jsonrpc: "2.0",
         id: request.id,
         result: { content: [{ type: "text", text: result }], structuredContent: { result } },
-      }));
+      });
+      res.writeHead(200, { "content-type": "text/event-stream", "mcp-session-id": sessionId });
+      res.end(`event: message\ndata: ${response}\n\n`);
       return;
     }
     res.writeHead(400, { "content-type": "application/json" });
@@ -104,29 +120,69 @@ try {
     workspaceRoot,
     logSink: (entry) => diagnostics.push(entry),
   });
+  gateway.on("request", (request) => {
+    if (request.url === "/mcp") gatewayRequestSockets.push(request.socket);
+  });
   await new Promise((resolve, reject) => {
     gateway.once("listening", resolve);
     gateway.once("error", reject);
   });
 
   const baseUrl = `http://127.0.0.1:${gateway.address().port}/mcp`;
-  const send = async (body, headers = {}) => {
-    const response = await fetch(baseUrl, {
-      method: "POST",
-      headers: {
-        accept: "application/json, text/event-stream",
-        "content-type": "application/json",
-        connection: "close",
-        "x-forwarded-for": "198.51.100.77",
-        authorization: "Bearer synthetic-diagnostic-secret",
-        ...headers,
-      },
-      body: JSON.stringify(body),
+  const send = async (body, headers = {}, agent = continuityAgent) => {
+    const requestBody = Buffer.from(JSON.stringify(body), "utf8");
+    return new Promise((resolve, reject) => {
+      const request = httpRequest(baseUrl, {
+        method: "POST",
+        agent,
+        headers: {
+          accept: "application/json, text/event-stream",
+          "content-type": "application/json",
+          "content-length": requestBody.length,
+          "x-forwarded-for": "198.51.100.77",
+          authorization: "Bearer synthetic-diagnostic-secret",
+          ...headers,
+        },
+      }, (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.once("error", reject);
+        response.once("end", () => {
+          const responseBody = Buffer.concat(chunks);
+          if (response.headers["content-length"] !== undefined) {
+            assert.equal(Number(response.headers["content-length"]), responseBody.length);
+          }
+          const raw = responseBody.toString("utf8");
+          let parsed;
+          const eventStream = String(response.headers["content-type"] ?? "").includes("text/event-stream");
+          if (raw) {
+            if (eventStream) {
+              const data = raw.split(/\r?\n/).filter((line) => line.startsWith("data:"));
+              assert.equal(data.length, 1, "one finite SSE response must contain one JSON-RPC message");
+              parsed = JSON.parse(data[0].slice("data:".length).trimStart());
+            } else {
+              parsed = JSON.parse(raw);
+            }
+          }
+          resolve({
+            status: response.statusCode,
+            headers: response.headers,
+            body: parsed,
+            eventStream,
+            rawLength: responseBody.length,
+            reusedSocket: request.reusedSocket,
+          });
+        });
+      });
+      request.once("error", (error) => {
+        error.reusedSocket = request.reusedSocket;
+        reject(error);
+      });
+      request.end(requestBody);
     });
-    const raw = await response.text();
-    return { status: response.status, headers: response.headers, body: raw ? JSON.parse(raw) : undefined };
   };
 
+  const flowSocketStart = gatewayRequestSockets.length;
   const initialized = await send({
     jsonrpc: "2.0",
     id: 1,
@@ -134,7 +190,7 @@ try {
     params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "continuity-test", version: "1" } },
   });
   assert.equal(initialized.status, 200);
-  const clientSessionId = initialized.headers.get("mcp-session-id");
+  const clientSessionId = initialized.headers["mcp-session-id"];
   assert.equal(clientSessionId, "synthetic-session-1");
   const sessionHeaders = { "mcp-session-id": clientSessionId, "mcp-protocol-version": "2025-11-25" };
 
@@ -172,6 +228,59 @@ try {
   assert.equal((await call(8, "edit", { path: "continuity.txt", edits: [{ oldText: "before", newText: "after" }] })).status, 200);
   assert.equal((await call(9, "read", { path: "continuity.txt" })).body.result.structuredContent.result, "after edit");
   assert.deepEqual(upstreamCalls.filter((name) => ["open_workspace", "read", "write", "edit", "bash"].includes(name)), ["open_workspace", "read", "write", "read", "edit", "read"]);
+  const flowSockets = gatewayRequestSockets.slice(flowSocketStart);
+  assert.equal(flowSockets.length, 10);
+  assert.equal(new Set(flowSockets).size, 1, "all MCP requests in one client flow must use the same inbound HTTP connection");
+  assert.ok((await call(10, "read", { path: "continuity.txt" })).eventStream);
+
+  continuityAgent.destroy();
+  const reconnectAgent = createKeepAliveAgent();
+  const beforeReconnect = gatewayRequestSockets.length;
+  const reconnected = await send({ jsonrpc: "2.0", id: 11, method: "ping" }, sessionHeaders, reconnectAgent);
+  assert.equal(reconnected.status, 200);
+  assert.equal(reconnected.reusedSocket, false);
+  assert.notEqual(gatewayRequestSockets[beforeReconnect], flowSockets[0]);
+
+  const boundaryIntervalsSeconds = [1, 4, 5, 6, 10];
+  const boundaryReuseResults = [];
+  for (const [index, intervalSeconds] of boundaryIntervalsSeconds.entries()) {
+    console.log(`Testing idle interval ${intervalSeconds}s`);
+    const agent = createKeepAliveAgent();
+    const boundaryInit = await send({
+      jsonrpc: "2.0",
+      id: 20 + index * 4,
+      method: "initialize",
+      params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "boundary-test", version: "1" } },
+    }, {}, agent);
+    assert.equal(boundaryInit.status, 200);
+    const boundarySessionHeaders = {
+      "mcp-session-id": boundaryInit.headers["mcp-session-id"],
+      "mcp-protocol-version": "2025-11-25",
+    };
+    assert.equal((await send({ jsonrpc: "2.0", method: "notifications/initialized" }, boundarySessionHeaders, agent)).status, 202);
+    const boundaryOpened = await send({
+      jsonrpc: "2.0",
+      id: 21 + index * 4,
+      method: "tools/call",
+      params: { name: "open_workspace", arguments: { path: workspaceRoot, mode: "checkout" } },
+    }, boundarySessionHeaders, agent);
+    assert.equal(boundaryOpened.status, 200);
+    await new Promise((resolve) => setTimeout(resolve, intervalSeconds * 1000));
+    let boundaryRead;
+    try {
+      boundaryRead = await send({
+        jsonrpc: "2.0",
+        id: 22 + index * 4,
+        method: "tools/call",
+        params: { name: "read", arguments: { workspaceId: "synthetic-workspace", path: "continuity.txt" } },
+      }, boundarySessionHeaders, agent);
+    } catch (error) {
+      throw new Error(`read failed after ${intervalSeconds}s (code=${error.code ?? "unknown"}, reusedSocket=${error.reusedSocket ?? "unknown"}, keepAliveHint=${boundaryOpened.headers["keep-alive"] ?? "absent"})`, { cause: error });
+    }
+    assert.equal(boundaryRead.status, 200, `read must succeed after ${intervalSeconds}s whether the client socket is reused or reopened`);
+    boundaryReuseResults.push(`${intervalSeconds}s=${boundaryRead.reusedSocket ? "reused" : "reopened"}`);
+    agent.destroy();
+  }
 
   const invalidJson = await fetch(baseUrl, {
     method: "POST",
@@ -195,9 +304,17 @@ try {
     socket.once("close", () => resolve(response));
   });
   assert.match(parserResponse, /^HTTP\/1\.1 400 Bad Request/);
+  const recoveryAgent = createKeepAliveAgent();
+  const recovered = await send({ jsonrpc: "2.0", id: 40, method: "ping" }, sessionHeaders, recoveryAgent);
+  assert.equal(recovered.status, 200, "a fresh connection must work after an HTTP parser error closed the malformed connection");
+  recoveryAgent.destroy();
   console.log("PASS: a denied Bash request leaves the same MCP session usable for open_workspace/read/write/edit/read.");
+  console.log("PASS: sequential MCP calls reuse one inbound HTTP connection, then recover after explicit close.");
+  console.log(`PASS: calls succeed after ${boundaryIntervalsSeconds.join(", ")} second idle intervals (${boundaryReuseResults.join(", " )}).`);
+  console.log("PASS: a new HTTP connection succeeds after an HTTP parser error.");
   forwardedForStripped = forwardedForHeaders.length > 0 && forwardedForHeaders.every((value) => value === undefined);
 } finally {
+  for (const agent of agents) agent.destroy();
   if (gateway?.listening) await new Promise((resolve) => gateway.close(resolve));
   if (upstream.listening) await new Promise((resolve) => upstream.close(resolve));
   await rm(temporaryRoot, { recursive: true, force: true });
@@ -222,7 +339,7 @@ assert.equal(oauthRouteTrace.authOutcome, "not_applicable");
 const callResponses = diagnostics.filter(
   (entry) => entry.event === "upstream_response" && entry.mcpMethods?.includes("tools/call"),
 );
-assert.equal(callResponses.length, 7);
+assert.equal(callResponses.length, 18);
 assert.ok(callResponses.every((entry) => entry.sessionIdPresent && entry.sessionIdMatched === true));
 assert.ok(callResponses.every((entry) => entry.durationMs >= 0 && entry.status === 200));
 assert.ok(diagnostics.some(
