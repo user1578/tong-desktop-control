@@ -22,6 +22,7 @@ logs/
 runtime/
 backups/
 diagnostics/
+artifacts/
 .cache/
 **/.cache/
 cache/
