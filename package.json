@@ -1,0 +1,12 @@
+{
+  "name": "tong-desktop-control",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "doctor": "devspace doctor",
+    "serve": "devspace serve"
+  },
+  "dependencies": {
+    "@waishnav/devspace": "1.0.8"
+  }
+}

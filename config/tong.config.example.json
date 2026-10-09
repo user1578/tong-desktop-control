@@ -1,0 +1,7 @@
+{
+  "publicOrigin": "https://your-ngrok-domain.ngrok-free.dev",
+  "port": 7676,
+  "workspacePath": "C:\\path\\to\\tong-desktop-control\\demo-workspace",
+  "ngrokExecutable": "C:\\path\\to\\ngrok.exe",
+  "ngrokConfigPath": "<USERPROFILE>\\AppData\\Local\\ngrok\\ngrok.yml"
+}
