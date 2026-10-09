@@ -13,6 +13,8 @@ $server = $null
 try {
     foreach ($directory in @($root, (Join-Path $root 'bin'), (Join-Path $root 'project'),
             (Join-Path $root 'other'), (Join-Path $root 'private'), (Join-Path $root 'auth'),
+            (Join-Path $root 'everyone'), (Join-Path $root 'users'),
+            (Join-Path $root 'all-app-packages'), (Join-Path $root 'all-restricted-packages'),
             (Join-Path $root 'profile'), (Join-Path $root 'temp'), (Join-Path $root 'state'))) {
         [void](New-Item -ItemType Directory -Path $directory -Force)
     }
@@ -24,11 +26,26 @@ try {
     $codex = Join-Path $bin 'synthetic-codex.exe'
     $policyPath = Join-Path $bin 'policy.json'
     Copy-Item -LiteralPath $build.executable -Destination $exe
+    $appContainerSid = (& $exe '--appcontainer-sid-synthetic' | Select-Object -First 1).Trim()
+    if ($LASTEXITCODE -ne 0 -or $appContainerSid -notmatch '^S-1-15-2-') { throw 'Synthetic AppContainer SID derivation failed.' }
     $nodeSource = (Get-Command node.exe -CommandType Application | Select-Object -First 1 -ExpandProperty Source)
     Copy-Item -LiteralPath $nodeSource -Destination $node
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'fixtures\TongNativeMockWorker.mjs') -Destination $mock
-    [IO.File]::WriteAllText($codex, 'synthetic marker: never execute Codex')
-    foreach ($name in @('project', 'other', 'private', 'auth')) {
+    $codexBin = Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\bin'
+    $codexSource = Get-ChildItem -LiteralPath $codexBin -Directory -ErrorAction Stop |
+        ForEach-Object { Join-Path $_.FullName 'codex.exe' } |
+        Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $codexSource) { throw 'Installed Codex CLI executable was not found for the isolated version probe.' }
+    Copy-Item -LiteralPath $codexSource -Destination $codex
+    $gitDirectory = 'C:\Program Files\Git\cmd'
+    $pythonDirectory = 'C:\Program Files\Python311'
+    foreach ($toolDirectory in @($gitDirectory, $pythonDirectory)) {
+        if (-not (Test-Path -LiteralPath $toolDirectory -PathType Container)) {
+            throw "Required synthetic runtime probe directory is unavailable: $toolDirectory"
+        }
+    }
+    foreach ($name in @('project', 'other', 'private', 'auth', 'everyone', 'users',
+            'all-app-packages', 'all-restricted-packages')) {
         [IO.File]::WriteAllText((Join-Path $root "$name\canary.txt"), "synthetic $name")
     }
     [IO.File]::WriteAllText((Join-Path $project 'delete.canary'), 'synthetic delete')
@@ -47,7 +64,7 @@ try {
         stateRoot = (Join-Path $root 'state')
         projectRoots = @{ synthetic = $project }
         workerModuleSha256 = @{}
-        toolDirectories = @()
+        toolDirectories = @($gitDirectory, $pythonDirectory)
         syntheticOnly = $true; syntheticRoot = $root
     }
     [IO.File]::WriteAllText($policyPath, ($policy | ConvertTo-Json -Depth 6 -Compress), [Text.UTF8Encoding]::new($false))
@@ -57,7 +74,9 @@ try {
     $rootAcl = Get-Acl -LiteralPath $root
     $rootAcl.SetAccessRuleProtection($true, $false)
     foreach ($entry in @(@($sid, 'FullControl'), @('S-1-5-18', 'FullControl'),
-            @('S-1-5-32-544', 'FullControl'), @('S-1-5-32-545', 'ReadAndExecute'))) {
+            @('S-1-5-32-544', 'FullControl'), @('S-1-5-32-545', 'ReadAndExecute'),
+            @('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464', 'ReadAndExecute'),
+            @($appContainerSid, 'ReadAndExecute'))) {
         $rule = [Security.AccessControl.FileSystemAccessRule]::new(
             [Security.Principal.SecurityIdentifier]::new($entry[0]),
             [Security.AccessControl.FileSystemRights]::$($entry[1]), $inheritance,
@@ -65,31 +84,59 @@ try {
         [void]$rootAcl.AddAccessRule($rule)
     }
     Set-Acl -LiteralPath $root -AclObject $rootAcl
-    foreach ($name in @('other', 'private', 'auth', 'state')) {
+    foreach ($directory in @((Join-Path $root 'profile'), (Join-Path $root 'temp'))) {
+        $directoryAcl = Get-Acl -LiteralPath $directory
+        $directoryAcl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+            [Security.Principal.SecurityIdentifier]::new($appContainerSid),
+            [Security.AccessControl.FileSystemRights]::Modify -bor [Security.AccessControl.FileSystemRights]::Synchronize,
+            $inheritance, [Security.AccessControl.PropagationFlags]::None, $allow))
+        Set-Acl -LiteralPath $directory -AclObject $directoryAcl
+    }
+    $fileCanarySids = @{
+        other = @('S-1-5-11', [Security.AccessControl.FileSystemRights]::FullControl)
+        auth = @('S-1-5-11', [Security.AccessControl.FileSystemRights]::FullControl)
+        everyone = @('S-1-1-0', [Security.AccessControl.FileSystemRights]::Read)
+        users = @('S-1-5-32-545', [Security.AccessControl.FileSystemRights]::Modify)
+        'all-app-packages' = @('S-1-15-2-1', [Security.AccessControl.FileSystemRights]::FullControl)
+        'all-restricted-packages' = @('S-1-15-2-2', [Security.AccessControl.FileSystemRights]::Read)
+    }
+    foreach ($name in $fileCanarySids.Keys) {
+        $fileAcl = Get-Acl -LiteralPath (Join-Path $root "$name\canary.txt")
+        $fileAcl.SetAccessRuleProtection($true, $false)
+        foreach ($entry in @(@($fileCanarySids[$name][0], $fileCanarySids[$name][1]),
+                @('S-1-5-18', [Security.AccessControl.FileSystemRights]::FullControl),
+                @('S-1-5-32-544', [Security.AccessControl.FileSystemRights]::FullControl))) {
+            $rule = [Security.AccessControl.FileSystemAccessRule]::new(
+                [Security.Principal.SecurityIdentifier]::new($entry[0]), $entry[1], $allow)
+            [void]$fileAcl.AddAccessRule($rule)
+        }
+        Set-Acl -LiteralPath (Join-Path $root "$name\canary.txt") -AclObject $fileAcl
+    }
+    foreach ($name in @('other', 'private', 'auth', 'everyone', 'users',
+            'all-app-packages', 'all-restricted-packages', 'state')) {
         $directory = Join-Path $root $name
         $acl = Get-Acl -LiteralPath $directory
         $acl.SetAccessRuleProtection($true, $false)
-        $allowed = if ($name -eq 'other') { @('S-1-5-11') }
+        $allowed = if ($name -eq 'other') { @('S-1-5-11', 'S-1-5-18', 'S-1-5-32-544') }
             elseif ($name -eq 'state') { @($sid, 'S-1-5-18', 'S-1-5-32-544') }
+            elseif ($name -eq 'everyone') { @('S-1-1-0', 'S-1-5-18', 'S-1-5-32-544') }
+            elseif ($name -eq 'users') { @('S-1-5-32-545', 'S-1-5-18', 'S-1-5-32-544') }
+            elseif ($name -eq 'auth') { @('S-1-5-11', 'S-1-5-18', 'S-1-5-32-544') }
+            elseif ($name -eq 'all-app-packages') { @('S-1-15-2-1', 'S-1-5-18', 'S-1-5-32-544') }
+            elseif ($name -eq 'all-restricted-packages') { @('S-1-15-2-2', 'S-1-5-18', 'S-1-5-32-544') }
             else { @('S-1-5-18', 'S-1-5-32-544') }
         foreach ($allowedSid in $allowed) {
+            $rights = if ($name -eq 'everyone' -and $allowedSid -eq 'S-1-1-0') { [Security.AccessControl.FileSystemRights]::Read }
+                elseif ($name -eq 'users' -and $allowedSid -eq 'S-1-5-32-545') { [Security.AccessControl.FileSystemRights]::Modify }
+                elseif ($name -eq 'all-restricted-packages' -and $allowedSid -eq 'S-1-15-2-2') { [Security.AccessControl.FileSystemRights]::Read }
+                else { [Security.AccessControl.FileSystemRights]::FullControl }
             $rule = [Security.AccessControl.FileSystemAccessRule]::new(
                 [Security.Principal.SecurityIdentifier]::new($allowedSid),
-                [Security.AccessControl.FileSystemRights]::FullControl, $inheritance,
+                $rights, $inheritance,
                 [Security.AccessControl.PropagationFlags]::None, $allow)
             [void]$acl.AddAccessRule($rule)
         }
         Set-Acl -LiteralPath $directory -AclObject $acl
-        if ($name -eq 'other') {
-            $canary = Join-Path $directory 'canary.txt'
-            $fileAcl = Get-Acl -LiteralPath $canary
-            $fileAcl.SetAccessRuleProtection($true, $false)
-            $rule = [Security.AccessControl.FileSystemAccessRule]::new(
-                [Security.Principal.SecurityIdentifier]::new('S-1-5-11'),
-                [Security.AccessControl.FileSystemRights]::FullControl, $allow)
-            [void]$fileAcl.AddAccessRule($rule)
-            Set-Acl -LiteralPath $canary -AclObject $fileAcl
-        }
     }
     $before = (Get-Acl -LiteralPath $project).GetSecurityDescriptorSddlForm([Security.AccessControl.AccessControlSections]::Access)
     [IO.File]::WriteAllText((Join-Path $root 'original-acl.txt'), $before)
@@ -98,6 +145,12 @@ try {
         -RedirectStandardOutput (Join-Path $root 'server.out') -RedirectStandardError (Join-Path $root 'server.err')
     Start-Sleep -Milliseconds 300
     if ($server.HasExited) { throw ('Native Supervisor exited early: ' + (Get-Content -LiteralPath (Join-Path $root 'server.err') -Raw)) }
+    $concurrentId = [guid]::NewGuid().ToString('D')
+    & $exe '--acl-grant-synthetic' $policyPath $concurrentId 'synthetic' 2>$null
+    if ($LASTEXITCODE -eq 0) { throw 'Concurrent ACL journal writer was not rejected while the Supervisor held its lock.' }
+    if ((Get-Acl -LiteralPath $project).GetSecurityDescriptorSddlForm([Security.AccessControl.AccessControlSections]::Access) -ne $before) {
+        throw 'Rejected concurrent ACL journal writer changed the synthetic project DACL.'
+    }
     & $nodeSource (Join-Path $PSScriptRoot 'Run-TongNativeWorkerSupervisor.mjs') $exe $policyPath $project $root
     if ($LASTEXITCODE -ne 0) { throw "Native Supervisor Node integration failed ($LASTEXITCODE)." }
     $after = (Get-Acl -LiteralPath $project).GetSecurityDescriptorSddlForm([Security.AccessControl.AccessControlSections]::Access)
@@ -147,15 +200,21 @@ try {
         throw 'Conflict reconciliation did not restore the original DACL.'
     }
     @{ NativeBuild = 'passed'; SyntheticCanary = 'passed'; ExactAclRestore = 'passed';
-        CrashRecovery = 'passed'; ConflictDetection = 'passed'; RealAccountsOrServiceChanged = $false } | ConvertTo-Json
+        CrashRecovery = 'passed'; ConflictDetection = 'passed'; ConcurrentAclAccessRejected = $true;
+        RealAccountsOrServiceChanged = $false } | ConvertTo-Json
 } catch {
     $errorFile = Join-Path $root 'server.err'
     if (Test-Path -LiteralPath $errorFile) { Write-Host ('Native Supervisor stderr: ' + (Get-Content -LiteralPath $errorFile -Raw)) }
     throw
 } finally {
     if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue }
+    if (Test-Path -LiteralPath $exe) {
+        & $exe '--appcontainer-delete-synthetic' 2>$null
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'Synthetic AppContainer profile cleanup failed.' }
+    }
     if (Test-Path -LiteralPath $root) {
-        foreach ($name in @('other', 'private', 'auth', 'state')) {
+        foreach ($name in @('other', 'private', 'auth', 'everyone', 'users',
+                'all-app-packages', 'all-restricted-packages', 'state')) {
             $directory = Join-Path $root $name
             if (Test-Path -LiteralPath $directory) {
                 & (Join-Path $env:WINDIR 'System32\icacls.exe') $directory '/grant' "*${sid}:F" '/T' '/C' | Out-Null

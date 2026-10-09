@@ -26,19 +26,32 @@ const session = await native.launchWorker({ taskId, timeoutMs: 30_000, bootstrap
 const result = await session.runTask(envelope, secret);
 await session.close();
 const canary = JSON.parse(result.summary);
+assert.equal(session.isolation.workerTokenVerified, true);
+assert.equal(session.isolation.jobObjectKillOnClose, true);
+assert.equal(session.isolation.appContainerBoundary, true);
+assert.match(session.isolation.appContainerSid, /^S-1-15-2-/);
+console.log(JSON.stringify({ broadAclAccess: {
+  everyone: { read: canary.everyoneread, write: canary.everyonewrite, delete: canary.everyonedelete },
+  users: { read: canary.usersread, write: canary.userswrite, delete: canary.usersdelete },
+  authenticatedUsers: { read: canary.authread, write: canary.authwrite, delete: canary.authdelete },
+  allApplicationPackages: { read: canary.allAppPackagesread, write: canary.allAppPackageswrite,
+    delete: canary.allAppPackagesdelete },
+  allRestrictedApplicationPackages: { read: canary.allRestrictedPackagesread,
+    write: canary.allRestrictedPackageswrite, delete: canary.allRestrictedPackagesdelete },
+} }));
 for (const key of ["projectRead", "projectWrite", "projectDelete"]) assert.equal(canary[key], "allowed", key);
-for (const name of ["other", "private", "auth"]) {
+for (const runtime of ["node", "git", "python", "codex"]) {
+  assert.equal(canary.runtimeVersions[runtime].exitCode, 0, `${runtime} --version: ${canary.runtimeVersions[runtime].error || canary.runtimeVersions[runtime].version}`);
+  assert.equal(canary.runtimeVersions[runtime].started, true, `${runtime} --version ran successfully`);
+}
+for (const name of ["other", "private", "auth", "everyone", "users", "all-app-packages",
+  "all-restricted-packages"]) {
   for (const action of ["read", "write", "delete"]) assert.equal(canary[`${name}${action}`], "denied", `${name}${action}`);
 }
 assert.equal(canary.junctionRead, "denied");
 assert.equal(canary.environmentSecretAbsent, true);
 assert.equal(canary.childExitCode, 0);
 assert.deepEqual(canary.child, { project: "allowed", other: "denied" });
-assert.equal(canary.token.restrictedToken, true);
-assert.equal(canary.token.jobObjectKillOnClose, true);
-assert.equal(canary.token.taskAclVerified, true);
-assert.equal(canary.token.cleanEnvironment, true);
-assert.equal(canary.token.credentialsSeparated, false, "synthetic mode uses the current account");
 await delay(500);
 try { process.kill(canary.lingerPid, 0); assert.fail("Job descendant remained alive"); }
 catch (error) { if (error.code !== "ESRCH") throw error; }
@@ -113,12 +126,17 @@ catch (error) { if (error.code !== "ESRCH") throw error; }
 
 // A direct Node pipe client has the same synthetic user SID, but its image is not
 // the pinned native bridge and therefore cannot submit a legitimate task.
-await new Promise((resolve) => {
+const directPeerResponse = await new Promise((resolve) => {
   const socket = net.connect(`\\\\.\\pipe\\${policy.pipeName}`);
-  socket.once("connect", () => socket.write(JSON.stringify({ kind: "inspect", projectId: "synthetic", projectRoot }) + "\n"));
-  socket.once("error", () => resolve());
-  socket.once("close", () => resolve());
+  let response = "";
+  const done = () => resolve(response);
+  socket.on("data", (chunk) => { response += chunk.toString("utf8"); });
+  socket.once("connect", () => socket.end(JSON.stringify({ kind: "inspect", projectId: "synthetic", projectRoot }) + "\n"));
+  socket.once("error", done);
+  socket.once("close", done);
+  socket.setTimeout(5_000, () => { socket.destroy(); done(); });
 });
+assert.ok(!directPeerResponse.includes('"ok":true'), "an unpinned same-user pipe client is rejected before receiving a response");
 
 console.log(JSON.stringify({ nativeRestrictedToken: true, namedPipePeerImageRejected: true,
   forgedHmacRejected: true,

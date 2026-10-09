@@ -70,6 +70,7 @@ function makeWorkerBroker(adapter, options = {}) {
       cleanEnvironment: true,
       jobObjectKillOnClose: true,
       privateIpcAuthenticated: true,
+      appContainerBoundary: true,
       ...options.isolation,
     }),
     launchWorker: async ({ taskId, timeoutMs }) => {

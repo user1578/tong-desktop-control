@@ -118,22 +118,55 @@ internal sealed class PipeHost : IDisposable {
         uint pid;
         Native.Require(Native.GetNamedPipeClientProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out pid),
             "GetNamedPipeClientProcessId");
-        bool group=false, account=false;
+        // Pin one process object and use its token and image throughout the
+        // handshake. Do not validate a PID, close its handle, then reopen that
+        // numeric PID after it could have exited and been reused.
+        IntPtr client=Native.OpenProcess(Native.PROCESS_QUERY_LIMITED_INFORMATION,false,pid);
+        if (client==IntPtr.Zero) throw new PeerRejectedException("IPC peer process exited during verification");
+        IntPtr processToken=IntPtr.Zero;
         try {
-            pipe.RunAsClient(delegate {
-                using (var identity = WindowsIdentity.GetCurrent(true)) {
-                    group=policy.syntheticOnly
-                        ? identity.User.Value.Equals(policy.gatewaySid,StringComparison.OrdinalIgnoreCase)
-                        : Native.TokenHasSid(identity.Token, 2, policy.gatewaySid, 4, 4);
-                    account=policy.syntheticOnly || identity.User.Value.Equals(policy.gatewayAccountSid,StringComparison.OrdinalIgnoreCase);
-                }
-            });
-        } catch (IOException) { throw new PeerRejectedException("IPC peer disconnected before token verification"); }
-        if (!group || !account) throw new PeerRejectedException("Gateway service or account SID does not match peer token");
-        string image=Native.ImagePath(pid);
-        if (!String.Equals(Path.GetFullPath(image), Path.GetFullPath(policy.bridgeImagePath), StringComparison.OrdinalIgnoreCase))
-            throw new PeerRejectedException("Gateway bridge image path mismatch");
-        Policy.Pin(image, policy.bridgeImageSha256);
+            Native.Require(Native.OpenProcessToken(client,Native.TOKEN_QUERY,out processToken),"OpenProcessToken(pipe client)");
+            string processUser;
+            bool processGroup, processAccount;
+            using (var identity=new WindowsIdentity(processToken)) {
+                processUser=identity.User.Value;
+                processGroup=policy.syntheticOnly
+                    ? processUser.Equals(policy.gatewaySid,StringComparison.OrdinalIgnoreCase)
+                    : Native.TokenHasSid(processToken,2,policy.gatewaySid,4,4);
+                processAccount=policy.syntheticOnly
+                    || processUser.Equals(policy.gatewayAccountSid,StringComparison.OrdinalIgnoreCase);
+            }
+            string pipeUser=null;
+            bool pipeGroup=false, pipeAccount=false;
+            try {
+                pipe.RunAsClient(delegate {
+                    using (var identity=WindowsIdentity.GetCurrent(true)) {
+                        pipeUser=identity.User.Value;
+                        pipeGroup=policy.syntheticOnly
+                            ? pipeUser.Equals(policy.gatewaySid,StringComparison.OrdinalIgnoreCase)
+                            : Native.TokenHasSid(identity.Token,2,policy.gatewaySid,4,4);
+                        pipeAccount=policy.syntheticOnly
+                            || pipeUser.Equals(policy.gatewayAccountSid,StringComparison.OrdinalIgnoreCase);
+                    }
+                });
+            } catch (IOException) {
+                throw new PeerRejectedException("IPC peer disconnected before token verification");
+            }
+            if (!processGroup || !processAccount || !pipeGroup || !pipeAccount
+                || !String.Equals(pipeUser,processUser,StringComparison.OrdinalIgnoreCase))
+                throw new PeerRejectedException("Gateway service or account SID does not match pipe peer process");
+            string image=Native.ImagePath(client);
+            if (!String.Equals(Path.GetFullPath(image),Path.GetFullPath(policy.bridgeImagePath),StringComparison.OrdinalIgnoreCase))
+                throw new PeerRejectedException("Gateway bridge image path mismatch");
+            Policy.Pin(image,policy.bridgeImageSha256);
+            uint currentPid;
+            Native.Require(Native.GetNamedPipeClientProcessId(pipe.SafePipeHandle.DangerousGetHandle(),out currentPid),
+                "GetNamedPipeClientProcessId(recheck)");
+            if (currentPid!=pid) throw new PeerRejectedException("IPC client process changed during verification");
+        } finally {
+            if (processToken!=IntPtr.Zero) Native.CloseHandle(processToken);
+            Native.CloseHandle(client);
+        }
     }
     internal static string TaskSid(string id) {
         Guid guid;
@@ -152,12 +185,14 @@ internal sealed class PipeHost : IDisposable {
             bool separate=!(policy.syntheticOnly ? policy.gatewaySid : policy.gatewayAccountSid)
                 .Equals(policy.workerSid,StringComparison.OrdinalIgnoreCase);
             if (!separate && !policy.syntheticOnly) throw new InvalidOperationException("Worker identity not separate");
-            using (var probe=new RestrictedProcess()) probe.Prepare(policy.workerSid,TaskSid(Guid.NewGuid().ToString("D")),policy.supervisorServiceSid);
+            string probeId=Guid.NewGuid().ToString("D");
+            using (var probe=new RestrictedProcess()) probe.Prepare(policy.workerSid,TaskSid(probeId),
+                policy.supervisorServiceSid,Native.AppContainerName(probeId,policy.syntheticOnly));
             Wire.WriteLine(pipe,Wire.Json.Serialize(new { ok=true, source="native-token-and-pipe",
                 gatewaySid=policy.gatewaySid, workerSid=policy.workerSid, ipcPeerSid=policy.gatewaySid,
                 projectId=id, projectRoot=inspectedRoot, restrictedToken=true,
                 credentialsSeparated=separate, cleanEnvironment=true,
-                jobObjectKillOnClose=true, privateIpcAuthenticated=true,
+                jobObjectKillOnClose=true, privateIpcAuthenticated=true, appContainerBoundary=true,
                 syntheticOnly=policy.syntheticOnly }));
             return;
         }
@@ -192,12 +227,15 @@ internal sealed class PipeHost : IDisposable {
             lock (gate) active=worker;
             bool granted=false, stopped=false;
             try {
-                worker.Prepare(policy.workerSid,taskSid,policy.supervisorServiceSid);
-                journal.Grant(taskId,root,policy.workerSid,taskSid); granted=true;
+                worker.Prepare(policy.workerSid,taskSid,policy.supervisorServiceSid,
+                    Native.AppContainerName(taskId,policy.syntheticOnly));
+                journal.Grant(taskId,root,policy.workerSid,taskSid,worker.AppContainerSid); granted=true;
                 // Pin files again immediately before each start.
                 policy.PinWorkerFiles();
                 worker.Start(policy,taskId,taskSid,secret,root);
-                Wire.WriteLine(pipe,"{\"ok\":true}");
+                Wire.WriteLine(pipe,Wire.Json.Serialize(new { ok=true, workerTokenVerified=worker.TokenVerified,
+                    jobObjectKillOnClose=true, appContainerBoundary=true,
+                    appContainerSid=worker.AppContainerSid }));
                 string actual=Wire.ReadLine(pipe);
                 if (!actual.Equals(execute,StringComparison.Ordinal)) throw new PeerRejectedException("Worker start frame changed");
                 Wire.WriteLine(worker.Input,actual);
@@ -207,6 +245,8 @@ internal sealed class PipeHost : IDisposable {
                 var exit=Task.Run(delegate { while (!worker.HasExited) Thread.Sleep(25); });
                 var limit=Task.Delay(timeout+5000);
                 int completed=Task.WaitAny(new Task[] { upstream, downstream, exit, limit });
+                if (policy.syntheticOnly && worker.HasExited)
+                    Console.Error.WriteLine("Synthetic Worker exit code: " + worker.ExitCode);
                 if (completed==2) downstream.Wait(2000); // drain the child's final result before closing its Job
                 if (downstream.IsFaulted) throw downstream.Exception;
                 worker.StopAndWait(); stopped=true;
@@ -265,16 +305,22 @@ internal static class Program {
             uint pid;
             Native.Require(Native.GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(),out pid),
                 "GetNamedPipeServerProcessId");
-            string image=Native.ImagePath(pid);
-            if (!String.Equals(Path.GetFullPath(image),Path.GetFullPath(policy.supervisorImagePath),StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Supervisor image path mismatch");
-            Policy.Pin(image,policy.supervisorImageSha256);
             IntPtr process=Native.OpenProcess(Native.PROCESS_QUERY_LIMITED_INFORMATION,false,pid), token=IntPtr.Zero;
             Native.Require(process!=IntPtr.Zero,"OpenProcess(supervisor)");
             try {
+                uint currentPid;
+                Native.Require(Native.GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(),out currentPid),
+                    "GetNamedPipeServerProcessId(recheck)");
+                if (currentPid!=pid) throw new UnauthorizedAccessException("Supervisor pipe process changed during verification");
+                string image=Native.ImagePath(process);
+                if (!String.Equals(Path.GetFullPath(image),Path.GetFullPath(policy.supervisorImagePath),StringComparison.OrdinalIgnoreCase))
+                    throw new UnauthorizedAccessException("Supervisor image path mismatch");
+                Policy.Pin(image,policy.supervisorImageSha256);
                 Native.Require(Native.OpenProcessToken(process,Native.TOKEN_QUERY,out token),"OpenProcessToken(supervisor)");
                 using (var identity=new WindowsIdentity(token))
-                    if (!identity.User.Value.Equals(policy.workerSid,StringComparison.OrdinalIgnoreCase))
+                    if (!identity.User.Value.Equals(policy.workerSid,StringComparison.OrdinalIgnoreCase)
+                        || (!String.IsNullOrEmpty(policy.supervisorServiceSid)
+                            && !Native.TokenHasSid(token,2,policy.supervisorServiceSid,0x10,0x10)))
                         throw new UnauthorizedAccessException("Supervisor account mismatch");
             } finally { if (token!=IntPtr.Zero) Native.CloseHandle(token); Native.CloseHandle(process); }
             var input=Console.OpenStandardInput(); var output=Console.OpenStandardOutput();
@@ -288,17 +334,18 @@ internal static class Program {
             Task.WaitAny(toServer,toGateway);
         }
     }
-    static void Attest(string userSid,string taskSid,string gatewayAccountSid,string projectRoot,string taskId,string serviceSid) {
+    static void Attest(string userSid,string taskSid,string gatewayAccountSid,string projectRoot,string taskId,
+        string serviceSid,string appContainerSid) {
         IntPtr token;
         Native.Require(Native.OpenProcessToken(Native.GetCurrentProcess(),Native.TOKEN_QUERY,out token),"OpenProcessToken(attest)");
         try {
-            bool verified=Native.VerifyToken(token,userSid,taskSid,true,serviceSid);
+            bool verified=Native.VerifyToken(token,userSid,taskSid,true,serviceSid,IntPtr.Zero,appContainerSid);
             Native.JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
             Native.Require(Native.QueryJobLimits(IntPtr.Zero,9,out limits,
                 (uint)Marshal.SizeOf(typeof(Native.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)),IntPtr.Zero),"QueryInformationJobObject(limits)");
             bool killOnClose=(limits.BasicLimitInformation.LimitFlags & Native.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE)!=0;
             bool separated=!userSid.Equals(gatewayAccountSid,StringComparison.OrdinalIgnoreCase);
-            bool acl=AclJournal.CheckGrant(projectRoot,userSid,taskSid);
+            bool acl=AclJournal.CheckGrant(projectRoot,userSid,taskSid,appContainerSid);
             bool env=Environment.GetEnvironmentVariable("TONG_WORKER_TASK_ID")==taskId
                 && Environment.GetEnvironmentVariable("TONG_WORKER_TASK_SID")==taskSid
                 && Environment.GetEnvironmentVariable("OPENAI_API_KEY")==null
@@ -307,6 +354,7 @@ internal static class Program {
             verified=verified && killOnClose && acl && env && separated;
             Console.WriteLine(Wire.Json.Serialize(new { verified=verified,
                 actualSid=WindowsIdentity.GetCurrent().User.Value, restrictingSid=taskSid,
+                appContainerSid=appContainerSid,
                 restrictedToken=Native.IsTokenRestricted(token), jobObjectKillOnClose=killOnClose,
                 taskAclVerified=acl, cleanEnvironment=env, credentialsSeparated=separated }));
             if (!verified) Environment.ExitCode=2;
@@ -314,17 +362,29 @@ internal static class Program {
     }
     static int Main(string[] args) {
         try {
-            if (args.Length==7 && args[0]=="--attest") { Attest(args[1],args[2],args[3],args[4],args[5],args[6]); return Environment.ExitCode; }
+            if (args.Length==8 && args[0]=="--attest") { Attest(args[1],args[2],args[3],args[4],args[5],args[6],args[7]); return Environment.ExitCode; }
             if (args.Length==4 && args[0]=="--acl-grant-synthetic") {
                 var testPolicy=Policy.Load(args[1],true);
-                using (var journal=new AclJournal(testPolicy.stateRoot))
+                using (var journal=new AclJournal(testPolicy.stateRoot)) {
+                    string appContainerSid=Native.DeriveAppContainerSid(Native.AppContainerName(args[2],true));
                     journal.Grant(args[2],testPolicy.RootFor(args[3],testPolicy.projectRoots[args[3]]),
-                        testPolicy.workerSid,PipeHost.TaskSid(args[2]));
+                        testPolicy.workerSid,PipeHost.TaskSid(args[2]),appContainerSid);
+                }
                 return 0;
             }
             if (args.Length==2 && args[0]=="--acl-recover-synthetic") {
                 var testPolicy=Policy.Load(args[1],true);
                 using (var journal=new AclJournal(testPolicy.stateRoot)) journal.Recover();
+                return 0;
+            }
+            if (args.Length==1 && args[0]=="--appcontainer-sid-synthetic") {
+                Native.EnsureAppContainerProfile("TongDesktopControlNativeSynthetic",new[] {
+                    Native.WINSOCK_CATALOG_READ_SID });
+                Console.WriteLine(Native.DeriveAppContainerSid("TongDesktopControlNativeSynthetic"));
+                return 0;
+            }
+            if (args.Length==1 && args[0]=="--appcontainer-delete-synthetic") {
+                Native.DeleteAppContainerProfile("TongDesktopControlNativeSynthetic");
                 return 0;
             }
             if (args.Length!=2) throw new InvalidOperationException("Expected --service, --serve, --bridge or synthetic equivalent and an absolute policy path");

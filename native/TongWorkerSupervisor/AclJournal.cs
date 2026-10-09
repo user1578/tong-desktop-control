@@ -10,6 +10,7 @@ internal sealed class AclRecord {
     public string taskId { get; set; }
     public string path { get; set; }
     public string identity { get; set; }
+    public string appContainerSid { get; set; }
     public string original { get; set; }
     public string applied { get; set; }
 }
@@ -37,10 +38,10 @@ internal sealed class AclJournal : IDisposable {
             if (parent == part) break;
         }
     }
-    internal static bool CheckGrant(string path, string workerSid, string taskSid) {
+    internal static bool CheckGrant(string path, string workerSid, string taskSid, string appContainerSid) {
         ValidatePath(path);
         var security = Directory.GetAccessControl(path, AccessControlSections.Access);
-        bool worker=false, task=false;
+        bool worker=false, task=false, appContainer=false;
         foreach (FileSystemAccessRule rule in security.GetAccessRules(true, false, typeof(SecurityIdentifier))) {
             if (rule.AccessControlType != AccessControlType.Allow
                 || (rule.FileSystemRights & FileSystemRights.Modify) != FileSystemRights.Modify
@@ -49,8 +50,9 @@ internal sealed class AclJournal : IDisposable {
             string sid=((SecurityIdentifier)rule.IdentityReference).Value;
             if (sid.Equals(workerSid,StringComparison.OrdinalIgnoreCase)) worker=true;
             if (sid.Equals(taskSid,StringComparison.OrdinalIgnoreCase)) task=true;
+            if (sid.Equals(appContainerSid,StringComparison.OrdinalIgnoreCase)) appContainer=true;
         }
-        return worker && task;
+        return worker && task && appContainer;
     }
     string RecordPath(string taskId) {
         Guid id;
@@ -80,18 +82,19 @@ internal sealed class AclJournal : IDisposable {
         var record = json.Deserialize<AclRecord>(File.ReadAllText(file, Encoding.UTF8));
         if (record == null || String.IsNullOrEmpty(record.path) || String.IsNullOrEmpty(record.identity)
             || String.IsNullOrEmpty(record.original) || String.IsNullOrEmpty(record.applied)
+            || String.IsNullOrEmpty(record.appContainerSid)
             || !String.Equals(file, RecordPath(record.taskId), StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("ACL journal record invalid");
         return record;
     }
-    internal void Grant(string taskId, string path, string workerSid, string taskSid) {
+    internal void Grant(string taskId, string path, string workerSid, string taskSid, string appContainerSid) {
         ValidatePath(path);
         path = Path.GetFullPath(path);
         string file = RecordPath(taskId);
         if (File.Exists(file)) throw new InvalidOperationException("Task ACL already active");
         string original = CurrentDacl(path);
         var security = Directory.GetAccessControl(path, AccessControlSections.Access);
-        foreach (string sid in new[] { workerSid, taskSid }) {
+        foreach (string sid in new[] { workerSid, taskSid, appContainerSid }) {
             security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(sid),
                 FileSystemRights.Modify | FileSystemRights.Synchronize,
                 InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
@@ -99,6 +102,7 @@ internal sealed class AclJournal : IDisposable {
         }
         string applied = security.GetSecurityDescriptorSddlForm(AccessControlSections.Access);
         var record = new AclRecord { taskId=taskId, path=path, identity=Native.FileIdentity(path),
+            appContainerSid=appContainerSid,
             original=original, applied=applied };
         Save(file, record);
         try {

@@ -81,6 +81,7 @@ export function createNativeWorkerSupervisor({ executablePath, executableSha256,
   const launchWorker = async ({ taskId, timeoutMs, bootstrapSecret }) => {
     let child;
     let stdio;
+    let isolation;
     let closed = false;
     let aborted = false;
     let launchedProject;
@@ -103,6 +104,7 @@ export function createNativeWorkerSupervisor({ executablePath, executableSha256,
       }
     };
     return {
+      get isolation() { return isolation; },
       async runTask(envelope, secret, callbacks) {
         if (closed || child) throw new Error("Native Worker session is already used");
         const payload = verifySignedWorkerEnvelope(envelope, secret, { expectedTaskId: taskId });
@@ -111,11 +113,12 @@ export function createNativeWorkerSupervisor({ executablePath, executableSha256,
         }
         const executeFrame = JSON.stringify({ protocolVersion: 1, kind: "execute", taskId, envelope });
         launchedProject = { projectId: payload.projectId, projectRoot: payload.projectRoot };
-        await send({ kind: "launch", taskId, timeoutMs, bootstrapSecret,
+        const launched = await send({ kind: "launch", taskId, timeoutMs, bootstrapSecret,
           payloadJson: JSON.stringify(envelope.payload), executeFrame }, (pending) => {
           child = pending;
           if (aborted || closed) pending.kill();
         });
+        isolation = launched.response;
         if (aborted || closed) { await stop(true); throw new Error("Native Worker launch was cancelled"); }
         stdio = new TongWorkerStdioSession({ input: child.stdout, output: child.stdin,
           terminateJobObject: () => stop(true), closeProcess: () => stop(false) });

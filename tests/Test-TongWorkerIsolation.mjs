@@ -43,6 +43,7 @@ function isolationSnapshot(overrides = {}) {
     gatewaySid: "S-1-5-21-100-200-300-1001",
     workerSid: "S-1-5-21-100-200-300-1002",
     restrictingSid: "S-1-5-21-100-200-300-19001",
+    appContainerSid: "S-1-15-2-19001",
     ipcPeerSid: "S-1-5-21-100-200-300-1001",
     taskId,
     projectId: project.id,
@@ -53,6 +54,7 @@ function isolationSnapshot(overrides = {}) {
     cleanEnvironment: true,
     jobObjectKillOnClose: true,
     privateIpcAuthenticated: true,
+    appContainerBoundary: true,
     ...overrides,
   };
 }
@@ -76,6 +78,8 @@ try {
   for (const badSnapshot of [
     isolationSnapshot({ workerSid: isolationSnapshot().gatewaySid }),
     isolationSnapshot({ restrictedToken: false }),
+    isolationSnapshot({ appContainerBoundary: false }),
+    isolationSnapshot({ appContainerSid: undefined }),
     isolationSnapshot({ taskAclVerified: false }),
     isolationSnapshot({ ipcPeerSid: "S-1-5-21-100-200-300-9999" }),
     isolationSnapshot({ projectRoot: otherProject }),

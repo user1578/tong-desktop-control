@@ -1,5 +1,5 @@
-import { spawn, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createInterface } from "node:readline";
 
@@ -22,9 +22,12 @@ if (process.argv[2] === "--linger") {
   }));
 } else {
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
-  lines.once("line", (line) => {
+  lines.once("line", async (line) => {
+    process.stderr.write("fixture: request received\n");
     const request = JSON.parse(line);
     const project = request.envelope.payload.projectRoot;
+    writeFileSync(join(project, "worker-started.canary"), "started");
+    process.stderr.write("fixture: wrote project canary\n");
     if (request.envelope.payload.prompt === "hang") {
       const linger = spawn(process.execPath, [process.argv[1], "--linger"],
         { stdio: "ignore", windowsHide: true });
@@ -42,21 +45,48 @@ if (process.argv[2] === "--linger") {
       environmentSecretAbsent: !process.env.OPENAI_API_KEY && !process.env.CODEX_ACCESS_TOKEN
         && !process.env.TONG_SYNTHETIC_SECRET_CANARY,
     };
-    for (const name of ["other", "private", "auth"]) {
+    for (const name of ["other", "private", "auth", "everyone", "users",
+      "all-app-packages", "all-restricted-packages"]) {
       for (const action of ["read", "write", "delete"]) {
         results[`${name}${action}`] = tryFile(join(parent, name, "canary.txt"), action);
       }
     }
-    const attestation = spawnSync(process.env.TONG_WORKER_NATIVE,
-      ["--attest", process.env.TONG_WORKER_SID, process.env.TONG_WORKER_TASK_SID,
-        process.env.TONG_GATEWAY_ACCOUNT_SID, project, process.env.TONG_WORKER_TASK_ID,
-        process.env.TONG_SUPERVISOR_SERVICE_SID],
-      { encoding: "utf8", timeout: 10_000, windowsHide: true });
-    results.token = JSON.parse(attestation.stdout);
-    const child = spawnSync(process.execPath, [process.argv[1], "--child", project],
-      { timeout: 10_000, windowsHide: true });
+    process.stderr.write("fixture: completed filesystem probes\n");
+    process.stderr.write("fixture: starting child process probe\n");
+    const child = await new Promise((resolve) => {
+      const launched = spawn(process.execPath, [process.argv[1], "--child", project],
+        { stdio: "ignore", windowsHide: true });
+      let settled = false;
+      const finish = (result) => { if (!settled) { settled = true; clearTimeout(timer); resolve(result); } };
+      const timer = setTimeout(() => { launched.kill(); finish({ status: null, error: "child process timed out" }); }, 10_000);
+      launched.once("error", (error) => finish({ status: null, error: error.message }));
+      launched.once("close", (status) => finish({ status, error: null }));
+    });
+    process.stderr.write(`fixture: child ${child.status} ${child.error || ""}\n`);
     results.childExitCode = child.status;
-    results.child = JSON.parse(readFileSync(join(project, "child.json"), "utf8"));
+    results.child = existsSync(join(project, "child.json"))
+      ? JSON.parse(readFileSync(join(project, "child.json"), "utf8")) : null;
+    const version = (executable, args) => new Promise((resolve) => {
+      let settled = false;
+      const child = spawn(executable, args, { stdio: "ignore", windowsHide: true });
+      const finish = (result) => { if (!settled) { settled = true; clearTimeout(timer); resolve(result); } };
+      const timer = setTimeout(() => {
+        process.stderr.write(`fixture: runtime timeout pid=${child.pid || "none"}\n`);
+        child.kill(); finish({ exitCode: null, started: false, error: "runtime probe timed out" });
+      }, 10_000);
+      child.once("spawn", () => process.stderr.write(`fixture: runtime spawned pid=${child.pid}\n`));
+      child.once("error", (error) => finish({ exitCode: null, started: false, error: error.message }));
+      child.once("close", (exitCode) => finish({ exitCode, started: exitCode === 0, error: null }));
+    });
+    results.runtimeVersions = {};
+    for (const [name, executable, args] of [
+      ["node", process.execPath, ["--version"]], ["git", "git.exe", ["--version"]],
+      ["python", "python.exe", ["--version"]], ["codex", process.env.TONG_WORKER_CODEX, ["--version"]],
+    ]) {
+      process.stderr.write(`fixture: starting runtime ${name}\n`);
+      results.runtimeVersions[name] = await version(executable, args);
+      process.stderr.write(`fixture: ${name} ${results.runtimeVersions[name].exitCode} ${results.runtimeVersions[name].error || ""}\n`);
+    }
     const linger = spawn(process.execPath, [process.argv[1], "--linger"],
       { stdio: "ignore", windowsHide: true });
     results.lingerPid = linger.pid;

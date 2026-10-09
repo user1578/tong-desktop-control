@@ -145,7 +145,8 @@ export function assertWorkerIsolationSnapshot(snapshot, expected = {}) {
   if (snapshot.gatewaySid.toLowerCase() === snapshot.workerSid.toLowerCase()) fail("Worker must run under a separate Windows identity");
   try { assertWorkerIpcPeer({ peerSid: snapshot.ipcPeerSid, expectedPeerSid: snapshot.gatewaySid }); }
   catch { fail("IPC peer does not match the trusted Gateway identity"); }
-  for (const flag of ["restrictedToken", "credentialsSeparated", "cleanEnvironment", "jobObjectKillOnClose", "privateIpcAuthenticated"]) {
+  for (const flag of ["restrictedToken", "credentialsSeparated", "cleanEnvironment", "jobObjectKillOnClose",
+    "privateIpcAuthenticated", "appContainerBoundary"]) {
     if (snapshot[flag] !== true) fail(`${flag} is not verified`);
   }
   if (expected.projectId !== undefined && snapshot.projectId !== expected.projectId) fail("project identity mismatch");
@@ -155,6 +156,9 @@ export function assertWorkerIsolationSnapshot(snapshot, expected = {}) {
   if (expected.requireTaskAcl === true) {
     if (snapshot.taskAclVerified !== true) fail("task project ACL is not verified");
     if (typeof snapshot.restrictingSid !== "string" || !SID.test(snapshot.restrictingSid)) fail("task restricting SID is missing");
+    if (typeof snapshot.appContainerSid !== "string" || !snapshot.appContainerSid.startsWith("S-1-15-2-")) {
+      fail("task AppContainer SID is missing");
+    }
     if ([snapshot.gatewaySid, snapshot.workerSid].some((sid) => sid.toLowerCase() === snapshot.restrictingSid.toLowerCase())) {
       fail("task restricting SID is not unique");
     }
