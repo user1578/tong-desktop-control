@@ -276,6 +276,17 @@ try {
   assert.equal(recoveredStatus.resumeAvailable, true,
     "restart recovery must preserve the saved session and must not report process liveness as success");
   await recovered.close();
+  await (await import("node:fs/promises")).writeFile(recoveryPath, JSON.stringify({ schemaVersion: 1, tasks: [
+    { taskId: "pending-no-session", projectId: "authorized", agent: "codex", status: "waiting_user_action",
+      pendingApproval: true, codexSessionId: null, logs: [], createdAt: new Date().toISOString() },
+    { taskId: "pending-saved-session", projectId: "authorized", agent: "codex", status: "waiting_user_action",
+      pendingApproval: true, codexSessionId: "saved-thread", continuationMessage: "continue", logs: [],
+      createdAt: new Date().toISOString() },
+  ] }), "utf8");
+  const pendingRecovered = new TongAgentTaskManager({ access, statePath: recoveryPath });
+  assert.equal((await pendingRecovered.status("pending-no-session")).status, "failed");
+  assert.equal((await pendingRecovered.status("pending-saved-session")).resumeAvailable, true);
+  await pendingRecovered.close();
   console.log("PASS: task authorization, idempotency, persistence, bounded redacted logs, results, resume, and timeout cleanup.");
 } finally {
   await manager.close();

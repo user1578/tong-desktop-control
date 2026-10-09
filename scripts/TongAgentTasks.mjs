@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdir, open, readFile, rename } from "node:fs/promises";
+import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
 import { TongWorkerBroker } from "./TongWorkerBroker.mjs";
+import { TongTrustedPolicy, TongTrustedCodexBroker, TongExecutorRouter } from "./TongTrustedCodexBroker.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_STATE_PATH = resolve(projectRoot, "runtime", "agent-tasks.json");
@@ -48,6 +50,7 @@ function publicTask(task, now = Date.now()) {
     taskId: task.taskId,
     projectId: task.projectId,
     agent: task.agent,
+    executorMode: task.executorMode ?? "isolated",
     status: task.status,
     createdAt: task.createdAt,
     startedAt: task.startedAt,
@@ -148,14 +151,20 @@ export class TongAgentTaskManager {
     if (!access || typeof access.authorize !== "function" || typeof access.listProjects !== "function") {
       throw new TypeError("TongAgentTaskManager requires project access");
     }
-    workerBroker ??= new TongWorkerBroker({ access });
+    if (!workerBroker) {
+      const policy = new TongTrustedPolicy({ taskStatePath: statePath });
+      workerBroker = new TongExecutorRouter({ policy, isolated: new TongWorkerBroker({ access }),
+        trusted: new TongTrustedCodexBroker({ access, policy }) });
+    }
     if (!workerBroker || typeof workerBroker.preflight !== "function" || typeof workerBroker.runTask !== "function") {
-      throw new TypeError("TongAgentTaskManager requires an isolated Worker broker");
+      throw new TypeError("TongAgentTaskManager requires an Executor broker");
     }
     if (!isAbsolute(statePath)) throw new Error("Task state path must be absolute");
     this.access = access;
     this.workerBroker = workerBroker;
     this.statePath = resolve(statePath);
+    this.managerLockPath = `${this.statePath}.manager.lock`;
+    this.managerLock = null;
     this.maxConcurrent = Math.max(1, Math.min(Number.isInteger(maxConcurrent) ? maxConcurrent : 2, MAX_PARALLEL_TASKS));
     this.defaultTimeoutMs = Math.max(1_000, Math.min(Number.isFinite(defaultTimeoutMs) ? defaultTimeoutMs : 30 * 60 * 1_000,
       maxTaskRuntimeMs));
@@ -174,6 +183,29 @@ export class TongAgentTaskManager {
   }
 
   async initialize() {
+    await mkdir(dirname(this.managerLockPath), { recursive: true });
+    try { this.managerLock = await open(this.managerLockPath, "wx", 0o600); }
+    catch (error) {
+      if (error?.code === "EEXIST") throw new Error("Task state is already owned by another manager");
+      throw error;
+    }
+    try {
+      await this.managerLock.writeFile(`${JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() })}\n`);
+      await this.loadState();
+    } catch (error) {
+      await this.releaseManagerLock();
+      throw error;
+    }
+  }
+
+  async releaseManagerLock() {
+    if (!this.managerLock) return;
+    await this.managerLock.close();
+    this.managerLock = null;
+    await unlink(this.managerLockPath);
+  }
+
+  async loadState() {
     try {
       this.document = JSON.parse(await readFile(this.statePath, "utf8"));
       if (!validDocument(this.document)) throw new Error("Invalid task state document");
@@ -186,9 +218,22 @@ export class TongAgentTaskManager {
     for (const task of this.document.tasks) {
       if (task.status === "running") {
         task.status = task.codexSessionId ? "waiting_user_action" : "failed";
+        task.pendingApproval = false;
         task.error = task.codexSessionId
           ? { message: "Task manager restarted while Codex was running.", suggestion: "Use tong_agent_resume to continue the saved Codex session." }
           : { message: "Task manager restarted before a Codex session was saved.", suggestion: "Submit a new request with a new idempotency key after checking project state." };
+        task.updatedAt = timestamp;
+        if (!task.codexSessionId) task.finishedAt = timestamp;
+        recovered = true;
+      } else if (task.status === "waiting_user_action" && task.pendingApproval) {
+        task.status = task.codexSessionId ? "waiting_user_action" : "failed";
+        task.pendingApproval = false;
+        task.continuationMessage = null;
+        task.error = task.codexSessionId
+          ? { message: "Task manager restarted before local approval was consumed.",
+            suggestion: "Review the saved Codex session and use tong_agent_resume to request a new local approval." }
+          : { message: "Task manager restarted before local approval and Codex session creation.",
+            suggestion: "Review project state and submit a new request with a new idempotency key." };
         task.updatedAt = timestamp;
         if (!task.codexSessionId) task.finishedAt = timestamp;
         recovered = true;
@@ -219,8 +264,15 @@ export class TongAgentTaskManager {
     const handle = await open(temporary, "wx", 0o600);
     try { await handle.writeFile(`${JSON.stringify(this.document)}\n`, "utf8"); }
     finally { await handle.close(); }
-    try { await rename(temporary, this.statePath); }
-    catch (error) { throw new Error(`Could not save task state: ${error.code ?? "unknown"}`); }
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try { await rename(temporary, this.statePath); return; }
+      catch (error) {
+        if (process.platform !== "win32" || !["EPERM", "EACCES"].includes(error?.code) || attempt === 19) {
+          throw new Error(`Could not save task state: ${error.code ?? "unknown"}`);
+        }
+        await delay(10);
+      }
+    }
   }
 
   async ensureOpen() {
@@ -244,7 +296,7 @@ export class TongAgentTaskManager {
     await this.ensureOpen();
     const request = normalizeRequest(input);
     const project = await this.projectForExecution(request.projectId);
-    await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
+    const preflight = await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
     const idempotencyHash = digest(request.idempotencyKey);
     const requestHash = digest(JSON.stringify({ ...request, idempotencyKey: undefined }));
     return this.withLock(async () => {
@@ -257,7 +309,8 @@ export class TongAgentTaskManager {
       const timeoutMs = Math.min((request.timeoutSeconds ?? this.defaultTimeoutMs / 1_000) * 1_000, this.maxTaskRuntimeMs);
       const task = {
         taskId: randomUUID(), idempotencyHash, requestHash,
-        projectId: request.projectId, agent: request.agent, task: request.task, scope: request.scope,
+        projectId: request.projectId, projectRoot: project.root, agent: request.agent,
+        executorMode: preflight?.mode ?? "isolated", task: request.task, scope: request.scope,
         timeoutMs, status: "queued", createdAt, startedAt: null, updatedAt: createdAt, finishedAt: null,
         codexSessionId: null, pendingApproval: false, resumeCount: 0, summary: null, result: null, error: null,
         baselineFiles: [], logs: [], logBytes: 0, logsTruncated: false,
@@ -345,8 +398,11 @@ export class TongAgentTaskManager {
       current.controller.abort(new Error("Task timed out"));
     }, timeoutMs);
     timeout.unref?.();
+    const pendingLogs = [];
     try {
       const project = await this.projectForExecution(task.projectId);
+      await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
+        executorMode: task.executorMode ?? "isolated" });
       await this.updateTask(taskId, (record) => {
         record.status = "running";
         record.startedAt ??= new Date(this.now()).toISOString();
@@ -366,7 +422,8 @@ export class TongAgentTaskManager {
       const result = await this.workerBroker.runTask({
         taskId, projectId: project.id, cwd: project.root, task: current.task, scope: current.scope,
         prompt: instructions, timeoutMs, threadId: current.codexSessionId ?? undefined,
-        continuationMessage,
+        continuationMessage, ...(this.workerBroker instanceof TongExecutorRouter
+          ? { executorMode: task.executorMode ?? "isolated", resumeCount: current.resumeCount ?? 0 } : {}),
       }, {
         signal: controller.signal,
         onSessionId: async (id) => {
@@ -374,11 +431,22 @@ export class TongAgentTaskManager {
             await this.updateTask(taskId, (record) => { record.codexSessionId = id; });
           }
         },
-        onLog: (message, kind = "output") => { void this.addLog(taskId, kind, message); },
+        onLog: (message, kind = "output") => {
+          const writing = this.addLog(taskId, kind, message);
+          pendingLogs.push(writing);
+          void writing.catch(() => {});
+          return writing;
+        },
         onState: (state) => {
-          if (state === "waiting_user_action") void this.updateTask(taskId, (record) => { record.status = state; });
+          if (state === "waiting_user_action" || state === "running") {
+            return this.updateTask(taskId, (record) => {
+              record.status = state;
+              record.pendingApproval = state === "waiting_user_action" && task.executorMode === "trusted-windows";
+            });
+          }
         },
       });
+      await Promise.all(pendingLogs);
       const execution = this.active.get(taskId);
       const finishedAt = new Date(this.now()).toISOString();
       const gitResult = await this.collectResult(project.root, current.baselineFiles);
@@ -410,6 +478,7 @@ export class TongAgentTaskManager {
         record.continuationMessage = null;
       });
     } catch (error) {
+      await Promise.allSettled(pendingLogs);
       const execution = this.active.get(taskId);
       const finishedAt = new Date(this.now()).toISOString();
       await this.addLog(taskId, "error", error instanceof Error ? error.message : "Codex adapter failed");
@@ -438,6 +507,7 @@ export class TongAgentTaskManager {
 
   async status(taskId) {
     await this.ensureOpen();
+    await this.lock;
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) throw new Error("Task not found");
     return publicTask(task, this.now());
@@ -445,6 +515,7 @@ export class TongAgentTaskManager {
 
   async list({ limit = 50, cursor } = {}) {
     await this.ensureOpen();
+    await this.lock;
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_TASK_PAGE_SIZE) throw new Error("Invalid task limit");
     const offset = decodeCursor(cursor, "task-list", "list");
     const tasks = [...this.document.tasks].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -456,6 +527,7 @@ export class TongAgentTaskManager {
 
   async logs({ taskId, limit = 50, cursor } = {}) {
     await this.ensureOpen();
+    await this.lock;
     if (typeof taskId !== "string") throw new Error("Invalid task id");
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LOG_PAGE_SIZE) throw new Error("Invalid log limit");
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
@@ -496,7 +568,8 @@ export class TongAgentTaskManager {
       throw new Error("Task has no resumable Codex session");
     }
     const project = await this.projectForExecution(task.projectId);
-    await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
+    await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
+      executorMode: task.executorMode ?? "isolated" });
     await this.updateTask(taskId, (record) => {
       record.status = "queued";
       record.updatedAt = new Date(this.now()).toISOString();
@@ -511,6 +584,7 @@ export class TongAgentTaskManager {
 
   async result(taskId) {
     await this.ensureOpen();
+    await this.lock;
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) throw new Error("Task not found");
     return {
@@ -536,5 +610,6 @@ export class TongAgentTaskManager {
       }
     }
     await Promise.allSettled([...this.runningPromises.values()]);
+    await this.releaseManagerLock();
   }
 }

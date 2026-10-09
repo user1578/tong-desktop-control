@@ -28,6 +28,10 @@ const AGENT_ERRORS = new Set([
   "Project is missing, disabled, or unavailable",
   "Authorized project root is invalid",
   "Worker execution is disabled until a verified Windows isolation launcher is configured",
+  "Trusted Codex execution is disabled locally",
+  "Trusted project grant is missing",
+  "Trusted project is unavailable or mismatched",
+  "Project must have agent.execute before a trusted grant",
   "Task not found",
   "Task has no resumable Codex session",
   "Invalid resume message",
@@ -86,7 +90,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks) {
 
   registerTool(server, "tong_agent_start", {
     title: "Start a Codex project task",
-    description: "Queue one Codex task for a project with an independent agent.execute grant. Requires an idempotency key, declared scope, and a bounded timeout. Real Codex execution remains disabled until operating-system isolation is verified.",
+    description: "Queue one Codex task for a locally authorized project. Trusted Windows execution also requires a separate local project grant and per-task local approval. Requires an idempotency key, scope, and bounded timeout.",
     inputSchema: {
       projectId: z.string().min(2).max(40).describe("Registered local project ID with an independent agent.execute grant."),
       agent: z.enum(["codex"]).describe("Agent to use. This phase supports Codex only."),
