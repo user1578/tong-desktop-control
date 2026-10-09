@@ -551,6 +551,7 @@ function upstreamOptions(req, body, upstreamPort) {
   return {
     hostname: UPSTREAM_HOST,
     port: upstreamPort,
+    agent: false,
     method: req.method,
     path: req.url,
     headers,

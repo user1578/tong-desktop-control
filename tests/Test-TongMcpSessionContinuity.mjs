@@ -18,6 +18,8 @@ const upstreamCalls = [];
 const forwardedForHeaders = [];
 const diagnostics = [];
 const gatewayRequestSockets = [];
+const upstreamRequestSockets = [];
+const upstreamConnectionHeaders = [];
 const agents = new Set();
 const continuityAgent = new Agent({ keepAlive: true, maxSockets: 1 });
 agents.add(continuityAgent);
@@ -28,10 +30,18 @@ function createKeepAliveAgent() {
   return agent;
 }
 const upstream = createServer((req, res) => {
+  upstreamRequestSockets.push(req.socket);
+  upstreamConnectionHeaders.push(req.headers.connection);
   void (async () => {
     if (req.method === "GET" && req.url === "/authorize") {
       res.writeHead(400);
       res.end();
+      return;
+    }
+    if (req.method === "GET" && req.url === "/mcp") {
+      assert.equal(req.headers["mcp-session-id"], sessionId);
+      res.writeHead(200, { "content-type": "text/event-stream", "mcp-session-id": sessionId });
+      res.end(": synthetic stream ready\n\n");
       return;
     }
     forwardedForHeaders.push(req.headers["x-forwarded-for"]);
@@ -44,6 +54,7 @@ const upstream = createServer((req, res) => {
       sessionId = "synthetic-session-1";
       res.writeHead(200, {
         "content-type": "application/json",
+        connection: "keep-alive",
         "mcp-session-id": sessionId,
       });
       res.end(JSON.stringify({
@@ -194,7 +205,18 @@ try {
   assert.equal(clientSessionId, "synthetic-session-1");
   const sessionHeaders = { "mcp-session-id": clientSessionId, "mcp-protocol-version": "2025-11-25" };
 
-  assert.equal((await send({ jsonrpc: "2.0", method: "notifications/initialized" }, sessionHeaders)).status, 202);
+  const notification = await send({ jsonrpc: "2.0", method: "notifications/initialized" }, sessionHeaders);
+  const initialAssignments = diagnostics.filter((entry) => entry.event === "upstream_socket_assigned");
+  assert.equal(initialAssignments[0].reusedSocket, false);
+  assert.equal(initialAssignments[1].reusedSocket, false, "Gateway must not reuse the DevSpace socket after sending Connection: close");
+  assert.equal(notification.status, 202);
+  assert.equal(upstreamRequestSockets.length, 2);
+  assert.notEqual(
+    upstreamRequestSockets[0],
+    upstreamRequestSockets[1],
+    "initialized notification must use a new DevSpace socket after initialize declared Connection: close",
+  );
+  assert.deepEqual(upstreamConnectionHeaders.slice(0, 2), ["close", "close"]);
   const listed = await send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }, sessionHeaders);
   assert.deepEqual(listed.body.result.tools.map(({ name }) => name), ["open_workspace", "read", "write", "edit"]);
 
@@ -232,6 +254,13 @@ try {
   assert.equal(flowSockets.length, 10);
   assert.equal(new Set(flowSockets).size, 1, "all MCP requests in one client flow must use the same inbound HTTP connection");
   assert.ok((await call(10, "read", { path: "continuity.txt" })).eventStream);
+
+  const sseGet = await fetch(baseUrl, {
+    headers: { accept: "text/event-stream", "mcp-session-id": clientSessionId, authorization: "Bearer synthetic-diagnostic-secret" },
+  });
+  assert.equal(sseGet.status, 200);
+  assert.match(sseGet.headers.get("content-type"), /text\/event-stream/);
+  assert.equal(await sseGet.text(), ": synthetic stream ready\n\n");
 
   continuityAgent.destroy();
   const reconnectAgent = createKeepAliveAgent();
@@ -335,6 +364,11 @@ const oauthRouteTrace = diagnostics.find(
   (entry) => entry.event === "upstream_response" && entry.path === "/authorize",
 );
 assert.equal(oauthRouteTrace.authOutcome, "not_applicable");
+const upstreamAssignments = diagnostics.filter((entry) => entry.event === "upstream_socket_assigned");
+assert.ok(upstreamAssignments.every((entry) => entry.reusedSocket === false), "no Gateway to DevSpace request may reuse a closing socket");
+assert.equal(new Set(upstreamRequestSockets).size, upstreamRequestSockets.length);
+assert.ok(upstreamConnectionHeaders.every((value) => value === "close"));
+console.log("PASS: every Gateway to DevSpace request uses a fresh TCP socket while preserving Connection: close.");
 
 const callResponses = diagnostics.filter(
   (entry) => entry.event === "upstream_response" && entry.mcpMethods?.includes("tools/call"),
