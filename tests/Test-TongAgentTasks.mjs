@@ -287,6 +287,15 @@ try {
   assert.equal((await pendingRecovered.status("pending-no-session")).status, "failed");
   assert.equal((await pendingRecovered.status("pending-saved-session")).resumeAvailable, true);
   await pendingRecovered.close();
+  const staleStatePath = join(temporaryRoot, "stale-state.json");
+  const staleLockPath = `${staleStatePath}.manager.lock`;
+  await (await import("node:fs/promises")).writeFile(staleLockPath,
+    JSON.stringify({ pid: 2147483647, startedAt: "2020-01-01T00:00:00.000Z" }), "utf8");
+  const staleManager = new TongAgentTaskManager({ access, statePath: staleStatePath });
+  await staleManager.ready;
+  await staleManager.close();
+  await assert.rejects(readFile(staleLockPath), { code: "ENOENT" },
+    "a dead manager lock must be recovered and released");
   console.log("PASS: task authorization, idempotency, persistence, bounded redacted logs, results, resume, and timeout cleanup.");
 } finally {
   await manager.close();

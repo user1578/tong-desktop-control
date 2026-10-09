@@ -184,11 +184,7 @@ export class TongAgentTaskManager {
 
   async initialize() {
     await mkdir(dirname(this.managerLockPath), { recursive: true });
-    try { this.managerLock = await open(this.managerLockPath, "wx", 0o600); }
-    catch (error) {
-      if (error?.code === "EEXIST") throw new Error("Task state is already owned by another manager");
-      throw error;
-    }
+    await this.acquireManagerLock();
     try {
       await this.managerLock.writeFile(`${JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() })}\n`);
       await this.loadState();
@@ -196,6 +192,50 @@ export class TongAgentTaskManager {
       await this.releaseManagerLock();
       throw error;
     }
+  }
+
+  async acquireManagerLock() {
+    const recoveryPath = `${this.managerLockPath}.recovery`;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      try {
+        this.managerLock = await open(this.managerLockPath, "wx", 0o600);
+        return;
+      } catch (error) {
+        if (error?.code !== "EEXIST") throw error;
+      }
+      let recovery;
+      try { recovery = await open(recoveryPath, "wx", 0o600); }
+      catch (error) {
+        if (error?.code !== "EEXIST") throw error;
+        await delay(50);
+        continue;
+      }
+      try {
+        let owner;
+        try { owner = JSON.parse(await readFile(this.managerLockPath, "utf8")); }
+        catch (error) {
+          if (error?.code === "ENOENT") continue;
+          throw new Error("Task manager lock is invalid; inspect it locally before recovery");
+        }
+        if (!Number.isSafeInteger(owner?.pid) || owner.pid < 1) {
+          throw new Error("Task manager lock is invalid; inspect it locally before recovery");
+        }
+        try { process.kill(owner.pid, 0); }
+        catch (error) {
+          if (error?.code !== "ESRCH") throw new Error("Task state is already owned by another manager");
+          const stalePath = `${this.managerLockPath}.${randomUUID()}.stale`;
+          try { await rename(this.managerLockPath, stalePath); }
+          catch (moveError) { if (moveError?.code !== "ENOENT") throw moveError; continue; }
+          await unlink(stalePath);
+          continue;
+        }
+        throw new Error("Task state is already owned by another manager");
+      } finally {
+        await recovery.close();
+        await unlink(recoveryPath);
+      }
+    }
+    throw new Error("Task manager lock recovery is busy; retry locally");
   }
 
   async releaseManagerLock() {
