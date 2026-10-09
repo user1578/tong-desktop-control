@@ -55,7 +55,7 @@ try {
   await access.grantAgentExecution("registered");
   const disabledStart = await client.callTool({ name: "tong_agent_start", arguments: startRequest });
   assert.equal(disabledStart.isError, true);
-  assert.ok(disabledStart.content[0].text.includes("isolation is verified"));
+  assert.ok(disabledStart.content[0].text.includes("Worker execution is disabled"));
   assert.deepEqual((await client.callTool({ name: "tong_agent_list", arguments: {} })).structuredContent.tasks, []);
   assert.equal(await readFile(join(scanRoot, "sample.txt"), "utf8"), "SYNTHETIC_FILE_BODY");
   console.log("PASS: MCP tool handlers expose bounded metadata and effective project permissions only.");

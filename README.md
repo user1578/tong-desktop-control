@@ -67,6 +67,10 @@ Task state is atomically saved in ignored `runtime\agent-tasks.json`. The manage
 
 The local Windows probe showed that Codex's `:workspace` sandbox could read and write a synthetic file under `%TEMP%` outside the project root. This does not isolate project files from the current Windows account. Real execution stays disabled until a separate low-privilege identity or an equivalent OS boundary is configured and verified against project and private-file canaries. No Windows account or ACL changes were made.
 
+### P2.2 Windows Worker isolation (Stage A)
+
+Branch `codex/p2-worker-isolation` adds a fail-closed Worker Broker, authenticated private-stdio protocol, fixed-executable Worker, and synthetic restricted-token canaries. The Windows canary probe passed for authorized project access, outside read/write/delete denial, junction denial, child-process inheritance, Job Object kill-on-close, and a clean Worker environment. The probe changed ACLs only inside its temporary synthetic tree and removed that tree. **No real Worker launcher is configured; real Codex execution remains disabled, and no account, service, or project ACL was changed.** The Stage B account/service/ACL/authentication plan and plan-only scripts are in [docs/P2.2-Worker-Isolation-StageB.md](docs/P2.2-Worker-Isolation-StageB.md).
+
 The gateway stdout log contains redacted JSON request traces. Correlate `requestId` across `request_start`, `mcp_request`, `upstream_*`, and `request_finish`; pair the upstream interval with DevSpace's request log by UTC time, method, path, and status. `http_client_error` records HTTP parser rejects that never reach the gateway request handler. Gateway traces omit authorization values, cookies, request/response bodies, tool arguments, and raw MCP session IDs; session IDs appear only as short hashes in those traces.
 
 When the shell inherits HTTP proxy variables, the launcher clears them only in the ngrok child process because this ngrok free endpoint rejects proxy connections. The parent environment and ngrok config remain unchanged.
@@ -81,6 +85,11 @@ Edit only `config\tong.config.json` and change `publicOrigin` to the new HTTPS o
 & '.\tests\Test-TongConfiguration.ps1'
 & '.\tests\Test-TongPortListenerArray.ps1'
 pwsh -NoProfile -ExecutionPolicy Bypass -File '.\tests\Test-TongEndpoints.ps1'
+node .\tests\Test-TongWorkerIsolation.mjs
+node .\tests\Test-TongAgentTasks.mjs
+node .\tests\Test-TongMcpMetadataTools.mjs
+node .\tests\Test-TongCodexAppServer.mjs
+& '.\tests\Test-TongWorkerCanaries.ps1'
 node --test
 & '.\node_modules\.bin\devspace.cmd' doctor
 & '<path-to-ngrok.exe>' config check --config "$env:LOCALAPPDATA\ngrok\ngrok.yml"

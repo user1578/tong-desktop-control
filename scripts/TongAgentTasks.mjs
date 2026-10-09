@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { mkdir, open, readFile, rename } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CodexAppServerAdapter } from "./TongCodexAppServer.mjs";
+import { TongWorkerBroker } from "./TongWorkerBroker.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_STATE_PATH = resolve(projectRoot, "runtime", "agent-tasks.json");
@@ -141,19 +141,21 @@ function validDocument(document) {
 }
 
 export class TongAgentTaskManager {
-  constructor({ access, adapter = new CodexAppServerAdapter(), statePath = DEFAULT_STATE_PATH,
-    executionEnabled = false, maxConcurrent = 2, defaultTimeoutMs = 30 * 60 * 1_000,
+  constructor({ access, workerBroker, statePath = DEFAULT_STATE_PATH,
+    maxConcurrent = 2, defaultTimeoutMs = 30 * 60 * 1_000,
     maxTaskRuntimeMs = MAX_TASK_TIMEOUT_MS, collectResult = collectGitResult,
     now = () => Date.now() } = {}) {
     if (!access || typeof access.authorize !== "function" || typeof access.listProjects !== "function") {
       throw new TypeError("TongAgentTaskManager requires project access");
     }
-    if (!adapter || typeof adapter.runTask !== "function") throw new TypeError("TongAgentTaskManager requires a Codex adapter");
+    workerBroker ??= new TongWorkerBroker({ access });
+    if (!workerBroker || typeof workerBroker.preflight !== "function" || typeof workerBroker.runTask !== "function") {
+      throw new TypeError("TongAgentTaskManager requires an isolated Worker broker");
+    }
     if (!isAbsolute(statePath)) throw new Error("Task state path must be absolute");
     this.access = access;
-    this.adapter = adapter;
+    this.workerBroker = workerBroker;
     this.statePath = resolve(statePath);
-    this.executionEnabled = executionEnabled === true;
     this.maxConcurrent = Math.max(1, Math.min(Number.isInteger(maxConcurrent) ? maxConcurrent : 2, MAX_PARALLEL_TASKS));
     this.defaultTimeoutMs = Math.max(1_000, Math.min(Number.isFinite(defaultTimeoutMs) ? defaultTimeoutMs : 30 * 60 * 1_000,
       maxTaskRuntimeMs));
@@ -190,17 +192,16 @@ export class TongAgentTaskManager {
         task.updatedAt = timestamp;
         if (!task.codexSessionId) task.finishedAt = timestamp;
         recovered = true;
-      } else if (task.status === "queued" && !this.executionEnabled) {
+      } else if (task.status === "queued") {
         task.status = "failed";
         task.finishedAt = timestamp;
         task.updatedAt = timestamp;
-        task.error = { message: "Queued task was not launched because Codex execution is disabled.",
-          suggestion: "Wait until an operating-system isolation profile is verified and enabled." };
+        task.error = { message: "Queued task was not launched after the task manager restarted.",
+          suggestion: "Review project state and Worker isolation, then submit a new request with a new idempotency key." };
         recovered = true;
       }
     }
     if (recovered) await this.persist();
-    if (this.executionEnabled) this.schedulePump();
   }
 
   async withLock(callback) {
@@ -243,9 +244,7 @@ export class TongAgentTaskManager {
     await this.ensureOpen();
     const request = normalizeRequest(input);
     const project = await this.projectForExecution(request.projectId);
-    if (!this.executionEnabled) {
-      throw new Error("Codex execution is disabled until operating-system isolation is verified");
-    }
+    await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
     const idempotencyHash = digest(request.idempotencyKey);
     const requestHash = digest(JSON.stringify({ ...request, idempotencyKey: undefined }));
     return this.withLock(async () => {
@@ -271,7 +270,7 @@ export class TongAgentTaskManager {
   }
 
   schedulePump() {
-    if (this.pumpScheduled || this.closed || !this.executionEnabled) return;
+    if (this.pumpScheduled || this.closed) return;
     this.pumpScheduled = true;
     queueMicrotask(() => {
       this.pumpScheduled = false;
@@ -280,7 +279,7 @@ export class TongAgentTaskManager {
   }
 
   async pump() {
-    while (!this.closed && this.executionEnabled && this.active.size < this.maxConcurrent) {
+    while (!this.closed && this.active.size < this.maxConcurrent) {
       const task = this.document.tasks.find((entry) => entry.status === "queued" && !this.activeProjects.has(entry.projectId));
       if (!task) return;
       this.activeProjects.add(task.projectId);
@@ -364,9 +363,9 @@ export class TongAgentTaskManager {
         `Allowed work scope: ${current.scope}`,
         `Task: ${current.task}`,
       ].join("\n\n");
-      const result = await this.adapter.runTask({
+      const result = await this.workerBroker.runTask({
         taskId, projectId: project.id, cwd: project.root, task: current.task, scope: current.scope,
-        prompt: instructions, threadId: current.codexSessionId ?? undefined,
+        prompt: instructions, timeoutMs, threadId: current.codexSessionId ?? undefined,
         continuationMessage,
       }, {
         signal: controller.signal,
@@ -488,7 +487,6 @@ export class TongAgentTaskManager {
 
   async resume(taskId, { message = "Continue the same task in this saved Codex session. Review the existing work before making further changes." } = {}) {
     await this.ensureOpen();
-    if (!this.executionEnabled) throw new Error("Codex execution is disabled until operating-system isolation is verified");
     if (typeof message !== "string" || message.trim().length < 1 || message.length > MAX_SCOPE_CHARS || /\0/.test(message)) {
       throw new Error("Invalid resume message");
     }
@@ -497,7 +495,8 @@ export class TongAgentTaskManager {
     if (task.status !== "waiting_user_action" || !task.codexSessionId || task.pendingApproval) {
       throw new Error("Task has no resumable Codex session");
     }
-    await this.projectForExecution(task.projectId);
+    const project = await this.projectForExecution(task.projectId);
+    await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
     await this.updateTask(taskId, (record) => {
       record.status = "queued";
       record.updatedAt = new Date(this.now()).toISOString();

@@ -3,6 +3,8 @@ import { mkdtemp, mkdir, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, parse } from "node:path";
 import { TongAgentTaskManager } from "../scripts/TongAgentTasks.mjs";
+import { TongWorkerBroker } from "../scripts/TongWorkerBroker.mjs";
+import { verifySignedWorkerEnvelope } from "../scripts/TongWorkerProtocol.mjs";
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), "tong-agent-tasks-"));
 const projectRoot = join(temporaryRoot, "authorized-project");
@@ -52,9 +54,46 @@ class SimulatedCodexAdapter {
   }
 }
 
+function makeWorkerBroker(adapter, options = {}) {
+  return new TongWorkerBroker({
+    access,
+    cancelGraceMs: 20,
+    inspectIsolation: async ({ projectId, projectRoot }) => ({
+      ready: true,
+      gatewaySid: "S-1-5-21-100-200-300-1001",
+      workerSid: "S-1-5-21-100-200-300-1002",
+      ipcPeerSid: "S-1-5-21-100-200-300-1001",
+      projectId,
+      projectRoot,
+      restrictedToken: true,
+      credentialsSeparated: true,
+      cleanEnvironment: true,
+      jobObjectKillOnClose: true,
+      privateIpcAuthenticated: true,
+      ...options.isolation,
+    }),
+    launchWorker: async ({ taskId, timeoutMs }) => {
+      if (options.launchWorker) return options.launchWorker({ taskId, timeoutMs });
+      const controller = new AbortController();
+      return {
+        async runTask(envelope, secret, callbacks) {
+          const request = verifySignedWorkerEnvelope(envelope, secret, { expectedTaskId: taskId });
+          return adapter.runTask({ taskId: request.taskId, projectId: request.projectId,
+            cwd: request.projectRoot, task: request.task, scope: request.scope, prompt: request.prompt,
+            timeoutMs: request.timeoutMs, threadId: request.threadId,
+            continuationMessage: request.continuationMessage }, { ...callbacks, signal: controller.signal });
+        },
+        async interrupt() { controller.abort(new Error("simulated Worker interrupt")); },
+        async terminateJobObject() { controller.abort(new Error("simulated Job Object termination")); },
+        async close() {},
+      };
+    },
+  });
+}
+
 const adapter = new SimulatedCodexAdapter();
 const managerOptions = {
-  access, adapter, statePath, executionEnabled: true,
+  access, workerBroker: makeWorkerBroker(adapter), statePath,
   defaultTimeoutMs: 40, maxTaskRuntimeMs: 5_000, maxConcurrent: 1,
   collectResult: async () => ({
     changedFiles: ["src/example.mjs"], diffSummary: "1 file changed",
@@ -63,19 +102,21 @@ const managerOptions = {
 };
 const manager = new TongAgentTaskManager(managerOptions);
 const idleStatePath = join(temporaryRoot, "idle.json");
-const idleManager = new TongAgentTaskManager({ ...managerOptions, statePath: idleStatePath, executionEnabled: false });
+const idleManager = new TongAgentTaskManager({ access, statePath: idleStatePath });
 await idleManager.close();
 await assert.rejects(readFile(idleStatePath), { code: "ENOENT" },
   "starting an empty restricted task manager must not write a runtime state artifact");
 
 async function waitForTask(taskId, predicate, timeoutMs = 2_000) {
   const deadline = Date.now() + timeoutMs;
+  let latest;
   while (Date.now() < deadline) {
-    const task = await manager.status(taskId);
-    if (predicate(task)) return task;
+    latest = await manager.status(taskId);
+    if (predicate(latest)) return latest;
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
-  throw new Error(`Timed out waiting for task ${taskId}`);
+  const logPage = await manager.logs({ taskId, limit: 20 }).catch(() => ({ entries: [] }));
+  throw new Error(`Timed out waiting for task ${taskId}; status=${latest?.status}; error=${latest?.error?.message}; logs=${JSON.stringify(logPage.entries)}`);
 }
 
 const request = {
@@ -84,6 +125,17 @@ const request = {
 };
 
 try {
+  const unsafeTogglePath = join(temporaryRoot, "unsafe-toggle.json");
+  const unsafeToggleManager = new TongAgentTaskManager({ access, adapter, statePath: unsafeTogglePath, executionEnabled: true });
+  try {
+    await assert.rejects(unsafeToggleManager.start({
+      projectId: "authorized", agent: "codex", task: "must stay disabled", scope: "synthetic project only",
+      idempotencyKey: "unsafe-toggle-request-0001",
+    }), /worker|isolation/i, "a boolean execution option must not bypass the Worker isolation broker");
+    assert.equal(adapter.calls.length, 0, "the Gateway must never fall back to spawning Codex under its own identity");
+  } finally { await unsafeToggleManager.close(); }
+  await assert.rejects(readFile(unsafeTogglePath), { code: "ENOENT" });
+
   await assert.rejects(manager.start({ ...request, projectId: "missing" }), /project/i,
     "unknown project IDs must be rejected");
   projects.get("authorized").effectiveCapabilities = ["project.metadata"];
@@ -178,7 +230,7 @@ try {
     releaseAll() { for (const finish of [...this.active.values()]) finish("completed"); }
   }
   const gateAdapter = new GateAdapter();
-  const parallel = new TongAgentTaskManager({ ...managerOptions, adapter: gateAdapter,
+  const parallel = new TongAgentTaskManager({ ...managerOptions, workerBroker: makeWorkerBroker(gateAdapter),
     statePath: join(temporaryRoot, "parallel.json"), maxConcurrent: 2, defaultTimeoutMs: 10_000 });
   const parallelWait = async (taskId, predicate) => {
     const deadline = Date.now() + 2_000;
@@ -217,7 +269,7 @@ try {
     createdAt: new Date().toISOString(), startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     codexSessionId: "saved-thread", logs: [],
   }] }), "utf8");
-  const recovered = new TongAgentTaskManager({ ...managerOptions, statePath: recoveryPath, executionEnabled: false });
+  const recovered = new TongAgentTaskManager({ access, statePath: recoveryPath });
   const recoveredStatus = await recovered.status("recovery-task");
   assert.equal(recoveredStatus.status, "waiting_user_action");
   assert.equal(recoveredStatus.resumeAvailable, true,

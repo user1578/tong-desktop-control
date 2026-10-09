@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { isAbsolute } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -112,9 +113,14 @@ class JsonRpcPeer {
 }
 
 export class CodexAppServerAdapter {
-  constructor({ executable = process.platform === "win32" ? "codex.exe" : "codex", spawnProcess = spawn,
+  constructor({ executable, env = {}, spawnProcess = spawn,
     requestTimeoutMs = 30_000, cancelGraceMs = 5_000, shutdownTimeoutMs = 1_500 } = {}) {
+    if (typeof executable !== "string" || !isAbsolute(executable)) {
+      throw new Error("Codex App Server executable must be a fixed absolute path");
+    }
+    if (!env || typeof env !== "object" || Array.isArray(env)) throw new Error("Codex App Server environment is invalid");
     this.executable = executable;
+    this.env = Object.freeze({ ...env });
     this.spawnProcess = spawnProcess;
     this.requestTimeoutMs = requestTimeoutMs;
     this.cancelGraceMs = cancelGraceMs;
@@ -125,6 +131,7 @@ export class CodexAppServerAdapter {
     if (!spec || typeof spec.cwd !== "string" || typeof spec.prompt !== "string") throw new Error("Invalid Codex task specification");
     const child = this.spawnProcess(this.executable, ["app-server", "--listen", "stdio://"], {
       cwd: spec.cwd,
+      env: this.env,
       shell: false,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"],

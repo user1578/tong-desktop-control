@@ -27,7 +27,7 @@ const AGENT_ERRORS = new Set([
   "Project is not authorized for agent.execute",
   "Project is missing, disabled, or unavailable",
   "Authorized project root is invalid",
-  "Codex execution is disabled until operating-system isolation is verified",
+  "Worker execution is disabled until a verified Windows isolation launcher is configured",
   "Task not found",
   "Task has no resumable Codex session",
   "Invalid resume message",
@@ -54,7 +54,7 @@ function safeAgent(handler) {
 export function registerTongMcpTools(server, registerTool, z, access, tasks) {
   if (process.env.TONG_RESTRICTED_MCP !== "1") return;
   access ??= new TongProjectAccess();
-  tasks ??= new TongAgentTaskManager({ access, executionEnabled: false });
+  tasks ??= new TongAgentTaskManager({ access });
   registerTool(server, "tong_list_drives", {
     title: "List C and D drive metadata",
     description: "Return only drive capacity and available space for C: and D:. No file contents are read.",

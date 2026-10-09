@@ -4,6 +4,9 @@ import { PassThrough, Writable } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
 import { CodexAppServerAdapter } from "../scripts/TongCodexAppServer.mjs";
 
+assert.throws(() => new CodexAppServerAdapter({ executable: "codex.exe" }), /absolute/i,
+  "the App Server executable must not be resolved through an inherited PATH");
+
 class SimulatedAppServerProcess extends EventEmitter {
   requests = [];
   killed = false;
@@ -71,10 +74,13 @@ class SimulatedAppServerProcess extends EventEmitter {
 }
 
 const projectRoot = "C:\\synthetic\\authorized-project";
+const codexExecutable = "C:\\Program Files\\Tong Worker\\codex.exe";
+const workerEnvironment = { SystemRoot: "C:\\Windows", USERPROFILE: "C:\\Users\\TongCodexWorker" };
 const launches = [];
 const processes = [];
 const adapter = new CodexAppServerAdapter({
-  executable: "codex.exe",
+  executable: codexExecutable,
+  env: workerEnvironment,
   requestTimeoutMs: 500,
   shutdownTimeoutMs: 20,
   spawnProcess: (executable, args, options) => {
@@ -103,16 +109,18 @@ assert.deepEqual(first.tests, [{ command: "node --test", exitCode: 0, status: "p
 assert.ok(logs.some((line) => line === "session:thread-simulated"));
 assert.ok(logs.some((line) => line.includes("Synthetic completion.")));
 assert.deepEqual(launches[0].args, ["app-server", "--listen", "stdio://"]);
-assert.equal(launches[0].executable, "codex.exe");
+assert.equal(launches[0].executable, codexExecutable);
 assert.equal(launches[0].options.shell, false, "Codex must be spawned without a shell");
 assert.equal(launches[0].options.cwd, projectRoot);
+assert.deepEqual(launches[0].options.env, workerEnvironment,
+  "Codex must receive an explicit worker environment instead of inheriting Gateway variables");
 assert.deepEqual(processes[0].requests.find((request) => request.method === "thread/start").params.runtimeWorkspaceRoots,
   [projectRoot]);
 assert.equal(processes[0].requests.find((request) => request.method === "thread/start").params.sandbox, "workspace-write");
 
 const resumedProcess = new SimulatedAppServerProcess({ threadId: "thread-existing" });
 const resumeAdapter = new CodexAppServerAdapter({
-  executable: "codex.exe", requestTimeoutMs: 500, shutdownTimeoutMs: 20,
+  executable: codexExecutable, env: workerEnvironment, requestTimeoutMs: 500, shutdownTimeoutMs: 20,
   spawnProcess: () => resumedProcess,
 });
 const resumed = await resumeAdapter.runTask({
@@ -126,7 +134,7 @@ assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/
 
 const interruptProcess = new SimulatedAppServerProcess({ interruptOnly: true });
 const interruptAdapter = new CodexAppServerAdapter({
-  executable: "codex.exe", requestTimeoutMs: 500, shutdownTimeoutMs: 20,
+  executable: codexExecutable, env: workerEnvironment, requestTimeoutMs: 500, shutdownTimeoutMs: 20,
   spawnProcess: () => interruptProcess,
 });
 const controller = new AbortController();
