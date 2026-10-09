@@ -42,6 +42,18 @@ try {
   assert.deepEqual(names, ["open_workspace", "read", "write", "edit",
     "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status",
     "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
+  const secondServer = createMcpServer(config, workspaces, null, null, () => [], []);
+  const secondClient = new Client({ name: "second-synthetic-client", version: "1" }, { capabilities: {} });
+  const [secondClientTransport, secondServerTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await secondServer.connect(secondServerTransport);
+    await secondClient.connect(secondClientTransport);
+    assert.deepEqual((await secondClient.listTools()).tools.map(({ name }) => name), names,
+      "multiple MCP sessions in one DevSpace process must share one task manager");
+  } finally {
+    await secondClient.close();
+    await secondServer.close();
+  }
   const deniedCalls = await Promise.allSettled([
     client.callTool({ name: "bash", arguments: { workspaceId: "synthetic", command: "cat ../outside/canary.txt" } }),
     client.callTool({ name: "exec_command", arguments: { workspaceId: "synthetic", command: "cat ../outside/canary.txt" } }),

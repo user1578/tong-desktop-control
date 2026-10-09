@@ -1,6 +1,8 @@
 import { TongProjectAccess } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
 
+let defaultTaskManager;
+
 function success(value) {
   return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value };
 }
@@ -57,8 +59,11 @@ function safeAgent(handler) {
 
 export function registerTongMcpTools(server, registerTool, z, access, tasks) {
   if (process.env.TONG_RESTRICTED_MCP !== "1") return;
+  const useDefaultAccess = access === undefined;
   access ??= new TongProjectAccess();
-  tasks ??= new TongAgentTaskManager({ access });
+  tasks ??= useDefaultAccess
+    ? (defaultTaskManager ??= new TongAgentTaskManager({ access }))
+    : new TongAgentTaskManager({ access });
   registerTool(server, "tong_list_drives", {
     title: "List C and D drive metadata",
     description: "Return only drive capacity and available space for C: and D:. No file contents are read.",
