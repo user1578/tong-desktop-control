@@ -152,6 +152,11 @@ function Wait-TongPort {
 function Start-TongDevSpace {
     param($Settings)
 
+    $paths = Get-TongDevSpacePaths
+    $securityPatch = Join-Path $script:ProjectRoot 'scripts\Apply-TongDevSpacePatch.mjs'
+    & $paths.Node $securityPatch --check | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'The pinned DevSpace security patch is missing or changed.' }
+
     $existing = Get-TongManagedProcess 'devspace'
     if ($existing) {
         if ($existing.Record.publicOrigin -ne $Settings.PublicOrigin) {
@@ -160,9 +165,13 @@ function Start-TongDevSpace {
         if ([int]$existing.Record.port -ne $Settings.DevSpacePort) {
             throw 'The managed DevSpace process uses the public gateway port. Run Restart-TongDesktopControl.ps1 to move it behind the gateway.'
         }
-        Wait-TongPort -Port $Settings.DevSpacePort -ProcessId $existing.Process.ProcessId -Service 'DevSpace'
-        Write-Output "DevSpace already running (PID $($existing.Process.ProcessId)) on port $($Settings.DevSpacePort)."
-        return
+        $patchProperty = $existing.Record.PSObject.Properties['securityPatchVersion']
+        if ($null -ne $patchProperty -and $patchProperty.Value -eq 'tong-1.0.8-v1') {
+            Wait-TongPort -Port $Settings.DevSpacePort -ProcessId $existing.Process.ProcessId -Service 'DevSpace'
+            Write-Output "DevSpace already running (PID $($existing.Process.ProcessId)) on port $($Settings.DevSpacePort)."
+            return
+        }
+        Stop-TongManagedProcess 'devspace'
     }
 
     $listeners = Get-TongPortListeners $Settings.DevSpacePort
@@ -171,7 +180,6 @@ function Start-TongDevSpace {
         throw "DevSpace upstream port $($Settings.DevSpacePort) is already in use by PID $owner. No process was stopped."
     }
 
-    $paths = Get-TongDevSpacePaths
     $httpDiagnostics = Join-Path $script:ProjectRoot 'scripts\TongDevSpaceHttpDiagnostics.mjs'
     if (-not (Test-Path -LiteralPath $httpDiagnostics)) { throw 'DevSpace HTTP diagnostics script is missing.' }
     $httpDiagnosticsUrl = ([uri]$httpDiagnostics).AbsoluteUri
@@ -180,11 +188,21 @@ function Start-TongDevSpace {
     $stderr = Join-Path $script:LogPath "devspace-$stamp.stderr.log"
     $oldSkills = $env:DEVSPACE_SKILLS
     $oldSubagents = $env:DEVSPACE_SUBAGENTS
+    $oldToolMode = $env:DEVSPACE_TOOL_MODE
+    $oldArtifacts = $env:DEVSPACE_ARTIFACTS
+    $oldAgentDir = $env:DEVSPACE_AGENT_DIR
+    $oldRestricted = $env:TONG_RESTRICTED_MCP
+    $oldRestrictedRoot = $env:TONG_RESTRICTED_ROOT
     $oldPort = $env:PORT
     $oldHost = $env:HOST
     try {
         $env:DEVSPACE_SKILLS = '0'
         $env:DEVSPACE_SUBAGENTS = '0'
+        $env:DEVSPACE_TOOL_MODE = 'minimal'
+        $env:DEVSPACE_ARTIFACTS = '0'
+        $env:DEVSPACE_AGENT_DIR = $Settings.WorkspacePath
+        $env:TONG_RESTRICTED_MCP = '1'
+        $env:TONG_RESTRICTED_ROOT = $Settings.WorkspacePath
         $env:PORT = [string]$Settings.DevSpacePort
         $env:HOST = '127.0.0.1'
         $process = Start-Process -FilePath $paths.Node -ArgumentList @('--import', $httpDiagnosticsUrl, $paths.Cli, 'serve') `
@@ -194,6 +212,11 @@ function Start-TongDevSpace {
     finally {
         if ($null -eq $oldSkills) { Remove-Item Env:\DEVSPACE_SKILLS -ErrorAction SilentlyContinue } else { $env:DEVSPACE_SKILLS = $oldSkills }
         if ($null -eq $oldSubagents) { Remove-Item Env:\DEVSPACE_SUBAGENTS -ErrorAction SilentlyContinue } else { $env:DEVSPACE_SUBAGENTS = $oldSubagents }
+        if ($null -eq $oldToolMode) { Remove-Item Env:\DEVSPACE_TOOL_MODE -ErrorAction SilentlyContinue } else { $env:DEVSPACE_TOOL_MODE = $oldToolMode }
+        if ($null -eq $oldArtifacts) { Remove-Item Env:\DEVSPACE_ARTIFACTS -ErrorAction SilentlyContinue } else { $env:DEVSPACE_ARTIFACTS = $oldArtifacts }
+        if ($null -eq $oldAgentDir) { Remove-Item Env:\DEVSPACE_AGENT_DIR -ErrorAction SilentlyContinue } else { $env:DEVSPACE_AGENT_DIR = $oldAgentDir }
+        if ($null -eq $oldRestricted) { Remove-Item Env:\TONG_RESTRICTED_MCP -ErrorAction SilentlyContinue } else { $env:TONG_RESTRICTED_MCP = $oldRestricted }
+        if ($null -eq $oldRestrictedRoot) { Remove-Item Env:\TONG_RESTRICTED_ROOT -ErrorAction SilentlyContinue } else { $env:TONG_RESTRICTED_ROOT = $oldRestrictedRoot }
         if ($null -eq $oldPort) { Remove-Item Env:\PORT -ErrorAction SilentlyContinue } else { $env:PORT = $oldPort }
         if ($null -eq $oldHost) { Remove-Item Env:\HOST -ErrorAction SilentlyContinue } else { $env:HOST = $oldHost }
     }
@@ -206,6 +229,7 @@ function Start-TongDevSpace {
         commandMarker = $paths.Cli
         publicOrigin = $Settings.PublicOrigin
         port = $Settings.DevSpacePort
+        securityPatchVersion = 'tong-1.0.8-v1'
         startedAt = (Get-Date).ToString('o')
         stdoutLog = $stdout
         stderrLog = $stderr

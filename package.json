@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "doctor": "devspace doctor",
+    "postinstall": "node scripts/Apply-TongDevSpacePatch.mjs",
     "serve": "devspace serve"
   },
   "dependencies": {
