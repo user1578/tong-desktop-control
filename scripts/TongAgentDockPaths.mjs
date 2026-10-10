@@ -44,14 +44,14 @@ async function inspect(path, metadataPaths) {
   metadataPaths.add(path);
   return info;
 }
-export async function checkedAgentDockPath(root, input = ".", { directory = false, treeDepth = 0, maxEntries = 2000, requireFullTree = false } = {}) {
+export async function checkedAgentDockPath(root, input = ".", { directory = false, treeDepth = 0, maxEntries = 2000, requireFullTree = false, allowMissing = false, gitMetadata = false, skipGit = false } = {}) {
   syntax(root); syntax(input);
   if (!isAbsolute(root)) denied();
   const canonicalRoot = resolve(root);
   const target = resolve(canonicalRoot, input);
   if (!within(canonicalRoot, target)) denied();
   const parts = relative(canonicalRoot, target).split(/[\\/]/).filter(Boolean);
-  if (parts.some((part) => protectedNames.test(part))) denied();
+  if (parts.some((part, index) => protectedNames.test(part) && !(gitMetadata && index === 0 && part === ".git"))) denied();
   const metadataPaths = new Set();
   let current = parse(canonicalRoot).root;
   for (const part of relative(current, canonicalRoot).split(/[\\/]/).filter(Boolean)) {
@@ -61,11 +61,15 @@ export async function checkedAgentDockPath(root, input = ".", { directory = fals
   let info = await inspect(canonicalRoot, metadataPaths);
   current = canonicalRoot;
   for (const [index, part] of parts.entries()) {
-    current = join(current, part); info = await inspect(current, metadataPaths);
+    current = join(current, part);
+    if (allowMissing && index === parts.length - 1) {
+      try { await lstat(current); } catch (error) { if (error.code === "ENOENT") { info = undefined; break; } denied(); }
+    }
+    info = await inspect(current, metadataPaths);
     if (index < parts.length - 1 && !info.isDirectory()) denied();
   }
-  if (directory ? !info.isDirectory() : !info.isFile()) denied();
-  const manifest = new Map([[target, info.isDirectory() ? "directory" : "file"]]);
+  if (info ? directory ? !info.isDirectory() : !info.isFile() : !allowMissing || directory) denied();
+  const manifest = new Map(info ? [[target, info.isDirectory() ? "directory" : "file"]] : []);
   const identities = new Map();
   let visited = 0;
   async function walk(path, depth) {
@@ -73,7 +77,8 @@ export async function checkedAgentDockPath(root, input = ".", { directory = fals
     try {
       for await (const entry of handle) {
         if (++visited > maxEntries) denied();
-        if (protectedNames.test(entry.name)) {
+        if (skipGit && path === canonicalRoot && entry.name === ".git") continue; // Caller checks standalone Git metadata separately.
+        if (protectedNames.test(entry.name) && !gitMetadata) {
           if (requireFullTree) denied();
           continue;
         }
@@ -95,16 +100,20 @@ export async function checkedAgentDockPath(root, input = ".", { directory = fals
     identities.set(path, `${stat.dev}:${stat.ino}:${stat.mode}:${stat.nlink}:${stat.mtimeMs}:${stat.size}`);
   }
   return {
-    root: canonicalRoot, target, manifest,
+    root: canonicalRoot, target, manifest, existed: !!info,
     relative: (path) => relative(canonicalRoot, path).split(sep).join("/") || ".",
-    async recheck() {
+    async recheck({ afterWrite = false } = {}) {
       for (const [path, identity] of identities) {
         const stat = await inspect(path, new Set());
-        if (`${stat.dev}:${stat.ino}:${stat.mode}:${stat.nlink}:${stat.mtimeMs}:${stat.size}` !== identity) denied();
+        if (afterWrite && path === target && !directory) continue; // AgentDock commits edits by atomic replacement; validate new file separately.
+        const observed = `${stat.dev}:${stat.ino}:${stat.mode}:${stat.nlink}:${stat.mtimeMs}:${stat.size}`;
+        const structural = afterWrite || !within(canonicalRoot, path);
+        if ((structural ? observed.split(":").slice(0, 4).join(":") : observed) !== (structural ? identity.split(":").slice(0, 4).join(":") : identity)) denied();
       }
       await noWindowsReparse([...metadataPaths]);
+      if (!info && !afterWrite) { try { await lstat(target); denied(); } catch (error) { if (error.code !== "ENOENT") denied(); } }
     },
-    resultPath(value, base = info.isDirectory() ? target : dirname(target)) {
+    resultPath(value, base = info?.isDirectory() ? target : dirname(target)) {
       try { syntax(value); } catch { throw dockError("INVALID_RESULT"); }
       const path = resolve(base, value);
       if (!within(canonicalRoot, path) || !manifest.has(path)) throw dockError("INVALID_RESULT");

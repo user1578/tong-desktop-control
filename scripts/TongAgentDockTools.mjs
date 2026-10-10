@@ -1,17 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { AGENTDOCK_READ_TOOLS, TongAgentDockClient, TongAgentDockError, dockError } from "./TongAgentDockClient.mjs";
 import { AGENTDOCK_EXCLUDES, checkedAgentDockPath } from "./TongAgentDockPaths.mjs";
+import { EXECUTION_OPERATIONS, TongAgentDockExecution, validateExecutionInput } from "./TongAgentDockExecution.mjs";
+import { resolveAgentDockProject } from "./TongAgentDockPolicy.mjs";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
-export const AGENTDOCK_PUBLIC_TOOLS = Object.freeze(["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]);
-const publicToBackend = Object.fromEntries(AGENTDOCK_PUBLIC_TOOLS.map((name, i) => [name, AGENTDOCK_READ_TOOLS[i]]));
+export const AGENTDOCK_PUBLIC_TOOLS = Object.freeze(["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]);
+const publicToBackend = Object.fromEntries(AGENTDOCK_PUBLIC_TOOLS.map((name, i) => [name, [...AGENTDOCK_READ_TOOLS, ...EXECUTION_OPERATIONS][i]]));
 function object(value) { return value && typeof value === "object" && !Array.isArray(value); }
 function integer(value, min, max) { return value === undefined || Number.isInteger(value) && value >= min && value <= max; }
 export function validateAgentDockInput(tool, input) {
+  if (EXECUTION_OPERATIONS.includes(tool)) return validateExecutionInput(tool, input);
   if (!AGENTDOCK_READ_TOOLS.includes(tool) || !object(input)) throw dockError("INVALID_ARGUMENT");
   const keys = ["projectId", "path", ...(tool === "read_file" ? ["startLine", "endLine", "maxBytes"]
     : tool === "list_dir" ? ["maxDepth", "maxEntries"] : ["query", "caseSensitive", "maxResults"])];
@@ -26,7 +29,7 @@ export function validateAgentDockInput(tool, input) {
 }
 export function validateAgentDockGatewayCall(name, input) {
   try { validateAgentDockInput(publicToBackend[name], input); return null; }
-  catch { return { code: -32602, message: "Invalid AgentDock read arguments" }; }
+  catch { return { code: -32602, message: "Invalid AgentDock arguments" }; }
 }
 async function localAudit(event) {
   const path = join(projectRoot, "runtime", "agentdock-audit.jsonl");
@@ -67,25 +70,18 @@ function filteredResult(tool, data, checked, input) {
 
 /** Independent synthetic-project grants. agent.execute is never consulted or promoted. */
 export class TongAgentDockRouter {
-  constructor({ client, access, policyPath = join(projectRoot, "runtime", "agentdock-access.json"), audit = localAudit } = {}) {
-    this.client = client ?? new TongAgentDockClient({ url: process.env.TONG_AGENTDOCK_URL });
+  constructor({ client, access, policyPath = join(projectRoot, "runtime", "agentdock-access.json"), audit = localAudit, maxOwnedSessions } = {}) {
+    this.client = client ?? new TongAgentDockClient({ url: process.env.TONG_AGENTDOCK_URL, controlledExecution: true });
     this.access = access; this.policyPath = policyPath; this.audit = audit;
+    this.execution = new TongAgentDockExecution({ client: this.client, access, policyPath, audit, maxOwnedSessions });
   }
   async #project(projectId, tool) {
-    let policy, projects;
-    try { policy = JSON.parse(await readFile(this.policyPath, "utf8")); projects = await this.access.listProjects(); }
-    catch { throw dockError("PROJECT_DENIED"); }
-    if (policy?.schemaVersion !== 1 || !Array.isArray(policy.projects)) throw dockError("PROJECT_DENIED");
-    const project = projects.find((entry) => entry.id === projectId && entry.status === "enabled" && entry.available
-      && ["read", "write"].includes(entry.permission));
-    const grants = policy.projects.filter((entry) => entry.projectId === projectId);
-    const grant = grants[0];
-    if (!project || grants.length !== 1 || !grant || grant.scope !== "synthetic" || grant.root !== project.root
-        || !Array.isArray(grant.tools) || grant.tools.some((name) => !AGENTDOCK_READ_TOOLS.includes(name))
-        || !grant.tools.includes(tool)) throw dockError("PROJECT_DENIED");
+    const { project, grant } = await resolveAgentDockProject(this.access, this.policyPath, projectId);
+    if (!grant.tools.includes(tool)) throw dockError("PROJECT_DENIED");
     return project;
   }
   async call(tool, input) {
+    if (EXECUTION_OPERATIONS.includes(tool)) return this.execution.call(tool, input);
     const started = performance.now();
     const event = { requestId: randomUUID(), projectId: /^[a-z][a-z0-9-]{1,39}$/.test(input?.projectId ?? "") ? input.projectId : "unknown",
       tool: AGENTDOCK_READ_TOOLS.includes(tool) ? tool : "unknown", outcome: "denied" };
@@ -123,7 +119,7 @@ export class TongAgentDockRouter {
       try { await this.audit(event); } catch { throw dockError("AUDIT_UNAVAILABLE"); }
     }
   }
-  async close() { await this.client.close(); }
+  async close() { await this.execution.close(); await this.client.close(); }
 }
 
 export function registerAgentDockTools(server, registerTool, z, router) {
@@ -132,14 +128,19 @@ export function registerAgentDockTools(server, registerTool, z, router) {
     { name: AGENTDOCK_PUBLIC_TOOLS[0], tool: "list_dir", inputSchema: { ...common, path: common.path.optional(), maxDepth: z.number().int().min(1).max(3).optional(), maxEntries: z.number().int().min(1).max(200).optional() } },
     { name: AGENTDOCK_PUBLIC_TOOLS[1], tool: "read_file", inputSchema: { ...common, startLine: z.number().int().min(1).max(1000000).optional(), endLine: z.number().int().min(1).max(1000000).optional(), maxBytes: z.number().int().min(1).max(65536).optional() } },
     { name: AGENTDOCK_PUBLIC_TOOLS[2], tool: "search_text", inputSchema: { ...common, path: common.path.optional(), query: z.string().min(1).max(512), caseSensitive: z.boolean().optional(), maxResults: z.number().int().min(1).max(100).optional() } },
+    { name: AGENTDOCK_PUBLIC_TOOLS[3], tool: "file_edit", inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80), action: z.enum(["add", "replace", "patch"]), path: common.path.optional(), content: z.string().max(65536).optional(), old: z.string().min(1).max(65536).optional(), new: z.string().max(65536).optional(), expectedMatches: z.literal(1).optional(), patch: z.string().min(1).max(65536).optional(), dryRun: z.boolean().optional(), overwrite: z.boolean().optional() } },
+    { name: AGENTDOCK_PUBLIC_TOOLS[4], tool: "command", inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80), operation: z.enum(["git_status", "git_diff", "pytest"]), timeoutMs: z.number().int().min(100).max(30000).optional(), async: z.boolean().optional() } },
+    ...["session_status", "session_cancel"].map((tool, index) => ({ name: AGENTDOCK_PUBLIC_TOOLS[5 + index], tool, inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80), sessionId: z.string().min(2).max(80) } })),
   ];
   for (const definition of definitions) registerTool(server, definition.name, {
-    title: `AgentDock ${definition.tool}`, description: "Read an explicitly granted synthetic project through the local AgentDock backend.",
-    inputSchema: z.object(definition.inputSchema).strict(), _meta: {}, annotations: { readOnlyHint: true, destructiveHint: false },
+    title: `AgentDock ${definition.tool}`, description: "Use a fixed local AgentDock operation with independent project and task approval. No arbitrary Shell or grant mutation.",
+    inputSchema: z.object(definition.inputSchema).strict(), _meta: {}, annotations: { readOnlyHint: AGENTDOCK_READ_TOOLS.includes(definition.tool) || definition.tool === "session_status", destructiveHint: !AGENTDOCK_READ_TOOLS.includes(definition.tool) && definition.tool !== "session_status" },
   }, async (input) => {
     try { const value = await router.call(definition.tool, input); return { structuredContent: value, content: [{ type: "text", text: JSON.stringify(value) }] }; }
     catch (error) { const safe = error instanceof TongAgentDockError ? error : dockError("UNAVAILABLE");
-      return { isError: true, structuredContent: { code: safe.code, error: safe.message }, content: [{ type: "text", text: safe.message }] }; }
+      return { isError: true, structuredContent: { toolOk: false, code: safe.code, error: safe.message,
+        category: ["PROJECT_DENIED", "APPROVAL_DENIED", "ACCESS_DENIED", "TOOL_DENIED", "SESSION_DENIED", "EXECUTABLE_DENIED"].includes(safe.code) ? "tong_denied" : safe.code === "TOOL_FAILED" ? "agentdock_error" : ["TIMEOUT", "UNAVAILABLE"].includes(safe.code) ? "transport_error" : "validation_error",
+        ...(safe.effect ? { effect: safe.effect } : {}), ...(safe.sessionId ? { sessionId: safe.sessionId } : {}) }, content: [{ type: "text", text: safe.message }] }; }
   });
   if (server.server) {
     const previous = server.server.onclose;

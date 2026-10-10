@@ -30,10 +30,11 @@ function extendRestrictedServer(source) {
   const baseToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);';
   const metadataToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects"]);';
   const agentToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);';
-  const agentDockToolSet = agentToolSet.replace('"tong_agent_result"]);', '"tong_agent_result", "tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]);');
+  const agentDockReadToolSet = agentToolSet.replace('"tong_agent_result"]);', '"tong_agent_result", "tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]);');
+  const agentDockToolSet = agentDockReadToolSet.replace('"tong_agentdock_search_text"]);', '"tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]);');
   if (!source.includes(agentDockToolSet)) {
-    const prior = source.includes(agentToolSet) ? agentToolSet : source.includes(metadataToolSet) ? metadataToolSet : baseToolSet;
-    source = replaceOnce(source, prior, agentDockToolSet, "AgentDock read tool registration guard");
+    const prior = source.includes(agentDockReadToolSet) ? agentDockReadToolSet : source.includes(agentToolSet) ? agentToolSet : source.includes(metadataToolSet) ? metadataToolSet : baseToolSet;
+    source = replaceOnce(source, prior, agentDockToolSet, "AgentDock fixed tool registration guard");
   }
   if (!source.includes("registerTongMcpTools(server, registerAppTool, z)")) {
     source = replaceOnce(source,
@@ -79,7 +80,8 @@ const files = [
     previousHash: "7102a8c4feec229cf0853de87bfa31065763afeef04c818786b7ccf3f9b4c9b0",
     previousHash2: "6e5ca5457de4c6da8bdcfda02f2f254a9e42c8f59bee32a1ea495c948f595646",
     previousHash3: "ea21bce39c54f32ddd966840dbeb3d87bc2fe117619f5ac517a31d9528f7fc67",
-    patchedHash: "3457bd2cc9158e3e93fb22028e81446528c92b94a522913fb081a82f0c0d6df5",
+    previousHash4: "3457bd2cc9158e3e93fb22028e81446528c92b94a522913fb081a82f0c0d6df5",
+    patchedHash: "e397438fd44a400f85d052cfd89396ac5a1a565962a285789017a608eb807a0d",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -134,7 +136,7 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}`);
   await writeFile(target, patched, "utf8");

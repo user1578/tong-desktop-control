@@ -4,15 +4,19 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv";
 
 export const AGENTDOCK_READ_TOOLS = Object.freeze(["list_dir", "read_file", "search_text"]);
+export const AGENTDOCK_EXECUTION_TOOLS = Object.freeze(["file_edit", "exec_command", "session_observe", "session_act"]);
 const MESSAGES = {
   INVALID_CONFIG: "AgentDock local configuration is invalid", AUTH_FAILED: "AgentDock authentication failed",
   UNAVAILABLE: "AgentDock is unavailable", TIMEOUT: "AgentDock request timed out", CLOSED: "AgentDock client is closed",
   REQUEST_TOO_LARGE: "AgentDock request exceeds its size limit", OUTPUT_TOO_LARGE: "AgentDock response exceeds its size limit",
   SCHEMA_ERROR: "AgentDock tool schema is invalid or incompatible", TOOL_DENIED: "AgentDock tool is not permitted",
   TOOL_FAILED: "AgentDock tool returned an error", SENSITIVE_RESULT: "AgentDock result contains a credential",
-  PROJECT_DENIED: "Project is not authorized for AgentDock reads", ACCESS_DENIED: "AgentDock project path is not permitted",
+  PROJECT_DENIED: "Project is not authorized for AgentDock", ACCESS_DENIED: "AgentDock project path is not permitted",
   INVALID_ARGUMENT: "Invalid AgentDock tool arguments", INVALID_RESULT: "AgentDock result is invalid or outside the project",
   AUDIT_UNAVAILABLE: "AgentDock audit is unavailable",
+  APPROVAL_DENIED: "Local operation approval is missing, expired or outside scope", SESSION_DENIED: "Session does not belong to this task",
+  VERIFY_FAILED: "File content does not match the requested change", ALREADY_EXISTS: "File already exists; overwrite approval required",
+  EXECUTABLE_DENIED: "Approved command executable is unavailable or changed",
 };
 export class TongAgentDockError extends Error {
   constructor(code) { super(MESSAGES[code] ?? MESSAGES.UNAVAILABLE); this.name = "TongAgentDockError"; this.code = code; }
@@ -42,13 +46,15 @@ function localURL(value) {
 export class TongAgentDockClient {
   #url; #tokenProvider; #token; #client; #transport; #connecting; #closed = false; #validators = new Map(); #tools = []; #discoveredCount = 0;
   constructor({ url = "http://127.0.0.1:18765/mcp", tokenProvider = () => process.env.TONG_AGENTDOCK_TOKEN,
-    timeoutMs, maxRequestBytes, maxResponseBytes } = {}) {
+    timeoutMs, maxRequestBytes, maxResponseBytes, controlledExecution = false } = {}) {
     this.#url = localURL(url);
     if (typeof tokenProvider !== "function") throw dockError("INVALID_CONFIG");
     this.#tokenProvider = tokenProvider;
     this.timeoutMs = bound(timeoutMs, 5000, 50, 30000);
-    this.maxRequestBytes = bound(maxRequestBytes, 32768, 1024, 1048576);
+    this.maxRequestBytes = bound(maxRequestBytes, controlledExecution === true ? 131072 : 32768, 1024, 1048576);
     this.maxResponseBytes = bound(maxResponseBytes, 262144, 1024, 4194304);
+    this.allowedTools = Object.freeze([...AGENTDOCK_READ_TOOLS, ...(controlledExecution === true ? AGENTDOCK_EXECUTION_TOOLS : [])]);
+    this.generation = 0;
   }
   get serverInfo() { return this.#client?.getServerVersion(); }
   get discoveredToolCount() { return this.#discoveredCount; }
@@ -107,16 +113,17 @@ export class TongAgentDockClient {
       if (containsToken({ descriptors, server: client.getServerVersion() }, token)) throw dockError("SENSITIVE_RESULT");
       const validator = new AjvJsonSchemaValidator();
       const validators = new Map();
-      const tools = descriptors.tools.filter((tool) => AGENTDOCK_READ_TOOLS.includes(tool.name));
+      const tools = descriptors.tools.filter((tool) => this.allowedTools.includes(tool.name));
       for (const tool of tools) {
         if (tool.inputSchema?.type !== "object" || validators.has(tool.name)) throw dockError("SCHEMA_ERROR");
         try { validators.set(tool.name, validator.getValidator(tool.inputSchema)); }
         catch { throw dockError("SCHEMA_ERROR"); }
       }
-      if (tools.length !== AGENTDOCK_READ_TOOLS.length) throw dockError("SCHEMA_ERROR");
+      if (tools.length !== this.allowedTools.length) throw dockError("SCHEMA_ERROR");
       if (this.#closed) throw dockError("CLOSED");
       this.#client = client; this.#transport = transport; this.#tools = tools; this.#validators = validators;
       this.#discoveredCount = descriptors.tools.length;
+      this.generation++;
     } catch (error) {
       await client?.close().catch(() => {}); await transport?.close().catch(() => {});
       this.#token = undefined;
@@ -125,7 +132,7 @@ export class TongAgentDockClient {
   }
   async listTools() { await this.connect(); return structuredClone(this.#tools); }
   async callTool(name, args) {
-    if (!AGENTDOCK_READ_TOOLS.includes(name)) throw dockError("TOOL_DENIED");
+    if (!this.allowedTools.includes(name)) throw dockError("TOOL_DENIED");
     if (Buffer.byteLength(JSON.stringify(args) ?? "") > this.maxRequestBytes) throw dockError("REQUEST_TOO_LARGE");
     await this.connect();
     if (!this.#validators.get(name)?.(args).valid) throw dockError("SCHEMA_ERROR");

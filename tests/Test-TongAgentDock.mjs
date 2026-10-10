@@ -135,7 +135,7 @@ try {
   assert.ok(!JSON.stringify(audits).includes(token));
   const registrations = [];
   registerAgentDockTools({}, (_server, name, _definition, handler) => registrations.push({ name, handler }), await import("zod/v4"), router);
-  assert.deepEqual(registrations.map((item) => item.name), ["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]);
+  assert.deepEqual(registrations.map((item) => item.name), ["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]);
   assert.ok(findDisallowedToolCall({ method: "tools/call", params: { name: "exec_command", arguments: {} } }));
   assert.equal(await validateAllowedToolCall({ params: { name: "tong_agentdock_read_file", arguments: { projectId: "synthetic", path: "hello.txt" } } }), null);
   assert.ok(await validateAllowedToolCall({ params: { name: "tong_agentdock_read_file", arguments: { projectId: "synthetic", path: "hello.txt", toolName: "exec_command" } } }));
@@ -145,7 +145,7 @@ try {
   registerAgentDockTools(inbound, registerAppTool, z, router);
   try {
     await inbound.connect(right); await inboundClient.connect(left);
-    assert.equal((await inboundClient.listTools()).tools.length, 3);
+    assert.equal((await inboundClient.listTools()).tools.length, 7);
     assert.equal((await inboundClient.callTool({ name: "tong_agentdock_read_file", arguments: { projectId: "synthetic", path: "hello.txt" } })).structuredContent.content, "synthetic hello");
     const extra = await inboundClient.callTool({ name: "tong_agentdock_read_file", arguments: { projectId: "synthetic", path: "hello.txt", toolName: "exec_command" } });
     assert.equal(extra.isError, true);

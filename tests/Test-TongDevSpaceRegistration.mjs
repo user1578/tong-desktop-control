@@ -62,10 +62,14 @@ try {
   try {
     await dockServer.connect(dockRight); await dockClient.connect(dockLeft);
     const dockNames = (await dockClient.listTools()).tools.map(({ name }) => name);
-    for (const name of ["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]) assert.ok(dockNames.includes(name));
+    for (const name of ["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]) assert.ok(dockNames.includes(name));
     for (const name of ["exec_command", "file_edit", "session_act", "mcp_tool_call"]) assert.ok(!dockNames.includes(name));
     const deniedRead = await dockClient.callTool({ name: "tong_agentdock_read_file", arguments: { projectId: "demo", path: "AGENTS.md" } });
     assert.equal(deniedRead.structuredContent.code, "PROJECT_DENIED");
+    const deniedWrite = await dockClient.callTool({ name: "tong_agentdock_file_edit", arguments: { projectId: "demo", taskId: "synthetic-task", approvalId: "unapproved", action: "add", path: "x.txt", content: "x" } });
+    assert.equal(deniedWrite.structuredContent.code, "PROJECT_DENIED");
+    const deniedCommand = await dockClient.callTool({ name: "tong_agentdock_command", arguments: { projectId: "demo", taskId: "synthetic-task", approvalId: "unapproved", operation: "git_status" } });
+    assert.equal(deniedCommand.structuredContent.code, "PROJECT_DENIED");
   } finally {
     await dockClient.close(); await dockServer.close();
     delete process.env.TONG_AGENTDOCK_ENABLED; delete process.env.TONG_AGENTDOCK_POLICY_PATH;
