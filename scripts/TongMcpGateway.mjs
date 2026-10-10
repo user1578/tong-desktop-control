@@ -4,6 +4,7 @@ import { lstat, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { AGENTDOCK_PUBLIC_TOOLS, validateAgentDockGatewayCall } from "./TongAgentDockTools.mjs";
 
 const LISTEN_HOST = "127.0.0.1";
 const LISTEN_PORT = 7676;
@@ -19,7 +20,7 @@ const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
 ]);
-const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...METADATA_TOOLS, ...AGENT_TOOLS]);
+const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
 const MCP_METHODS = new Set([
   "initialize",
   "notifications/initialized",
@@ -377,6 +378,7 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
   // The authenticated DevSpace tool handler owns metadata path and project policy.
   if (METADATA_TOOLS.has(name)) return null;
   if (AGENT_TOOLS.has(name)) return validateAgentToolArguments(name, args);
+  if (AGENTDOCK_PUBLIC_TOOLS.includes(name)) return validateAgentDockGatewayCall(name, args);
 
   if (name === "open_workspace") {
     const path = args.path;

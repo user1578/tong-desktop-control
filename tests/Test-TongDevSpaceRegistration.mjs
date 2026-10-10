@@ -54,6 +54,22 @@ try {
     await secondClient.close();
     await secondServer.close();
   }
+  process.env.TONG_AGENTDOCK_ENABLED = "1";
+  process.env.TONG_AGENTDOCK_POLICY_PATH = join(temporaryRoot, "no-agentdock-grants.json");
+  const dockServer = createMcpServer(config, workspaces, null, null, () => [], []);
+  const dockClient = new Client({ name: "agentdock-registration-client", version: "1" });
+  const [dockLeft, dockRight] = InMemoryTransport.createLinkedPair();
+  try {
+    await dockServer.connect(dockRight); await dockClient.connect(dockLeft);
+    const dockNames = (await dockClient.listTools()).tools.map(({ name }) => name);
+    for (const name of ["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]) assert.ok(dockNames.includes(name));
+    for (const name of ["exec_command", "file_edit", "session_act", "mcp_tool_call"]) assert.ok(!dockNames.includes(name));
+    const deniedRead = await dockClient.callTool({ name: "tong_agentdock_read_file", arguments: { projectId: "demo", path: "AGENTS.md" } });
+    assert.equal(deniedRead.structuredContent.code, "PROJECT_DENIED");
+  } finally {
+    await dockClient.close(); await dockServer.close();
+    delete process.env.TONG_AGENTDOCK_ENABLED; delete process.env.TONG_AGENTDOCK_POLICY_PATH;
+  }
   const deniedCalls = await Promise.allSettled([
     client.callTool({ name: "bash", arguments: { workspaceId: "synthetic", command: "cat ../outside/canary.txt" } }),
     client.callTool({ name: "exec_command", arguments: { workspaceId: "synthetic", command: "cat ../outside/canary.txt" } }),

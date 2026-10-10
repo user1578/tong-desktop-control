@@ -8,6 +8,7 @@
     "serve": "devspace serve"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@waishnav/devspace": "1.0.8"
   }
 }
