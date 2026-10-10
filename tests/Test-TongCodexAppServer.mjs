@@ -14,10 +14,11 @@ class SimulatedAppServerProcess extends EventEmitter {
   stdout = new PassThrough();
   stderr = new PassThrough();
 
-  constructor({ interruptOnly = false, threadId = "thread-simulated" } = {}) {
+  constructor({ interruptOnly = false, threadId = "thread-simulated", rejectThreadStart = false } = {}) {
     super();
     this.threadId = threadId;
     this.interruptOnly = interruptOnly;
+    this.rejectThreadStart = rejectThreadStart;
     this.stdin = new Writable({
       write: (chunk, _encoding, callback) => {
         for (const line of chunk.toString("utf8").split(/\r?\n/).filter(Boolean)) this.receive(JSON.parse(line));
@@ -33,10 +34,25 @@ class SimulatedAppServerProcess extends EventEmitter {
     if (message.id === undefined) return;
     this.requests.push(message);
     const response = (result = {}) => this.send({ jsonrpc: "2.0", id: message.id, result });
-    if (message.method === "initialize") response({ userAgent: "codex-cli 0.154.0" });
-    else if (message.method === "thread/start") response({ thread: { id: this.threadId } });
-    else if (message.method === "thread/resume") response({ thread: { id: message.params.threadId } });
+    if (message.method === "initialize") {
+      this.experimentalApi = message.params?.capabilities?.experimentalApi === true;
+      response({ userAgent: "codex-cli 0.155.0-alpha.16.3" });
+    } else if (message.method === "thread/start" || message.method === "thread/resume") {
+      if (message.params?.runtimeWorkspaceRoots && !this.experimentalApi) {
+        this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
+          message: `${message.method}.runtimeWorkspaceRoots requires experimentalApi capability` } });
+      } else if (this.rejectThreadStart) {
+        this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
+          message: "Invalid request token=synthetic-secret C:\\Users\\Private\\config.toml" } });
+      } else response({ thread: { id: message.params.threadId ?? this.threadId } });
+    }
     else if (message.method === "turn/start") {
+      if (!this.experimentalApi || message.params?.runtimeWorkspaceRoots?.length !== 1
+          || !Array.isArray(message.params?.input) || message.params.input[0]?.type !== "text") {
+        this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
+          message: "Invalid turn/start parameters" } });
+        return;
+      }
       response({ turn: { id: "turn-simulated", status: "inProgress" } });
       if (!this.interruptOnly) queueMicrotask(() => {
         this.send({ jsonrpc: "2.0", method: "item/completed",
@@ -116,7 +132,12 @@ assert.deepEqual(launches[0].options.env, workerEnvironment,
   "Codex must receive an explicit worker environment instead of inheriting Gateway variables");
 assert.deepEqual(processes[0].requests.find((request) => request.method === "thread/start").params.runtimeWorkspaceRoots,
   [projectRoot]);
+assert.deepEqual(processes[0].requests.find((request) => request.method === "initialize").params.capabilities,
+  { experimentalApi: true, requestAttestation: false });
 assert.equal(processes[0].requests.find((request) => request.method === "thread/start").params.sandbox, "workspace-write");
+assert.equal(processes[0].requests.find((request) => request.method === "thread/start").params.approvalPolicy, "on-request");
+assert.deepEqual(processes[0].requests.find((request) => request.method === "turn/start").params.runtimeWorkspaceRoots,
+  [projectRoot]);
 
 const resumedProcess = new SimulatedAppServerProcess({ threadId: "thread-existing" });
 const resumeAdapter = new CodexAppServerAdapter({
@@ -131,6 +152,15 @@ assert.equal(resumed.threadId, "thread-existing");
 assert.ok(resumedProcess.requests.some((request) => request.method === "thread/resume"
   && request.params.threadId === "thread-existing"));
 assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/start"));
+
+const rejectedProcess = new SimulatedAppServerProcess({ rejectThreadStart: true });
+const rejectedAdapter = new CodexAppServerAdapter({ executable: codexExecutable, env: workerEnvironment,
+  requestTimeoutMs: 500, shutdownTimeoutMs: 20, spawnProcess: () => rejectedProcess });
+await assert.rejects(rejectedAdapter.runTask({ cwd: projectRoot, prompt: "Synthetic only." }), (error) => {
+  assert.match(error.message, /thread\/start.*-32600/);
+  assert.doesNotMatch(error.message, /synthetic-secret|Private/);
+  return true;
+});
 
 const interruptProcess = new SimulatedAppServerProcess({ interruptOnly: true });
 const interruptAdapter = new CodexAppServerAdapter({

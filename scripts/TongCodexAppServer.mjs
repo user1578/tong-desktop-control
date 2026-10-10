@@ -20,6 +20,16 @@ function safeSummary(value) {
     .slice(-MAX_AGENT_MESSAGE_CHARS);
 }
 
+function safeProtocolMessage(value, limit = 300) {
+  return safeSummary(String(value ?? "").replace(/[\r\n\t\x00-\x1f]+/g, " "))
+    .replace(/\b(token|client[_-]?secret|api[_-]?key|password)\s*[:=]\s*[^\s,;]+/gi,
+      (_match, key) => `${key}=[REDACTED]`)
+    .replace(/\b[A-Za-z]:\\[^\s"']+/g, "[path]")
+    .replace(/\/(?:Users|home|root)\/[^\s"']+/g, "[path]")
+    .replace(/https?:\/\/[^\s"']+/g, "[url]")
+    .slice(0, limit);
+}
+
 function turnSummary(turn, deltas) {
   const messages = [];
   for (const item of turn?.items ?? []) {
@@ -43,7 +53,7 @@ class JsonRpcPeer {
     this.pending = new Map();
     this.lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
     this.lines.on("line", (line) => this.receive(line));
-    child.stderr.on("data", (chunk) => this.onLog(chunk.toString("utf8"), "stderr"));
+    child.stderr.on("data", (chunk) => this.onLog(safeProtocolMessage(chunk.toString("utf8"), 2_000), "stderr"));
     child.once("error", (error) => this.failAll(error));
     child.once("close", (code, signal) => {
       if (this.pending.size) this.failAll(new Error(`Codex App Server exited (${code ?? signal ?? "unknown"})`));
@@ -59,7 +69,11 @@ class JsonRpcPeer {
       if (!waiter) return;
       this.pending.delete(String(message.id));
       clearTimeout(waiter.timer);
-      if (message.error) waiter.reject(new Error(`Codex App Server request failed (${message.error.code ?? "unknown"})`));
+      if (message.error) {
+        const code = Number.isInteger(message.error.code) ? message.error.code : "unknown";
+        const detail = safeProtocolMessage(message.error.message);
+        waiter.reject(new Error(`Codex App Server ${waiter.method} failed (${code})${detail ? `: ${detail}` : ""}`));
+      }
       else waiter.resolve(message.result ?? {});
       return;
     }
@@ -83,7 +97,7 @@ class JsonRpcPeer {
         reject(new Error(`Codex App Server request timed out (${method})`));
       }, this.requestTimeoutMs);
       timer.unref?.();
-      this.pending.set(String(id), { resolve: resolvePromise, reject, timer });
+      this.pending.set(String(id), { method, resolve: resolvePromise, reject, timer });
       try { this.write({ jsonrpc: "2.0", id, method, params }); }
       catch (error) {
         clearTimeout(timer);
@@ -145,6 +159,8 @@ export class CodexAppServerAdapter {
     let completionResolve;
     let completionReject;
     const completion = new Promise((resolvePromise, reject) => { completionResolve = resolvePromise; completionReject = reject; });
+    // Handshake failures can close the child before completion is awaited.
+    void completion.catch(() => {});
     const deltas = [];
     const testRuns = new Map();
     let completed = false;
@@ -225,7 +241,8 @@ export class CodexAppServerAdapter {
     });
 
     try {
-      const initialized = await peer.request("initialize", { clientInfo: CLIENT_INFO, capabilities: {} });
+      const initialized = await peer.request("initialize", { clientInfo: CLIENT_INFO,
+        capabilities: { experimentalApi: true, requestAttestation: false } });
       onLog(`Codex App Server initialized (${initialized.serverInfo?.version ?? initialized.userAgent ?? "version unavailable"}).`, "status");
       peer.notify("initialized");
       const threadParams = {
