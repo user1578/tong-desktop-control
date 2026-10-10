@@ -1,0 +1,30 @@
+import assert from "node:assert/strict";
+import { mkdtemp, mkdir, rm, access as exists } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, parse } from "node:path";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+import * as z from "zod/v4";
+import * as tong from "../scripts/TongMcpTools.mjs";
+import { TongProjectAccess } from "../scripts/TongProjectAccess.mjs";
+const prefix = join(parse(process.cwd()).root, "tong-local-state-");
+const root = await mkdtemp(prefix), state = join(root, "state"), demo = join(root, "demo"), project = join(root, "project");
+await mkdir(state); await mkdir(demo); await mkdir(project);
+process.env.TONG_RESTRICTED_MCP = "1"; process.env.TONG_RESTRICTED_ROOT = demo; process.env.TONG_LOCAL_STATE_DIR = state;
+const local = new TongProjectAccess({ registryPath: join(state, "project-access.json"), agentAccessPath: join(state, "agent-execution.json"), demoRoot: demo, scanRoots: [] });
+await local.addProject({ id: "local-test", name: "Synthetic local", root: project, permission: "read" });
+const server = new McpServer({ name: "local-state-test", version: "1" }), client = new Client({ name: "local-client", version: "1" });
+try {
+  assert.equal(typeof tong.closeTongMcpTools, "function", "server shutdown must await owned resource cleanup");
+  tong.registerTongMcpTools(server, registerAppTool, z);
+  const [left, right] = InMemoryTransport.createLinkedPair(); await server.connect(right); await client.connect(left);
+  const result = await client.callTool({ name: "tong_list_projects", arguments: {} });
+  assert.ok(result.structuredContent.projects.some(entry => entry.id === "local-test"));
+  await exists(join(state, "agent-tasks.json.manager.lock"));
+  await client.close(); await server.close();
+  assert.equal((await tong.closeTongMcpTools()).complete, true);
+  await assert.rejects(exists(join(state, "agent-tasks.json.manager.lock")));
+  console.log("PASS: default registration uses independent local state and awaitable shutdown releases the task lock.");
+} finally { await client.close(); await server.close(); await tong.closeTongMcpTools?.(); assert.ok(root.startsWith(prefix)); await rm(root, { recursive: true, force: true }); }

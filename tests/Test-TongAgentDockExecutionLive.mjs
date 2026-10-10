@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -18,9 +19,9 @@ else {
     const access = new TongProjectAccess(state.accessOptions);
     const audits = [], router = new TongAgentDockRouter({ client: dock, access, policyPath: state.policyPath, audit: event => audits.push(event) });
     try {
-      await assert.rejects(router.call("file_edit", { projectId: "synthetic", taskId: "acceptance-task", approvalId: "local-write", action: "add", path: "offline.txt", content: "offline\n" }), error => error.code === "UNAVAILABLE");
+      await assert.rejects(router.call("file_edit", { idempotencyKey: randomUUID(), projectId: "synthetic", taskId: "acceptance-task", approvalId: "local-write", action: "add", path: "offline.txt", content: "offline\n" }), error => error.code === "UNAVAILABLE");
       await assert.rejects(readFile(join(state.project, "offline.txt")));
-      await assert.rejects(router.call("command", { projectId: "synthetic", taskId: "acceptance-task", approvalId: "local-command", operation: "pytest" }), error => error.code === "UNAVAILABLE");
+      await assert.rejects(router.call("command", { idempotencyKey: randomUUID(), projectId: "synthetic", taskId: "acceptance-task", approvalId: "local-command", operation: "pytest" }), error => error.code === "UNAVAILABLE");
       await writeFile(join(evidence, "p244-live-offline.json"), JSON.stringify({ passed: true, error: "UNAVAILABLE", fallback: false, audits }, null, 2));
       console.log("PASS: offline write and command fail explicitly, no local fallback or file creation.");
     } finally { await router.close(); }
@@ -46,42 +47,43 @@ else {
     const access = new TongProjectAccess(accessOptions), audits = [];
     await access.addProject({ id: "synthetic", name: "P2.4.4 synthetic", root: project, permission: "write" });
     const router = new TongAgentDockRouter({ client: dock, access, policyPath, audit: event => audits.push(event) });
+    const invoke = (tool, input) => router.call(tool, ["file_edit", "command"].includes(tool) ? { idempotencyKey: randomUUID(), ...input } : input);
     const base = { projectId: "synthetic", taskId: "acceptance-task", approvalId: "local-write" }, cmdBase = { ...base, approvalId: "local-command" };
     const results = {};
     async function runCommand(input) {
-      let value = await router.call("command", { ...cmdBase, ...input }); const handle = value.sessionId;
+      let value = await invoke("command", { ...cmdBase, ...input }); const handle = value.sessionId;
       let stdout = value.stdout, stderr = value.stderr;
-      for (let i = 0; value.status === "running" && i < 100; i++) { await new Promise(resolve => setTimeout(resolve, 100)); value = await router.call("session_status", { ...cmdBase, sessionId: handle }); stdout += value.stdout; stderr += value.stderr; }
+      for (let i = 0; value.status === "running" && i < 100; i++) { await new Promise(resolve => setTimeout(resolve, 100)); value = await invoke("session_status", { ...cmdBase, sessionId: handle }); stdout += value.stdout; stderr += value.stderr; }
       assert.notEqual(value.status, "running"); return { ...value, stdout, stderr };
     }
     try {
       await dock.connect(); assert.equal(dock.serverInfo.version, "1.0.1"); assert.equal((await dock.listTools()).length, 7);
-      results.preview = await router.call("file_edit", { ...base, action: "add", path: "new.txt", content: "new\n", dryRun: true });
+      results.preview = await invoke("file_edit", { ...base, action: "add", path: "new.txt", content: "new\n", dryRun: true });
       await assert.rejects(readFile(join(project, "new.txt")));
-      results.add = await router.call("file_edit", { ...base, action: "add", path: "new.txt", content: "new\n" });
-      results.replace = await router.call("file_edit", { ...base, action: "replace", path: "hello.txt", old: "before", new: "after" });
-      results.patch = await router.call("file_edit", { ...base, action: "patch", patch: "*** Begin Patch\n*** Update File: hello.txt\n@@\n-after\n+patched\n*** Add File: nested/中文.txt\n+unicode\n*** Add File: patched.txt\n+added by patch\n*** End Patch" });
+      results.add = await invoke("file_edit", { ...base, action: "add", path: "new.txt", content: "new\n" });
+      results.replace = await invoke("file_edit", { ...base, action: "replace", path: "hello.txt", old: "before", new: "after" });
+      results.patch = await invoke("file_edit", { ...base, action: "patch", patch: "*** Begin Patch\n*** Update File: hello.txt\n@@\n-after\n+patched\n*** Add File: nested/中文.txt\n+unicode\n*** Add File: patched.txt\n+added by patch\n*** End Patch" });
       assert.equal(await readFile(join(project, "hello.txt"), "utf8"), "patched\n");
       assert.equal(await readFile(join(project, "nested", "中文.txt"), "utf8"), "unicode\n");
       console.log("PASS: real AgentDock add, exact replacement, multi-file relative patch, Unicode and verified content.");
       for (const input of [ { ...base, projectId: "unregistered", action: "add", path: "x.txt", content: "x" }, { ...base, approvalId: "unapproved", action: "replace", path: "hello.txt", old: "patched", new: "x" },
         { ...base, action: "add", path: "../outside/canary.txt", content: "x" }, { ...base, action: "add", path: join(outside, "canary.txt"), content: "x" },
-        { ...base, action: "patch", patch: "*** Begin Patch\n*** Update File: hello.txt\n@@\n-patched\n+x\n*** Add File: ../outside/new-canary.txt\n+escape\n*** End Patch" } ]) await assert.rejects(router.call("file_edit", input));
+        { ...base, action: "patch", patch: "*** Begin Patch\n*** Update File: hello.txt\n@@\n-patched\n+x\n*** Add File: ../outside/new-canary.txt\n+escape\n*** End Patch" } ]) await assert.rejects(invoke("file_edit", input));
       assert.equal(await readFile(join(outside, "canary.txt"), "utf8"), "P244_OUTSIDE_CANARY\n"); await assert.rejects(readFile(join(outside, "new-canary.txt")));
       assert.equal(await readFile(join(project, "hello.txt"), "utf8"), "patched\n");
-      await assert.rejects(router.call("command", { ...base, operation: "pytest" }), error => error.code === "APPROVAL_DENIED");
-      await assert.rejects(router.call("exec_command", { ...cmdBase, cmd: "whoami" }), error => error.code === "TOOL_DENIED");
+      await assert.rejects(invoke("command", { ...base, operation: "pytest" }), error => error.code === "APPROVAL_DENIED");
+      await assert.rejects(invoke("exec_command", { ...cmdBase, cmd: "whoami" }), error => error.code === "TOOL_DENIED");
       results.gitStatus = await runCommand({ operation: "git_status" }); assert.equal(results.gitStatus.exitCode, 0); assert.ok(results.gitStatus.stdout.includes("hello.txt"));
       results.gitDiff = await runCommand({ operation: "git_diff" }); assert.equal(results.gitDiff.exitCode, 0); assert.ok(results.gitDiff.stdout.includes("+patched"));
       results.pytest = await runCommand({ operation: "pytest" }); assert.equal(results.pytest.exitCode, 0); assert.ok(results.pytest.stdout.includes("1 passed"));
       console.log("PASS: real fixed Git status/diff and pytest exit 0.");
-      await router.call("file_edit", { ...base, action: "replace", path: "test_sample.py", old: "assert True", new: "assert False" });
+      await invoke("file_edit", { ...base, action: "replace", path: "test_sample.py", old: "assert True", new: "assert False" });
       results.pytestFailure = await runCommand({ operation: "pytest" }); assert.equal(results.pytestFailure.exitCode, 1); assert.equal(results.pytestFailure.commandOk, false);
-      await router.call("file_edit", { ...base, action: "replace", path: "test_sample.py", old: "assert False", new: "import time; time.sleep(20); assert True" });
+      await invoke("file_edit", { ...base, action: "replace", path: "test_sample.py", old: "assert False", new: "import time; time.sleep(20); assert True" });
       results.timeout = await runCommand({ operation: "pytest", timeoutMs: 300 }); assert.equal(results.timeout.status, "timeout");
-      const running = await router.call("command", { ...cmdBase, operation: "pytest", async: true }); assert.equal(running.status, "running");
-      results.sessionStatus = await router.call("session_status", { ...cmdBase, sessionId: running.sessionId }); assert.equal(results.sessionStatus.status, "running");
-      results.cancel = await router.call("session_cancel", { ...cmdBase, sessionId: running.sessionId }); assert.equal(results.cancel.status, "killed");
+      const running = await invoke("command", { ...cmdBase, operation: "pytest", async: true }); assert.equal(running.status, "running");
+      results.sessionStatus = await invoke("session_status", { ...cmdBase, sessionId: running.sessionId }); assert.equal(results.sessionStatus.status, "running");
+      results.cancel = await invoke("session_cancel", { ...cmdBase, sessionId: running.sessionId }); assert.equal(results.cancel.status, "killed");
       console.log("PASS: real pytest exit 1, timeout, owned session status and cancellation.");
       assert.ok(!JSON.stringify(audits).includes(token) && !JSON.stringify(audits).includes("P244_OUTSIDE_CANARY"));
       await writeFile(join(evidence, "p244-live-context.json"), JSON.stringify({ project, policyPath, accessOptions }));

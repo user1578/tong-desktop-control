@@ -5,6 +5,7 @@ import { performance } from "node:perf_hooks";
 import { dockError, TongAgentDockError } from "./TongAgentDockClient.mjs";
 import { checkedAgentDockPath, within } from "./TongAgentDockPaths.mjs";
 import { resolveAgentDockProject, operationApproval } from "./TongAgentDockPolicy.mjs";
+import { agentDockOperationGroup, reserveAgentDockOperation } from "./TongAgentDockOperations.mjs";
 
 export const EXECUTION_OPERATIONS = Object.freeze(["file_edit", "command", "session_status", "session_cancel"]);
 const identifier = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,79}$/;
@@ -17,18 +18,19 @@ export function validateExecutionInput(tool, input) {
   let keys;
   if (tool === "file_edit") {
     if (!["add", "replace", "patch"].includes(input.action)) invalid();
-    keys = [...common, "action", "dryRun", ...(input.action === "add" ? ["path", "content", "overwrite"] : input.action === "replace" ? ["path", "old", "new", "expectedMatches"] : ["patch"])];
+    keys = [...common, "idempotencyKey", "action", "dryRun", ...(input.action === "add" ? ["path", "content", "overwrite"] : input.action === "replace" ? ["path", "old", "new", "expectedMatches"] : ["patch"])];
     if (input.dryRun !== undefined && typeof input.dryRun !== "boolean") invalid();
     if (input.action === "add" && (!text(input.content) || input.overwrite !== undefined && typeof input.overwrite !== "boolean")) invalid();
     if (input.action === "replace" && (!text(input.old) || !input.old || !text(input.new) || input.expectedMatches !== undefined && input.expectedMatches !== 1)) invalid();
     if (input.action === "patch" ? !text(input.patch) || !input.patch : typeof input.path !== "string" || !input.path || input.path.length > 4096) invalid();
   } else if (tool === "command") {
-    keys = [...common, "operation", "timeoutMs", "async"];
+    keys = [...common, "idempotencyKey", "operation", "timeoutMs", "async"];
     if (!["git_status", "git_diff", "pytest"].includes(input.operation) || input.timeoutMs !== undefined && (!Number.isInteger(input.timeoutMs) || input.timeoutMs < 100 || input.timeoutMs > 30000)
         || input.async !== undefined && typeof input.async !== "boolean") invalid();
   } else if (["session_status", "session_cancel"].includes(tool)) {
     keys = [...common, "sessionId"]; if (!identifier.test(input.sessionId ?? "")) invalid();
   } else invalid();
+  if ((tool === "command" || tool === "file_edit" && input.dryRun !== true) && !/^[a-zA-Z0-9-]{16,128}$/.test(input.idempotencyKey ?? "")) invalid();
   if (Object.keys(input).some(key => !keys.includes(key))) invalid();
 }
 function relativePath(path) {
@@ -84,10 +86,11 @@ const digest = value => createHash("sha256").update(value).digest("hex");
 const quote = value => "'" + value.replaceAll("'", "''") + "'";
 
 export class TongAgentDockExecution {
-  #sessions = new Map(); #busy = new Set(); #launching = 0;
-  constructor({ client, access, policyPath, audit, maxOwnedSessions = 8 }) {
+  #sessions = new Map(); #group; #inflight = new Set(); #closing = false;
+  constructor({ client, access, policyPath, audit, maxOwnedSessions = 8, now = () => performance.now() }) {
     if (!Number.isInteger(maxOwnedSessions) || maxOwnedSessions < 1 || maxOwnedSessions > 100) throw dockError("INVALID_CONFIG");
-    Object.assign(this, { client, access, policyPath, audit, maxOwnedSessions });
+    Object.assign(this, { client, access, policyPath, audit, maxOwnedSessions, now });
+    this.#group = agentDockOperationGroup(policyPath);
   }
   async #context(input) { return resolveAgentDockProject(this.access, this.policyPath, input.projectId); }
   async #write(context, input, event) {
@@ -147,6 +150,10 @@ export class TongAgentDockExecution {
     await this.audit({ ...event, phase: "commit", outcome: "authorized" });
     for (const file of files) await file.checked.recheck();
     current = await this.#context(input); if (current.project.root !== context.project.root) throw dockError("PROJECT_DENIED"); approve(current);
+    event.operationId = await reserveAgentDockOperation(this.policyPath, current, "file_edit", input);
+    for (const file of files) await file.checked.recheck();
+    current = await this.#context(input); if (current.project.root !== context.project.root) throw dockError("PROJECT_DENIED");
+    approve(current); event.effect = "unknown";
     result = await this.client.callTool("file_edit", { ...args, dry_run: false });
     event.effect = "applied";
     current = await this.#context(input); if (current.project.root !== context.project.root) throw dockError("PROJECT_DENIED"); approve(current);
@@ -168,7 +175,7 @@ export class TongAgentDockExecution {
       const checked = await checkedAgentDockPath(dirname(profile.path), basename(profile.path));
       const handle = await open(checked.target, "r"); let hash;
       try { hash = createHash("sha256"); for await (const chunk of handle.createReadStream({ autoClose: false })) hash.update(chunk); } finally { await handle.close(); }
-      await checked.recheck(); if (hash.digest("hex") !== profile.sha256) throw new Error();
+      await checked.recheck({ ignoreDirectoryTimes: true }); if (hash.digest("hex") !== profile.sha256) throw new Error();
       return checked;
     } catch { throw dockError("EXECUTABLE_DENIED"); }
   }
@@ -182,9 +189,10 @@ export class TongAgentDockExecution {
       timedOut: data.status === "timeout" || data.timed_out === true, ...(sessionId ? { sessionId } : {}) };
   }
   async #command(context, input, event) {
-    if (this.#sessions.size + this.#launching >= this.maxOwnedSessions) throw dockError("SESSION_DENIED");
-    this.#launching++;
-    try { return await this.#launchCommand(context, input, event); } finally { this.#launching--; }
+    for (const [id, deadline] of this.#group.sessions) if (deadline <= this.now()) { this.#group.sessions.delete(id); this.#sessions.delete(id); }
+    if (this.#group.sessions.size + this.#group.launching >= this.maxOwnedSessions) throw dockError("SESSION_DENIED");
+    this.#group.launching++;
+    try { return await this.#launchCommand(context, input, event); } finally { this.#group.launching--; }
   }
   async #launchCommand(context, input, event) {
     if (process.platform !== "win32") throw dockError("TOOL_DENIED");
@@ -217,19 +225,25 @@ export class TongAgentDockExecution {
     event.operation = input.operation; event.targets = targets;
     const current = await this.#context(input);
     if (JSON.stringify(current.grant) !== JSON.stringify(context.grant)) throw dockError("APPROVAL_DENIED");
-    operationApproval(current, input, "command.execute", input.operation, targets); await root.recheck(); await executable.recheck();
+    operationApproval(current, input, "command.execute", input.operation, targets); await root.recheck(); await executable.recheck({ ignoreDirectoryTimes: true });
     await this.audit({ ...event, phase: "started", outcome: "authorized" });
     await this.client.connect();
     const launchContext = await this.#context(input);
     if (JSON.stringify(launchContext.grant) !== JSON.stringify(context.grant)) throw dockError("APPROVAL_DENIED");
     operationApproval(launchContext, input, "command.execute", input.operation, targets);
+    event.operationId = await reserveAgentDockOperation(this.policyPath, launchContext, "command", input);
+    await root.recheck(); await executable.recheck({ ignoreDirectoryTimes: true });
+    const dispatchContext = await this.#context(input);
+    if (JSON.stringify(dispatchContext.grant) !== JSON.stringify(context.grant)) throw dockError("APPROVAL_DENIED");
+    operationApproval(dispatchContext, input, "command.execute", input.operation, targets); event.effect = "unknown";
     const result = await this.client.callTool("exec_command", { cmd: command, runtime: "windows", workdir: root.target, env,
       timeout_ms: input.timeoutMs ?? 30000, execution_mode: input.async === true ? "async" : "auto", yield_time_ms: 500, max_output_bytes: 65536, tty: false });
     const data = result.structuredContent; let sessionId;
     if (data?.status === "running") {
       if (typeof data.session_id !== "string" || !data.session_id || data.session_id.length > 256) throw dockError("INVALID_RESULT");
       sessionId = randomUUID(); this.#sessions.set(sessionId, { backendId: data.session_id, projectId: input.projectId, taskId: input.taskId, approvalId: input.approvalId,
-        operation: input.operation, targets, root: root.target, generation: this.client.generation });
+        operation: input.operation, targets, root: root.target, generation: this.client.generation, deadline: this.now() + (input.timeoutMs ?? 30000) + 5000 });
+      this.#group.sessions.set(sessionId, this.#sessions.get(sessionId).deadline);
     }
     event.effect = "executed"; if (sessionId) event.sessionId = sessionId;
     try {
@@ -248,6 +262,7 @@ export class TongAgentDockExecution {
   }
   async #session(context, tool, input, event) {
     const session = this.#sessions.get(input.sessionId);
+    if (session?.deadline <= this.now()) { this.#sessions.delete(input.sessionId); this.#group.sessions.delete(input.sessionId); throw dockError("SESSION_DENIED"); }
     if (!session || session.projectId !== input.projectId || session.taskId !== input.taskId || session.approvalId !== input.approvalId || session.root !== context.project.root) throw dockError("SESSION_DENIED");
     // Cancellation of an owned process remains possible after expiry/revocation. It never starts a new process.
     if (tool === "session_status") operationApproval(context, input, "command.execute", session.operation, session.targets);
@@ -256,7 +271,7 @@ export class TongAgentDockExecution {
     await this.audit({ ...event, phase: "started", outcome: "authorized" });
     const result = await this.client.callTool(tool === "session_cancel" ? "session_act" : "session_observe", { action: tool === "session_cancel" ? "kill" : "status", session_id: session.backendId, max_output_bytes: 65536 });
     const value = this.#commandResult(result.structuredContent, input.sessionId);
-    if (value.status !== "running") this.#sessions.delete(input.sessionId);
+    if (value.status !== "running") { this.#sessions.delete(input.sessionId); this.#group.sessions.delete(input.sessionId); }
     if (tool === "session_status") {
       const current = await this.#context(input); if (current.project.root !== session.root) throw dockError("PROJECT_DENIED");
       operationApproval(current, input, "command.execute", session.operation, session.targets);
@@ -264,22 +279,27 @@ export class TongAgentDockExecution {
     return value;
   }
   async call(tool, input) {
+    if (this.#closing) throw dockError("CLOSED");
+    const pending = this.#runCall(tool, input); this.#inflight.add(pending);
+    try { return await pending; } finally { this.#inflight.delete(pending); }
+  }
+  async #runCall(tool, input) {
     const started = performance.now(), event = { requestId: randomUUID(), projectId: /^[a-z][a-z0-9-]{1,39}$/.test(input?.projectId ?? "") ? input.projectId : "unknown", tool, outcome: "denied" };
     let locked = false;
     try {
       validateExecutionInput(tool, input); event.taskId = input.taskId; event.approvalId = input.approvalId;
-      if (this.#busy.has(input.projectId)) throw dockError("ACCESS_DENIED"); this.#busy.add(input.projectId); locked = true;
+      if (this.#group.busy.has(input.projectId)) throw dockError("ACCESS_DENIED"); this.#group.busy.add(input.projectId); locked = true;
       const context = await this.#context(input);
       const result = tool === "file_edit" ? await this.#write(context, input, event) : tool === "command" ? await this.#command(context, input, event) : await this.#session(context, tool, input, event);
       event.outcome = "allowed"; return result;
     } catch (error) {
       const safe = error instanceof TongAgentDockError ? error : dockError("UNAVAILABLE"); event.errorType = safe.code;
-      if (!["APPROVAL_DENIED", "PROJECT_DENIED", "ACCESS_DENIED", "INVALID_ARGUMENT", "ALREADY_EXISTS", "SESSION_DENIED", "EXECUTABLE_DENIED"].includes(safe.code)) event.outcome = "failed";
+      if (!["APPROVAL_DENIED", "PROJECT_DENIED", "ACCESS_DENIED", "INVALID_ARGUMENT", "ALREADY_EXISTS", "SESSION_DENIED", "EXECUTABLE_DENIED", "REPLAY_DENIED"].includes(safe.code)) event.outcome = "failed";
       if (["TIMEOUT", "UNAVAILABLE"].includes(safe.code)) event.effect = "unknown";
       safe.effect ??= event.effect; event.effect = safe.effect;
       throw safe;
     } finally {
-      if (locked) this.#busy.delete(input.projectId); event.durationMs = Math.round(performance.now() - started);
+      if (locked) this.#group.busy.delete(input.projectId); event.durationMs = Math.round(performance.now() - started);
       try { await this.audit({ ...event, phase: "finished" }); } catch {
         const error = dockError("AUDIT_UNAVAILABLE"); error.effect = event.effect;
         if (event.sessionId && this.#sessions.has(event.sessionId)) {
@@ -298,8 +318,10 @@ export class TongAgentDockExecution {
     const value = this.#commandResult(result.structuredContent);
     if (value.status === "running") throw dockError("INVALID_RESULT");
     this.#sessions.delete(sessionId);
+    this.#group.sessions.delete(sessionId);
   }
   async close() {
+    this.#closing = true; await Promise.allSettled([...this.#inflight]);
     for (const sessionId of this.#sessions.keys()) {
       const session = this.#sessions.get(sessionId);
       await this.#kill(sessionId, { requestId: randomUUID(), tool: "session_cancel", projectId: session.projectId, taskId: session.taskId, approvalId: session.approvalId, operation: "shutdown" }).catch(() => {});

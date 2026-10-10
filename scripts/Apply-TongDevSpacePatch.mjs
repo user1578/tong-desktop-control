@@ -22,9 +22,12 @@ function replaceOnce(source, before, after, name) {
 
 function extendRestrictedServer(source) {
   const toolImport = 'import { assertTongRestrictedConfig, assertTongWorkspaceRoot } from "../../../../scripts/TongSafeFilePath.mjs";';
-  if (!source.includes('import { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";')) {
+  const oldImport = 'import { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";';
+  const newImport = 'import { registerTongMcpTools, closeTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";';
+  if (source.includes(oldImport)) source = replaceOnce(source, oldImport, newImport, "awaitable Tong cleanup import");
+  if (!source.includes(newImport)) {
     source = replaceOnce(source, toolImport,
-      `${toolImport}\nimport { registerTongMcpTools } from "../../../../scripts/TongMcpTools.mjs";`,
+      `${toolImport}\n${newImport}`,
       "agent task tool import");
   }
   const baseToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit"]);';
@@ -42,6 +45,8 @@ function extendRestrictedServer(source) {
       '    registerTongMcpTools(server, registerAppTool, z);\n    return server;\n}\nexport function createServer(config = loadConfig(), options = {}) {',
       "agent task tool registration");
   }
+  if (!source.includes("await closeTongMcpTools();")) source = replaceOnce(source,
+    "const results = await transports.closeAll();", "const results = await transports.closeAll();\n                await closeTongMcpTools();", "await owned AgentDock cleanup before process exit");
   return source;
 }
 
@@ -81,7 +86,8 @@ const files = [
     previousHash2: "6e5ca5457de4c6da8bdcfda02f2f254a9e42c8f59bee32a1ea495c948f595646",
     previousHash3: "ea21bce39c54f32ddd966840dbeb3d87bc2fe117619f5ac517a31d9528f7fc67",
     previousHash4: "3457bd2cc9158e3e93fb22028e81446528c92b94a522913fb081a82f0c0d6df5",
-    patchedHash: "e397438fd44a400f85d052cfd89396ac5a1a565962a285789017a608eb807a0d",
+    previousHash5: "e397438fd44a400f85d052cfd89396ac5a1a565962a285789017a608eb807a0d",
+    patchedHash: "b71a8e616ffb337c38cba6109f922e163d82bcfa34f1bdf94a830130bcc5979c",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -136,7 +142,7 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}`);
   await writeFile(target, patched, "utf8");

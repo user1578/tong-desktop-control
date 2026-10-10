@@ -17,6 +17,7 @@ const MESSAGES = {
   APPROVAL_DENIED: "Local operation approval is missing, expired or outside scope", SESSION_DENIED: "Session does not belong to this task",
   VERIFY_FAILED: "File content does not match the requested change", ALREADY_EXISTS: "File already exists; overwrite approval required",
   EXECUTABLE_DENIED: "Approved command executable is unavailable or changed",
+  REPLAY_DENIED: "Operation key has already been reserved; reconcile before requesting a new operation",
 };
 export class TongAgentDockError extends Error {
   constructor(code) { super(MESSAGES[code] ?? MESSAGES.UNAVAILABLE); this.name = "TongAgentDockError"; this.code = code; }

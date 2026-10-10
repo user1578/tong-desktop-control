@@ -102,12 +102,13 @@ export async function checkedAgentDockPath(root, input = ".", { directory = fals
   return {
     root: canonicalRoot, target, manifest, existed: !!info,
     relative: (path) => relative(canonicalRoot, path).split(sep).join("/") || ".",
-    async recheck({ afterWrite = false } = {}) {
+    async recheck({ afterWrite = false, ignoreDirectoryTimes = false } = {}) {
       for (const [path, identity] of identities) {
         const stat = await inspect(path, new Set());
         if (afterWrite && path === target && !directory) continue; // AgentDock commits edits by atomic replacement; validate new file separately.
         const observed = `${stat.dev}:${stat.ino}:${stat.mode}:${stat.nlink}:${stat.mtimeMs}:${stat.size}`;
-        const structural = afterWrite || !within(canonicalRoot, path);
+        // Creating a sibling journal changes directory times, not executable identity.
+        const structural = afterWrite || !within(canonicalRoot, path) || ignoreDirectoryTimes && stat.isDirectory();
         if ((structural ? observed.split(":").slice(0, 4).join(":") : observed) !== (structural ? identity.split(":").slice(0, 4).join(":") : identity)) denied();
       }
       await noWindowsReparse([...metadataPaths]);

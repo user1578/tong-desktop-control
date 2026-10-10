@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { dirname, basename, resolve } from "node:path";
+import { dirname, basename, resolve, isAbsolute } from "node:path";
 import { AGENTDOCK_READ_TOOLS, dockError } from "./TongAgentDockClient.mjs";
 import { checkedAgentDockPath, within } from "./TongAgentDockPaths.mjs";
 
@@ -11,7 +11,7 @@ export async function resolveAgentDockProject(access, policyPath, projectId) {
     policy = JSON.parse(await readFile(checked.target, "utf8")); await checked.recheck();
     projects = await access.listProjects();
   } catch { throw dockError("PROJECT_DENIED"); }
-  if (policy?.schemaVersion !== 1 || !Array.isArray(policy.projects)) throw dockError("PROJECT_DENIED");
+  if (policy?.schemaVersion !== 1 || !Array.isArray(policy.projects) || policy.backendWorkspaceRoot !== undefined && (typeof policy.backendWorkspaceRoot !== "string" || !isAbsolute(policy.backendWorkspaceRoot))) throw dockError("PROJECT_DENIED");
   const candidates = projects.filter(entry => entry.id === projectId && entry.status === "enabled" && entry.available && ["read", "write"].includes(entry.permission));
   const grants = policy.projects.filter(entry => entry.projectId === projectId);
   const project = candidates[0], grant = grants[0];

@@ -1,8 +1,18 @@
 import { TongProjectAccess } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
+import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
+const dockClosures = new Set();
+export async function closeTongMcpTools({ timeoutMs = 10000 } = {}) {
+  let timer;
+  const cleanup = Promise.allSettled([...dockClosures].map(close => close()).concat(defaultTaskManager ? [defaultTaskManager.close()] : []));
+  try {
+    const result = await Promise.race([cleanup, new Promise(resolve => { timer = setTimeout(() => resolve(null), timeoutMs); })]);
+    return { complete: result !== null && result.every(entry => entry.status === "fulfilled") };
+  } finally { clearTimeout(timer); }
+}
 
 function success(value) {
   return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value };
@@ -61,13 +71,16 @@ function safeAgent(handler) {
 export function registerTongMcpTools(server, registerTool, z, access, tasks, agentDock) {
   if (process.env.TONG_RESTRICTED_MCP !== "1") return;
   const useDefaultAccess = access === undefined;
-  access ??= new TongProjectAccess();
+  const stateDir = process.env.TONG_LOCAL_STATE_DIR;
+  if (stateDir && !isAbsolute(stateDir)) throw new Error("Tong local state directory must be absolute");
+  access ??= stateDir ? new TongProjectAccess({ registryPath: join(stateDir, "project-access.json"), agentAccessPath: join(stateDir, "agent-execution.json"), demoRoot: process.env.TONG_RESTRICTED_ROOT, scanRoots: [] }) : new TongProjectAccess();
   tasks ??= useDefaultAccess
-    ? (defaultTaskManager ??= new TongAgentTaskManager({ access }))
+    ? (defaultTaskManager ??= new TongAgentTaskManager({ access, ...(stateDir ? { statePath: join(stateDir, "agent-tasks.json"), trustedPolicyPath: join(stateDir, "trusted-codex.json") } : {}) }))
     : new TongAgentTaskManager({ access });
   if (agentDock || process.env.TONG_AGENTDOCK_ENABLED === "1") {
-    registerAgentDockTools(server, registerTool, z, agentDock ?? new TongAgentDockRouter({ access,
-      policyPath: process.env.TONG_AGENTDOCK_POLICY_PATH }));
+    const close = registerAgentDockTools(server, registerTool, z, agentDock ?? new TongAgentDockRouter({ access,
+      policyPath: process.env.TONG_AGENTDOCK_POLICY_PATH }), () => dockClosures.delete(close));
+    dockClosures.add(close);
   }
   registerTool(server, "tong_list_drives", {
     title: "List C and D drive metadata",

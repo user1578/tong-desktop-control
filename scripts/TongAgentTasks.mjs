@@ -144,7 +144,7 @@ function validDocument(document) {
 }
 
 export class TongAgentTaskManager {
-  constructor({ access, workerBroker, statePath = DEFAULT_STATE_PATH,
+  constructor({ access, workerBroker, statePath = DEFAULT_STATE_PATH, trustedPolicyPath,
     maxConcurrent = 2, defaultTimeoutMs = 30 * 60 * 1_000,
     maxTaskRuntimeMs = MAX_TASK_TIMEOUT_MS, collectResult = collectGitResult,
     now = () => Date.now() } = {}) {
@@ -152,7 +152,7 @@ export class TongAgentTaskManager {
       throw new TypeError("TongAgentTaskManager requires project access");
     }
     if (!workerBroker) {
-      const policy = new TongTrustedPolicy({ taskStatePath: statePath });
+      const policy = new TongTrustedPolicy({ taskStatePath: statePath, ...(trustedPolicyPath ? { policyPath: trustedPolicyPath } : {}) });
       workerBroker = new TongExecutorRouter({ policy, isolated: new TongWorkerBroker({ access }),
         trusted: new TongTrustedCodexBroker({ access, policy }) });
     }

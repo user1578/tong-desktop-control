@@ -60,6 +60,11 @@ const http = createServer(async (req, res) => {
     if (params.name === "read_file") data = { path: params.arguments.path, content: mode === "large" ? "x".repeat(300_000) : mode === "leak-token" ? acceptedToken : "synthetic hello", encoding: "utf-8", start_line: 1, end_line: 1, total_lines: 1, truncated: false };
     if (params.name === "list_dir") data = { path: params.arguments.path, entries: [{ name: "hello.txt", path: mode === "escape-result" ? "../outside/secret.txt" : "hello.txt", type: "file", size_bytes: 15 }], truncated: false, partial: false, skipped_paths: [] };
     if (params.name === "search_text") data = { matches: [{ path: join(project, "hello.txt"), line: 1, column: 1, preview: "synthetic hello", match_text: "hello" }], truncated: false };
+    if (mode === "workspace-relative") {
+      if (params.name === "read_file") data.path = "project/hello.txt";
+      if (params.name === "list_dir") data.entries[0].path = "project/hello.txt";
+    }
+    if (mode === "workspace-relative-escape" && params.name === "read_file") data.path = "outside/secret.txt";
     return { structuredContent: data, content: [{ type: "text", text: JSON.stringify(data) }] };
   });
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
@@ -97,6 +102,12 @@ try {
   assert.equal((await router.call("read_file", { projectId: "synthetic", path: "hello.txt" })).content, "synthetic hello");
   assert.equal((await router.call("list_dir", { projectId: "synthetic", path: "." })).entries[0].path, "hello.txt");
   assert.equal((await router.call("search_text", { projectId: "synthetic", path: ".", query: "hello" })).matches[0].path, "hello.txt");
+  await writeFile(policyPath, JSON.stringify({ ...grants, backendWorkspaceRoot: root })); mode = "workspace-relative";
+  assert.equal((await router.call("read_file", { projectId: "synthetic", path: "hello.txt" })).path, "hello.txt");
+  assert.equal((await router.call("list_dir", { projectId: "synthetic", path: "." })).entries[0].path, "hello.txt");
+  mode = "workspace-relative-escape";
+  await assert.rejects(router.call("read_file", { projectId: "synthetic", path: "hello.txt" }), errorCode("INVALID_RESULT"));
+  mode = "normal"; await writeFile(policyPath, JSON.stringify(grants));
   await writeFile(join(project, "中文-日文.txt"), "synthetic unicode filename");
   assert.equal((await router.call("read_file", { projectId: "synthetic", path: "中文-日文.txt" })).path, "中文-日文.txt");
   const beforeDenied = calls.length;
