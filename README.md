@@ -95,7 +95,7 @@ node --test
 & '<path-to-ngrok.exe>' config check --config "$env:LOCALAPPDATA\ngrok\ngrok.yml"
 ```
 
-The doctor checks the installed Node, Git, Git Bash, SQLite binding, configured URLs, roots, and allowed hosts. The tests confirm the 14-tool allowlist, strict task arguments, authorization, persistence, bounded logs, adapter lifecycle, workspace pinning, and path traversal protection. The endpoint test uses PowerShell 7 because Windows PowerShell 5.1 reports inconsistent public 401 status codes through its legacy `HttpClient`.
+The doctor checks the installed Node, Git, Git Bash, SQLite binding, configured URLs, roots, and allowed hosts. The tests confirm the 14-tool allowlist, strict task arguments, authorization, persistence, bounded logs, adapter lifecycle, workspace pinning, and path traversal protection. The endpoint test runs in Windows PowerShell 5.1; it uses the installed `curl.exe` for public HTTPS because the legacy .NET HTTP clients on this host report some public 401 responses as 200.
 
 ## Connect ChatGPT
 
