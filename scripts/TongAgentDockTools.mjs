@@ -31,10 +31,11 @@ export function validateAgentDockGatewayCall(name, input) {
   try { validateAgentDockInput(publicToBackend[name], input); return null; }
   catch { return { code: -32602, message: "Invalid AgentDock arguments" }; }
 }
-async function localAudit(event) {
+export async function writeAgentDockAudit(event) {
   const stateDir = process.env.TONG_LOCAL_STATE_DIR ?? join(projectRoot, "runtime");
   if (!isAbsolute(stateDir)) throw dockError("INVALID_CONFIG");
-  const path = join(stateDir, "agentdock-audit.jsonl");
+  const path = process.env.TONG_AGENTDOCK_AUDIT_PATH ?? join(stateDir, "agentdock-audit.jsonl");
+  if (!isAbsolute(path)) throw dockError("INVALID_CONFIG");
   await mkdir(dirname(path), { recursive: true });
   await appendFile(path, JSON.stringify({ at: new Date().toISOString(), ...event }) + "\n", { mode: 0o600 });
 }
@@ -72,7 +73,7 @@ function filteredResult(tool, data, checked, input, backendWorkspaceRoot) {
 
 /** Independent synthetic-project grants. agent.execute is never consulted or promoted. */
 export class TongAgentDockRouter {
-  constructor({ client, access, policyPath = join(process.env.TONG_LOCAL_STATE_DIR ?? join(projectRoot, "runtime"), "agentdock-access.json"), audit = localAudit, maxOwnedSessions, now } = {}) {
+  constructor({ client, access, policyPath = join(process.env.TONG_LOCAL_STATE_DIR ?? join(projectRoot, "runtime"), "agentdock-access.json"), audit = writeAgentDockAudit, maxOwnedSessions, now } = {}) {
     this.client = client ?? new TongAgentDockClient({ url: process.env.TONG_AGENTDOCK_URL, controlledExecution: true });
     this.access = access; this.policyPath = policyPath; this.audit = audit;
     this.execution = new TongAgentDockExecution({ client: this.client, access, policyPath, audit, maxOwnedSessions, now });
