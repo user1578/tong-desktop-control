@@ -5,7 +5,11 @@ try {
     if(@($Root,$NodeExe,$Supervisor,$guardian) | Where-Object {$_ -match '["\r\n]'}){throw 'Invalid launch path'}
     if($RunId -notmatch '^[a-f0-9-]{36}$'){throw 'Invalid run identity'}
     $Root=[IO.Path]::GetFullPath($Root)
-    if(-not $Root.StartsWith('D:\agentdock-poc-20261010\isolated\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved PoC'}
+    if($Root -ceq 'D:\tong-agentdock-local') {
+        if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\tong-agentdock-local\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
+        & $NodeExe $Supervisor preflight-production | Out-Null
+        if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
+    }elseif(-not $Root.StartsWith('D:\agentdock-poc-20261010\isolated\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$guardian+'" -Root "'+$Root+'" -RunId "'+$RunId+'" -NodeExe "'+$NodeExe+'" -Supervisor "'+$Supervisor+'"'
     # A separate hidden Windows console survives the initiating CLI's console exit.
     # No service, scheduled task, startup item, or credential argument is created.

@@ -4,6 +4,14 @@ import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTool
 import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
+let preservedState;
+// Called by the locally approved launcher before DevSpace registers tools.
+// Preserves the original registry/Codex paths while code comes from a candidate.
+export function configureTongMcpState({stateDir,demoRoot,scanRoots}={}) {
+  if(!isAbsolute(stateDir??'')||!isAbsolute(demoRoot??'')||scanRoots!==undefined&&(!Array.isArray(scanRoots)||scanRoots.some(root=>!isAbsolute(root))))throw new Error('Preserved Tong state paths must be absolute');
+  if(defaultTaskManager||preservedState)throw new Error('Tong state is already configured');
+  preservedState=Object.freeze({stateDir,demoRoot,...(scanRoots!==undefined?{scanRoots:[...scanRoots]}:{})});
+}
 const dockClosures = new Set();
 export async function closeTongMcpTools({ timeoutMs = 10000 } = {}) {
   let timer;
@@ -71,9 +79,10 @@ function safeAgent(handler) {
 export function registerTongMcpTools(server, registerTool, z, access, tasks, agentDock) {
   if (process.env.TONG_RESTRICTED_MCP !== "1") return;
   const useDefaultAccess = access === undefined;
-  const stateDir = process.env.TONG_LOCAL_STATE_DIR;
+  const stateDir = preservedState?.stateDir ?? process.env.TONG_LOCAL_STATE_DIR;
   if (stateDir && !isAbsolute(stateDir)) throw new Error("Tong local state directory must be absolute");
-  access ??= stateDir ? new TongProjectAccess({ registryPath: join(stateDir, "project-access.json"), agentAccessPath: join(stateDir, "agent-execution.json"), demoRoot: process.env.TONG_RESTRICTED_ROOT, scanRoots: [] }) : new TongProjectAccess();
+  access ??= preservedState ? new TongProjectAccess({ registryPath: join(stateDir,"project-access.json"),agentAccessPath:join(stateDir,"agent-execution.json"),demoRoot:preservedState.demoRoot,...(preservedState.scanRoots!==undefined?{scanRoots:preservedState.scanRoots}:{}) })
+    : stateDir ? new TongProjectAccess({ registryPath: join(stateDir, "project-access.json"), agentAccessPath: join(stateDir, "agent-execution.json"), demoRoot: process.env.TONG_RESTRICTED_ROOT, scanRoots: [] }) : new TongProjectAccess();
   tasks ??= useDefaultAccess
     ? (defaultTaskManager ??= new TongAgentTaskManager({ access, ...(stateDir ? { statePath: join(stateDir, "agent-tasks.json"), trustedPolicyPath: join(stateDir, "trusted-codex.json") } : {}) }))
     : new TongAgentTaskManager({ access });
