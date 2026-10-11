@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, open } from "node:fs/promises";
+import { mkdir, open, lstat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { checkedAgentDockPath, within } from "./TongAgentDockPaths.mjs";
 import { dockError } from "./TongAgentDockClient.mjs";
@@ -11,6 +11,19 @@ export function agentDockOperationGroup(policyPath) {
   return groups.get(key);
 }
 const hash = value => createHash("sha256").update(value).digest("hex");
+// Read-only early rejection precedes content-dependent previews. The atomic
+// reservation below is still required immediately before a real dispatch.
+export async function assertAgentDockOperationUnused(policyPath, context, input) {
+  if(!/^[a-zA-Z0-9-]{16,128}$/.test(input.idempotencyKey??''))throw dockError('INVALID_ARGUMENT');
+  const root=join(dirname(resolve(policyPath)),'agentdock-operations');
+  if(context.projects.some(project=>project.root&&within(resolve(project.root),root)))throw dockError('APPROVAL_DENIED');
+  await checkedAgentDockPath(dirname(root),'.',{directory:true});
+  try{await lstat(root);}catch(error){if(error.code==='ENOENT')return;throw dockError('AUDIT_UNAVAILABLE');}
+  const checked=await checkedAgentDockPath(root,'.',{directory:true});
+  let exists=false;
+  try{await lstat(join(root,hash(input.idempotencyKey)+'.json'));exists=true;}catch(error){if(error.code!=='ENOENT')throw dockError('AUDIT_UNAVAILABLE');}
+  await checked.recheck();if(exists)throw dockError('REPLAY_DENIED');
+}
 // Atomic create-only reservation survives MCP reconnection and Tong restarts.
 // Records contain digests and references, never arguments, content or output.
 export async function reserveAgentDockOperation(policyPath, context, tool, input) {

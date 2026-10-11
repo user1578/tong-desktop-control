@@ -10,8 +10,9 @@ const policyPath = join(state, "policy.json");
 await writeFile(policyPath, JSON.stringify({ schemaVersion: 1, projects: [{ projectId: "synthetic", root: project, scope: "synthetic", tools: ["read_file"] }],
   approvals: [{ approvalId: "local-write", taskId: "one-task", projectId: "synthetic", capability: "project.write", operations: ["replace"], paths: ["text.txt"], expiresAt: new Date(Date.now() + 600000).toISOString() }] }));
 const access = { listProjects: async () => [{ id: "synthetic", root: project, status: "enabled", available: true, permission: "write" }] };
-let commits = 0, failAfterWrite = false;
+let commits = 0, backendCalls = 0, failAfterWrite = false;
 const client = { connect: async () => {}, close: async () => {}, callTool: async (_name, args) => {
+  backendCalls++;
   if (!args.dry_run) { commits++; await writeFile(args.path, (await readFile(args.path, "utf8")).replace(args.old, () => args.new)); if (failAfterWrite) throw dockError("TOOL_FAILED"); }
   return { structuredContent: { dry_run: args.dry_run, path: args.path, diff_preview: "synthetic" } };
 } };
@@ -30,6 +31,12 @@ try {
   assert.equal(audits.at(-1).effect, "unknown");
   await assert.rejects(makeRouter().call("file_edit", { ...input, idempotencyKey: "synthetic-operation-003" }), error => error.code === "REPLAY_DENIED");
   assert.equal(commits, 3);
+  const finalEdit={...input,old:'ABBB',new:'DONE',idempotencyKey:'synthetic-operation-004'};
+  failAfterWrite=false;await router.call('file_edit',finalEdit);assert.equal(commits,4);
+  const callsBeforeReplay=backendCalls;
+  await assert.rejects(makeRouter().call('file_edit',finalEdit),error=>error.code==='REPLAY_DENIED');
+  assert.equal(backendCalls,callsBeforeReplay);
+  assert.equal(commits,4);assert.equal(await readFile(join(project,'text.txt'),'utf8'),'DONE');
   const records = (await import("node:fs/promises")).readdir;
   for (const name of await records(join(state, "agentdock-operations"))) { const text = await readFile(join(state, "agentdock-operations", name), "utf8"); assert.ok(!text.includes("ABBB") && !text.includes("synthetic backend failed")); }
   console.log("PASS: replay blocked across Routers, missing key denied, explicit new operation allowed, uncertain backend effects preserved.");

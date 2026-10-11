@@ -5,7 +5,7 @@ import { performance } from "node:perf_hooks";
 import { dockError, TongAgentDockError } from "./TongAgentDockClient.mjs";
 import { checkedAgentDockPath, within } from "./TongAgentDockPaths.mjs";
 import { resolveAgentDockProject, operationApproval } from "./TongAgentDockPolicy.mjs";
-import { agentDockOperationGroup, reserveAgentDockOperation } from "./TongAgentDockOperations.mjs";
+import { agentDockOperationGroup, assertAgentDockOperationUnused, reserveAgentDockOperation } from "./TongAgentDockOperations.mjs";
 
 export const EXECUTION_OPERATIONS = Object.freeze(["file_edit", "command", "session_status", "session_cancel"]);
 const identifier = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,79}$/;
@@ -102,6 +102,7 @@ export class TongAgentDockExecution {
       return approval;
     };
     approve(context); let current;
+    if(input.dryRun!==true)await assertAgentDockOperationUnused(this.policyPath,context,input);
     const files = [];
     for (const op of operations) {
       const checked = await checkedAgentDockPath(context.project.root, op.path, { allowMissing: op.kind === "add" });
