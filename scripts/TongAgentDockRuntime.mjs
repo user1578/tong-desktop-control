@@ -99,10 +99,12 @@ async function guardianComplete(root,runId) {
     && !sameProcess(await processIdentity(guardian.pid),guardian)
     && !(await processIdentity(guardian.nodePid,runId))?.markerMatches;
 }
-export async function startRuntime(root,{startupTimeoutMs=30000}={}) {
-  if(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>30000)throw fail('INVALID_TIMEOUT');
+export async function startRuntime(root,{startupTimeoutMs}={}) {
+  if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
   root=absoluteRoot(root);const approved=guardedRoot(root)?await loadApprovedProfile(root,'start'):null;
   const profile=await layout(root);if(approved&&JSON.stringify(profile)!==JSON.stringify(approved))throw fail('APPROVAL_DENIED');
+  const maxStartupMs=preserved(profile)?120000:30000;
+  startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
   const held=await freeze(root);
   let runId,child,launchedIdentity,release=true;
@@ -168,8 +170,9 @@ async function supervise(root,runId){root=absoluteRoot(root);const request=await
     const child=fork(childScript,[],{cwd:codeRoot(profile),env:safeEnvironment(root),windowsHide:true,execArgv:['--trace-uncaught','--trace-warnings'],stdio:['ignore','pipe','pipe','ipc']});
     await attach(role,child);
     const ready=new Promise((ok,reject)=>{
-      const time=setTimeout(()=>reject(fail('CHILD_READINESS_TIMEOUT')),20000);
-      child.on('message',message=>{if(message.event==='logging_secret'&&role==='devspace'&&preserved(profile)){if(typeof message.ownerToken!=='string'||message.ownerToken.length<16||message.ownerToken.length>4096||/[\x00-\x20\x7f]/.test(message.ownerToken)){clearTimeout(time);reject(fail('CHILD_READINESS_FAILED'));return;}if(!secrets.includes(message.ownerToken))secrets.push(message.ownerToken);child.send({event:'logging_ready'});return;}clearTimeout(time);message.event==='ready'?ok():reject(fail('CHILD_READINESS_FAILED'));});
+      const time=setTimeout(()=>reject(fail('CHILD_READINESS_TIMEOUT')),preserved(profile)?45000:20000);
+      child.on('message',message=>{if(message.event==='stage'&&/^[a-z_]{1,40}$/.test(message.stage??''))void event({event:'child_stage',role,stage:message.stage,durationMs:Date.now()-began});});
+      child.on('message',message=>{if(message.event==='stage')return;if(message.event==='logging_secret'&&role==='devspace'&&preserved(profile)){if(typeof message.ownerToken!=='string'||message.ownerToken.length<16||message.ownerToken.length>4096||/[\x00-\x20\x7f]/.test(message.ownerToken)){clearTimeout(time);reject(fail('CHILD_READINESS_FAILED'));return;}if(!secrets.includes(message.ownerToken))secrets.push(message.ownerToken);child.send({event:'logging_ready'});return;}clearTimeout(time);message.event==='ready'?ok():reject(fail('CHILD_READINESS_FAILED'));});
       child.once('exit',()=>{clearTimeout(time);reject(fail('CHILD_EXIT'));});
     });
     child.send({schemaVersion:1,role,root,...settings,tongRoot:codeRoot(profile),...(preserved(profile)?{profile}:{}),gatewayPort:profile.gatewayPort,upstreamPort:profile.upstreamPort});

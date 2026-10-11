@@ -5,12 +5,16 @@ import { readFile } from 'node:fs/promises';
 const [settings] = await once(process, 'message');
 if (settings.schemaVersion !== 1 || !['devspace','gateway'].includes(settings.role)) throw new Error('Runtime child settings rejected');
 const preserved=settings.profile!==undefined;
+const stage=name=>process.send({event:'stage',stage:name});
+stage('settings_received');
 if(preserved){
   const {validateProductionProfile,verifyRuntimeApproval,readApprovedEnabledState}=await import('./TongProductionProfile.mjs');
   const profile=validateProductionProfile(settings.profile);
   if(profile.root!==settings.root||profile.codeRoot!==settings.tongRoot||profile.gatewayPort!==settings.gatewayPort||profile.upstreamPort!==settings.upstreamPort)throw new Error('Approved runtime settings rejected');
   await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);
+  stage('approval_verified');
   const {verifyRuntimeCandidate}=await import('./TongRuntimeCandidate.mjs');await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});
+  stage('candidate_verified');
 }else{
   const marker=JSON.parse(await readFile(join(settings.root,'runtime-synthetic.json'),'utf8'));
   if(marker.scope!=='synthetic-only')throw new Error('Synthetic runtime marker required');
@@ -31,9 +35,11 @@ if (settings.role === 'devspace') {
       TONG_AGENTDOCK_POLICY_PATH:join(profile.root,'tong-policy','agentdock-access.json'),TONG_AGENTDOCK_AUDIT_PATH:join(profile.root,'logs','agentdock-audit.jsonl')});
     const {loadConfig}=await import(pathToFileURL(join(profile.codeRoot,'node_modules','@waishnav','devspace','dist','config.js')).href);
     try{config=loadConfig(process.env);}catch{throw new Error('Original DevSpace configuration unavailable');}
+    stage('config_loaded');
     delete process.env.DEVSPACE_OAUTH_OWNER_TOKEN;
     const loggingReady=once(process,'message');process.send({event:'logging_secret',ownerToken:config.oauth.ownerToken});
     const [loggingAck]=await loggingReady;if(loggingAck.event!=='logging_ready')throw new Error('Private log protection unavailable');
+    stage('log_protection_ready');
     if(config.host!=='127.0.0.1'||config.port!==profile.upstreamPort||config.stateDir.toLowerCase()!==profile.oauthStateDir.toLowerCase()||config.publicBaseUrl!==profile.publicOrigin||config.allowedRoots.length!==1||config.allowedRoots[0].toLowerCase()!==profile.demoRoot.toLowerCase()||config.subagents.enabled)throw new Error('Original runtime configuration mismatch');
     const tools=await import(pathToFileURL(join(profile.codeRoot,'scripts','TongMcpTools.mjs')).href);
     if(typeof tools.configureTongMcpState==='function')tools.configureTongMcpState({stateDir:profile.runtimeDir,demoRoot:profile.demoRoot,...(profile.mode==='production-simulation'?{scanRoots:[]}:{})});
@@ -43,7 +49,10 @@ if (settings.role === 'devspace') {
     TONG_AGENTDOCK_ENABLED: '1', TONG_AGENTDOCK_URL: 'http://127.0.0.1:18765/mcp', TONG_AGENTDOCK_TOKEN: settings.agentdockToken,
     TONG_AGENTDOCK_POLICY_PATH: join(settings.root, 'tong-policy', 'agentdock-access.json'), TONG_AGENTDOCK_AUDIT_PATH: join(settings.root, 'logs', 'agentdock-audit.jsonl'), DEVSPACE_CONFIG_DIR: join(settings.root, 'tong-state', 'config') });
   }
+  stage('server_import_begin');
   const { createServer } = await import(pathToFileURL(join(settings.tongRoot, 'node_modules', '@waishnav', 'devspace', 'dist', 'server.js')).href);
+  stage('server_import_complete');
+  if(settings.preflightOnly===true&&settings.profile?.mode==='production-simulation'){stage('preflight_complete');process.disconnect();process.exit(0);}
   server = createServer(config??{ host:'127.0.0.1', port:settings.upstreamPort, publicBaseUrl:`http://127.0.0.1:${settings.gatewayPort}`,
     oauth:{ownerToken:settings.ownerToken,accessTokenTtlSeconds:3600,refreshTokenTtlSeconds:7200,scopes:['devspace'],allowedRedirectHosts:['127.0.0.1']},
     allowedHosts:['127.0.0.1','localhost'],allowedRoots:[process.env.TONG_RESTRICTED_ROOT],agentDir:process.env.TONG_RESTRICTED_ROOT,
