@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {mkdtemp,readFile,writeFile} from 'node:fs/promises';
+import {createServer} from 'node:net';
+import {join} from 'node:path';
+import {once} from 'node:events';
+import {fileURLToPath} from 'node:url';
+import {initializeRuntime,reconcileStaleRuntime,runtimeStatus} from '../scripts/TongAgentDockRuntime.mjs';
+import {processIdentity} from '../scripts/TongRuntimeSecurity.mjs';
+
+const root=await mkdtemp('D:\\agentdock-poc-20261010\\isolated\\state\\b24-stale-recovery-');
+await initializeRuntime({root,tongRoot:fileURLToPath(new URL('../',import.meta.url)),withTong:true});
+const runId=randomUUID(),live=await processIdentity(process.pid);
+const supervisor={...live,startTicks:'1'};
+const record={schemaVersion:1,runId,phase:'ready',supervisor,children:[],descendants:[]};
+const guardian={schemaVersion:1,runId,pid:process.pid,exe:live.exe,startTicks:live.startTicks,nodePid:process.pid,jobAssigned:true};
+const runtimePath=join(root,'run','runtime.json'),guardianPath=join(root,'run','guardian.json');
+await writeFile(runtimePath,JSON.stringify(record));await writeFile(guardianPath,JSON.stringify(guardian));
+assert.equal((await runtimeStatus(root)).phase,'stale_record');
+await assert.rejects(reconcileStaleRuntime(root),/RECONCILIATION_DENIED/);
+guardian.startTicks='1';await writeFile(guardianPath,JSON.stringify(guardian));
+const occupied=createServer();occupied.listen(17876,'127.0.0.1');await once(occupied,'listening');
+try{await assert.rejects(reconcileStaleRuntime(root),/PORT_OCCUPIED/);}finally{await new Promise(ok=>occupied.close(ok));}
+const originalRuntime=await readFile(runtimePath),originalGuardian=await readFile(guardianPath);
+const result=await reconcileStaleRuntime(root);
+assert.equal(result.reconciled,true);assert.equal(result.originalRecordsPreserved,true);
+assert.deepEqual(await readFile(runtimePath),originalRuntime);assert.deepEqual(await readFile(guardianPath),originalGuardian);
+const proof=JSON.parse(await readFile(join(root,'run','stale-reconciliation.json'),'utf8'));
+assert.equal(proof.kind,'guardian-lost');assert.equal(proof.jobActiveAfterCleanup,undefined);
+assert.equal((await runtimeStatus(root)).phase,'abnormal_exit');
+await writeFile(runtimePath,Buffer.concat([originalRuntime,Buffer.from(' ')]));
+assert.equal((await runtimeStatus(root)).phase,'stale_record');
+await writeFile(runtimePath,originalRuntime);
+assert.equal((await runtimeStatus(root)).phase,'abnormal_exit');
+console.log(JSON.stringify({passed:true,root,liveGuardianRejected:true,occupiedPortRejected:true,recordsPreserved:true,tamperRejected:true}));
