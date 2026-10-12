@@ -6,13 +6,13 @@ $stage='compile'
 $approvedRoot=$false
 try {
     if ($Root -match '["\r\n]' -or $RunId -notmatch '^[a-f0-9-]{36}$') { throw 'Invalid guardian settings' }
-    $boundary='D:\agentdock-poc-20261010\isolated\state\'
+    $boundary='D:\Tong\runtime\state\'
     $Root=[IO.Path]::GetFullPath($Root)
-    if($Root -ceq 'D:\tong-agentdock-local') {
-        if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\tong-agentdock-local\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
+    if($Root -ceq 'D:\Tong\runtime') {
+        if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
         & $NodeExe $Supervisor preflight-production | Out-Null
         if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
-    }elseif(-not $Root.StartsWith('D:\agentdock-poc-20261010\isolated\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
+    }elseif(-not $Root.StartsWith('D:\Tong\runtime\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     $approvedRoot=$true
     Add-Type -TypeDefinition @'
 using System;

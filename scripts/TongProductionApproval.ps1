@@ -7,7 +7,7 @@ $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 [Console]::InputEncoding=[Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
-$stateRoot='D:\agentdock-poc-20261010\isolated\state'
+$stateRoot='D:\Tong\runtime\state'
 $store=Join-Path $stateRoot 'b23-production-approvals'
 $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $allowedSids=@($sid,'S-1-5-18','S-1-5-32-544')

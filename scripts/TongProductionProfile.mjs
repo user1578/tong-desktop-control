@@ -5,16 +5,16 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { assertProtectedPaths } from './TongRuntimeSecurity.mjs';
 
-export const PRODUCTION_ROOT = 'D:\\tong-agentdock-local';
-export const PRODUCTION_SIMULATION_STATE_ROOT = 'D:\\agentdock-poc-20261010\\isolated\\state';
+export const PRODUCTION_ROOT = 'D:\\Tong\\runtime';
+export const PRODUCTION_SIMULATION_STATE_ROOT = 'D:\\Tong\\runtime\\state';
 export const PRODUCTION_APPROVAL_STORE = win32.join(PRODUCTION_SIMULATION_STATE_ROOT, 'b23-production-approvals');
 const helper = fileURLToPath(new URL('TongProductionApproval.ps1', import.meta.url));
 const actions = new Set(['init','start','stop','enable-agentdock','disable-agentdock','backup','restore','manager']);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const fail = code => new Error(code);
 const production = {
-  schemaVersion:1, mode:'production', root:PRODUCTION_ROOT, codeRoot:'D:\\tong-desktop-control', originalTongRoot:'D:\\tong-desktop-control',
-  originalStateRoot:'D:\\tong-desktop-control\\runtime', runtimeDir:'D:\\tong-desktop-control\\runtime', demoRoot:'D:\\tong-desktop-control\\demo-workspace',
+  schemaVersion:1, mode:'production', root:PRODUCTION_ROOT, codeRoot:'D:\\Tong\\app', originalTongRoot:'D:\\Tong\\app',
+  originalStateRoot:'D:\\Tong\\app\\runtime', runtimeDir:'D:\\Tong\\app\\runtime', demoRoot:'D:\\Tong\\app\\demo-workspace',
   stageRoot:PRODUCTION_ROOT+'\\releases\\candidate', managerRoot:PRODUCTION_ROOT+'\\releases\\manager', configDir:'C:\\Users\\Rune\\.devspace', oauthStateDir:'C:\\Users\\Rune\\.local\\share\\devspace',
   publicOrigin:'https://retold-pointer-irregular.ngrok-free.dev', host:'127.0.0.1', gatewayPort:7676, upstreamPort:7677, agentdockPort:18765,
 };

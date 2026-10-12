@@ -12,7 +12,7 @@ import { TongAgentDockClient } from './TongAgentDockClient.mjs';
 import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic } from './TongRuntimeSecurity.mjs';
 import {PRODUCTION_ROOT,validateProductionProfile,loadApprovedProfile,verifyRuntimeApproval,initializeProductionRoot,recordApprovedEnabledState,readApprovedEnabledState} from './TongProductionProfile.mjs';
 import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.mjs';
-export const AGENTDOCK_EXE='D:\\agentdock-poc-20261010\\runtime\\agentdock.exe';
+export const AGENTDOCK_EXE='D:\\Tong\\runtime\\agentdock\\agentdock.exe';
 export const AGENTDOCK_SHA256='bc1a7a35f1985e9f7827142577fc31bd4ca536e27252b08fc28c5ed636cf5e8d';
 const self=fileURLToPath(import.meta.url), guardianScript=fileURLToPath(new URL('TongRuntimeLaunch.ps1',import.meta.url)), childScript=fileURLToPath(new URL('TongRuntimeServer.mjs',import.meta.url));
 const preservedDirs=['backend-state','workspace','tong-policy','tong-policy/agentdock-operations','secrets','run','logs','temp','home'];
@@ -20,14 +20,14 @@ const preserved=profile=>['production','production-simulation'].includes(profile
 const dockEnabled=profile=>!preserved(profile)||profile.agentdockEnabled;
 const codeRoot=profile=>preserved(profile)?profile.codeRoot:profile.tongRoot;
 const hasTong=profile=>preserved(profile)||profile.withTong;
-const guardedRoot=root=>root===PRODUCTION_ROOT||/^b23-[a-zA-Z0-9_-]+$/.test(relative(resolve('D:\\agentdock-poc-20261010\\isolated\\state'),resolve(root)));
+const guardedRoot=root=>root===PRODUCTION_ROOT||/^b23-[a-zA-Z0-9_-]+$/.test(relative(resolve('D:\\Tong\\runtime\\state'),resolve(root)));
 const dirs=['backend-state','workspace','workspace/demo','tong-state','tong-state/config','tong-policy','tong-policy/agentdock-operations','secrets','run','logs','temp','home'];
 const fail=code=>new Error(code), delay=ms=>new Promise(ok=>setTimeout(ok,ms));
 const hash=async path=>createHash('sha256').update(await readFile(path)).digest('hex');
 async function json(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw fail('INVALID_STATE');}}
 async function save(path,value){const tmp=path+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value,null,2)+'\n',{flag:'wx'});for(let n=0;n<10;n++){try{await rename(tmp,path);return;}catch(error){if(!['EPERM','EACCES','EBUSY'].includes(error.code)||n===9)throw fail('STATE_UNAVAILABLE');await delay(25);}}}
 function absoluteRoot(root){
-  const approved=resolve('D:\\agentdock-poc-20261010\\isolated\\state');
+  const approved=resolve('D:\\Tong\\runtime\\state');
   if(typeof root!=='string'||/[\r\n"]/.test(root)||!isAbsolute(root))throw fail('INVALID_ROOT');
   root=resolve(root);if(root===PRODUCTION_ROOT)return root;const rel=relative(approved,root);
   if(!rel||isAbsolute(rel)||rel==='..'||rel.startsWith('..'+sep))throw fail('INVALID_ROOT');
