@@ -70,7 +70,7 @@ try {
   if($Mode -eq 'restore'){$arguments+=[string]$request.restoreRoot}
   $preflight=& 'D:\node\node.exe' @arguments 2>$null
   if($LASTEXITCODE -ne 0 -or ($preflight|ConvertFrom-Json).approved -ne $true){throw 'stopped-preflight'}
-  $protected=[IO.Path]::GetFullPath('D:\Tong\runtime\state')+'\'
+  $protected=[IO.Path]::GetFullPath('D:\Tong\state')+'\'
   if($profile.mode -eq 'production'){$protected=[IO.Path]::GetFullPath($validated.root)+'\'}
   $backup=[IO.Path]::GetFullPath($request.backupRoot)
   if(-not $backup.StartsWith($protected,[StringComparison]::OrdinalIgnoreCase) -or -not $backup.StartsWith($profile.root+'\',[StringComparison]::OrdinalIgnoreCase) -or $backup.StartsWith($profile.codeRoot+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'path'}

@@ -5,7 +5,7 @@ import { resolve, join, dirname, relative, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertProtectedPaths, processIdentity, sameProcess, safeEnvironment } from './TongRuntimeSecurity.mjs';
 
-const isolated = resolve('D:\\Tong\\runtime\\state');
+const isolated = resolve('D:\\Tong\\state');
 const codeBase = 'b96795840cf5a320090861389b63796a1be164bd';
 const fail = code => new Error(code);
 const sha = value => createHash('sha256').update(value).digest('hex');

@@ -7,7 +7,7 @@ $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 [Console]::InputEncoding=[Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
-$stateRoot='D:\Tong\runtime\state'
+$stateRoot='D:\Tong\state'
 $store=Join-Path $stateRoot 'b23-production-approvals'
 $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $allowedSids=@($sid,'S-1-5-18','S-1-5-32-544')
@@ -145,7 +145,7 @@ try {
                     Assert-Protected $marker
                     $known=Get-Content -LiteralPath $marker -Raw|ConvertFrom-Json
                     if($known.schemaVersion -ne 1 -or $known.root -cne $root -or $known.mode -cne $descriptor.mode){throw 'Unknown root refused'}
-                    $names=@('production-root.json','profile.json','backend-state','workspace','tong-policy','secrets','logs','run','temp','home','tong','releases','state-backups','state-restores')
+                    $names=@('production-root.json','profile.json','backend-state','workspace','tong-policy','secrets','logs','run','temp','home','tong','releases','agentdock','state-backups','state-restores')
                     foreach($entry in $entries){if($entry.Name -cnotin $names){throw 'Unknown root entry refused'};Assert-Protected $entry.FullName}
                     $queue=[Collections.Generic.Queue[string]]::new();$queue.Enqueue($root);$visited=0
                     while($queue.Count -gt 0) {

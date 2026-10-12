@@ -12,7 +12,7 @@ const oldCommit='58786f601ceb8c7f3842225697adfb5e4034a73f';
 const preciseCommit=value=>typeof value==='string'&&/^[a-f0-9]{40}$/.test(value);
 const defaultPython='C:\\Program Files\\Python311\\python.exe';
 const developmentRoot = resolve('D:\\Tong\\development\\tong-desktop-control');
-const stateRoot = resolve('D:\\Tong\\runtime\\state');
+const stateRoot = resolve('D:\\Tong\\state');
 const packages = ['@waishnav/devspace','@modelcontextprotocol/sdk','better-sqlite3','node-pty'];
 const fail = code => new Error(code);
 const sha = value => createHash('sha256').update(value).digest('hex');

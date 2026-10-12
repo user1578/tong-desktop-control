@@ -9,7 +9,7 @@ import { assertProtectedPaths, processIdentity, sameProcess } from './TongRuntim
 
 const helper=fileURLToPath(new URL('TongProductionState.ps1',import.meta.url));
 const fail=code=>new Error(code),sha=value=>createHash('sha256').update(value).digest('hex');
-const STATE_ROOT=resolve('D:\\Tong\\runtime\\state');
+const STATE_ROOT=resolve('D:\\Tong\\state');
 const within=(root,path)=>{const part=relative(root,path);return part===''||!isAbsolute(part)&&part!=='..'&&!part.startsWith('..'+sep);};
 function newTarget(profile,path) {
   const approved=profile.mode==='production'?resolve(profile.root):STATE_ROOT;

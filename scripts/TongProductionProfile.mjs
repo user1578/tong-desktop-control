@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { assertProtectedPaths } from './TongRuntimeSecurity.mjs';
 
 export const PRODUCTION_ROOT = 'D:\\Tong\\runtime';
-export const PRODUCTION_SIMULATION_STATE_ROOT = 'D:\\Tong\\runtime\\state';
+export const PRODUCTION_SIMULATION_STATE_ROOT = 'D:\\Tong\\state';
 export const PRODUCTION_APPROVAL_STORE = win32.join(PRODUCTION_SIMULATION_STATE_ROOT, 'b23-production-approvals');
 const helper = fileURLToPath(new URL('TongProductionApproval.ps1', import.meta.url));
 const actions = new Set(['init','start','stop','enable-agentdock','disable-agentdock','backup','restore','manager']);

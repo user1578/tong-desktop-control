@@ -9,7 +9,7 @@ try {
         if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
         & $NodeExe $Supervisor preflight-production | Out-Null
         if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
-    }elseif(-not $Root.StartsWith('D:\Tong\runtime\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
+    }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$guardian+'" -Root "'+$Root+'" -RunId "'+$RunId+'" -NodeExe "'+$NodeExe+'" -Supervisor "'+$Supervisor+'"'
     # A separate hidden Windows console survives the initiating CLI's console exit.
     # No service, scheduled task, startup item, or credential argument is created.
