@@ -209,7 +209,7 @@ try {
   assert.equal(calls.filter(x => x.name === "file_edit" && !x.args.dry_run).length, before);
   assert.equal(await readFile(join(project, "hello.txt"), "utf8"), "unexpected\n");
   await writeFile(policyPath, JSON.stringify(policy));
-  mode = "hang"; await assert.rejects(invoke("command", { ...cmdBase, operation: "pytest" }), denied("TIMEOUT"));
+  mode = "hang"; await assert.rejects(invoke("command", { ...cmdBase, operation: "pytest", timeoutMs: 100 }), denied("TIMEOUT"));
   mode = "disconnect"; await assert.rejects(invoke("command", { ...cmdBase, operation: "pytest" }), denied("UNAVAILABLE")); mode = "normal";
   const registrations = []; registerAgentDockTools({}, (_s, name, definition) => registrations.push({ name, definition }), await import("zod/v4"), router);
   for (const name of ["tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]) assert.ok(registrations.some(x => x.name === name));

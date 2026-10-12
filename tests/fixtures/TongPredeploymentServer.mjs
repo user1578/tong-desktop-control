@@ -5,7 +5,7 @@ import { mkdir } from "node:fs/promises";
 const [settings] = await once(process, "message");
 for (const key of Object.keys(process.env)) if (/^(TONG_|DEVSPACE_|AGENTDOCK_)/.test(key)) delete process.env[key];
 Object.assign(process.env, { TONG_RESTRICTED_MCP: "1", TONG_RESTRICTED_ROOT: settings.demoRoot, TONG_LOCAL_STATE_DIR: settings.stateDir,
-  TONG_AGENTDOCK_ENABLED: "1", TONG_AGENTDOCK_URL: "http://127.0.0.1:18765/mcp", TONG_AGENTDOCK_TOKEN: settings.agentdockToken,
+  TONG_AGENTDOCK_ENABLED: "1", TONG_AGENTDOCK_URL: `http://127.0.0.1:${settings.agentdockPort ?? 18765}/mcp`, TONG_AGENTDOCK_TOKEN: settings.agentdockToken,
   TONG_AGENTDOCK_POLICY_PATH: settings.policyPath, DEVSPACE_CONFIG_DIR: join(settings.stateDir, "config") });
 await mkdir(process.env.DEVSPACE_CONFIG_DIR, { recursive: true });
 const { createServer } = await import("../../node_modules/@waishnav/devspace/dist/server.js");

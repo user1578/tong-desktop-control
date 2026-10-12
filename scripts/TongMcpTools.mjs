@@ -1,6 +1,7 @@
 import { TongProjectAccess } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
+import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
 import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
@@ -15,7 +16,11 @@ export function configureTongMcpState({stateDir,demoRoot,scanRoots}={}) {
 const dockClosures = new Set();
 export async function closeTongMcpTools({ timeoutMs = 10000 } = {}) {
   let timer;
-  const cleanup = Promise.allSettled([...dockClosures].map(close => close()).concat(defaultTaskManager ? [defaultTaskManager.close()] : []));
+  const cleanup = (async () => {
+    const results = await Promise.allSettled([...dockClosures].map(close => close()).concat(defaultTaskManager ? [defaultTaskManager.close()] : []));
+    results.push(...await Promise.allSettled([closeAgentDockSessionCoordinators()]));
+    return results;
+  })();
   try {
     const result = await Promise.race([cleanup, new Promise(resolve => { timer = setTimeout(() => resolve(null), timeoutMs); })]);
     return { complete: result !== null && result.every(entry => entry.status === "fulfilled") };

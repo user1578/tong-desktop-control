@@ -7,6 +7,7 @@ import { AGENTDOCK_READ_TOOLS, TongAgentDockClient, TongAgentDockError, dockErro
 import { AGENTDOCK_EXCLUDES, checkedAgentDockPath } from "./TongAgentDockPaths.mjs";
 import { EXECUTION_OPERATIONS, TongAgentDockExecution, validateExecutionInput } from "./TongAgentDockExecution.mjs";
 import { resolveAgentDockProject } from "./TongAgentDockPolicy.mjs";
+import { agentDockSessionCoordinator } from "./TongAgentDockSessions.mjs";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 export const AGENTDOCK_PUBLIC_TOOLS = Object.freeze(["tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]);
@@ -51,9 +52,12 @@ function filteredResult(tool, data, checked, input, backendWorkspaceRoot) {
   }
   if (tool === "list_dir") {
     if (!Array.isArray(data.entries) || data.entries.length > (input.maxEntries ?? 100)) invalidResult();
+    // Directory metadata is workspace-relative; entries are request-relative.
+    if (data.path !== undefined && checked.resultPath(data.path, backendWorkspaceRoot) !== checked.target) invalidResult();
     const entries = data.entries.map((item) => {
       if (!object(item) || typeof item.path !== "string" || !["file", "directory"].includes(item.type)) invalidResult();
-      const target = checked.resultPath(item.path, backendWorkspaceRoot);
+      if (isAbsolute(item.path)) invalidResult();
+      const target = checked.resultPath(item.path, checked.target);
       if (checked.manifest.get(target) !== item.type) invalidResult();
       return { path: checked.relative(target), type: item.type,
         ...(Number.isSafeInteger(item.size_bytes) && item.size_bytes >= 0 ? { sizeBytes: item.size_bytes } : {}) };
@@ -73,18 +77,41 @@ function filteredResult(tool, data, checked, input, backendWorkspaceRoot) {
 
 /** Independent synthetic-project grants. agent.execute is never consulted or promoted. */
 export class TongAgentDockRouter {
+  #closed = false;
   constructor({ client, access, policyPath = join(process.env.TONG_LOCAL_STATE_DIR ?? join(projectRoot, "runtime"), "agentdock-access.json"), audit = writeAgentDockAudit, maxOwnedSessions, now } = {}) {
     this.client = client ?? new TongAgentDockClient({ url: process.env.TONG_AGENTDOCK_URL, controlledExecution: true });
     this.access = access; this.policyPath = policyPath; this.audit = audit;
     this.execution = new TongAgentDockExecution({ client: this.client, access, policyPath, audit, maxOwnedSessions, now });
+    this.coordinator = agentDockSessionCoordinator(policyPath);
+    this.executionOptions = { client: this.client, access, policyPath, audit, maxOwnedSessions, now };
   }
   async #project(projectId, tool) {
     const { project, grant, policy } = await resolveAgentDockProject(this.access, this.policyPath, projectId);
     if (!grant.tools.includes(tool)) throw dockError("PROJECT_DENIED");
     return { ...project, backendWorkspaceRoot: policy.backendWorkspaceRoot };
   }
-  async call(tool, input) {
-    if (EXECUTION_OPERATIONS.includes(tool)) return this.execution.call(tool, input);
+  async call(tool, input, request) {
+    if (this.#closed) throw dockError("CLOSED");
+    if (EXECUTION_OPERATIONS.includes(tool)) {
+      if (request) {
+        const started = performance.now(); let delegated = false;
+        try {
+          await resolveAgentDockProject(this.access, this.policyPath, input?.projectId);
+          if (this.#closed) throw dockError("CLOSED");
+          return await this.coordinator.call(request.authInfo, this.executionOptions, tool, input,
+            () => { if (this.#closed) throw dockError("CLOSED"); }, () => { delegated = true; });
+        } catch (error) {
+          const safe = error instanceof TongAgentDockError ? error : dockError("UNAVAILABLE");
+          if (!delegated) {
+            try { await this.audit({ requestId: randomUUID(), tool, phase: "finished", outcome: "denied", errorType: safe.code,
+              projectId: /^[a-z][a-z0-9-]{1,39}$/.test(input?.projectId ?? "") ? input.projectId : "unknown",
+              durationMs: Math.round(performance.now() - started) }); } catch { throw dockError("AUDIT_UNAVAILABLE"); }
+          }
+          throw safe;
+        }
+      }
+      return this.execution.call(tool, input);
+    }
     const started = performance.now();
     const event = { requestId: randomUUID(), projectId: /^[a-z][a-z0-9-]{1,39}$/.test(input?.projectId ?? "") ? input.projectId : "unknown",
       tool: AGENTDOCK_READ_TOOLS.includes(tool) ? tool : "unknown", outcome: "denied" };
@@ -122,7 +149,12 @@ export class TongAgentDockRouter {
       try { await this.audit(event); } catch { throw dockError("AUDIT_UNAVAILABLE"); }
     }
   }
-  async close() { await this.execution.close(); await this.client.close(); }
+  async close() {
+    this.#closed = true;
+    await this.execution.close();
+    // Transport detach is not runtime shutdown. The coordinator owns its clients.
+    if (!this.coordinator.owns(this.client)) await this.client.close();
+  }
 }
 
 export function registerAgentDockTools(server, registerTool, z, router, onClosed) {
@@ -138,8 +170,8 @@ export function registerAgentDockTools(server, registerTool, z, router, onClosed
   for (const definition of definitions) registerTool(server, definition.name, {
     title: `AgentDock ${definition.tool}`, description: "Use a fixed local AgentDock operation with independent project and task approval. No arbitrary Shell or grant mutation.",
     inputSchema: z.object(definition.inputSchema).strict(), _meta: {}, annotations: { readOnlyHint: AGENTDOCK_READ_TOOLS.includes(definition.tool) || definition.tool === "session_status", destructiveHint: !AGENTDOCK_READ_TOOLS.includes(definition.tool) && definition.tool !== "session_status" },
-  }, async (input) => {
-    try { const value = await router.call(definition.tool, input); return { structuredContent: value, content: [{ type: "text", text: JSON.stringify(value) }] }; }
+  }, async (input, extra) => {
+    try { const value = await router.call(definition.tool, input, { authInfo: extra?.authInfo }); return { structuredContent: value, content: [{ type: "text", text: JSON.stringify(value) }] }; }
     catch (error) { const safe = error instanceof TongAgentDockError ? error : dockError("UNAVAILABLE");
       return { isError: true, structuredContent: { toolOk: false, code: safe.code, error: safe.message,
         category: ["PROJECT_DENIED", "APPROVAL_DENIED", "ACCESS_DENIED", "TOOL_DENIED", "SESSION_DENIED", "EXECUTABLE_DENIED", "REPLAY_DENIED"].includes(safe.code) ? "tong_denied" : safe.code === "TOOL_FAILED" ? "agentdock_error" : ["TIMEOUT", "UNAVAILABLE"].includes(safe.code) ? "transport_error" : "validation_error",

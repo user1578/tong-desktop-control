@@ -53,7 +53,7 @@ else {
     async function runCommand(input) {
       let value = await invoke("command", { ...cmdBase, ...input }); const handle = value.sessionId;
       let stdout = value.stdout, stderr = value.stderr;
-      for (let i = 0; value.status === "running" && i < 100; i++) { await new Promise(resolve => setTimeout(resolve, 100)); value = await invoke("session_status", { ...cmdBase, sessionId: handle }); stdout += value.stdout; stderr += value.stderr; }
+      for (let i = 0; value.status === "running" && i < 100; i++) { await new Promise(resolve => setTimeout(resolve, 100)); value = await invoke("session_status", { ...cmdBase, sessionId: handle }); stdout = value.outputMode === "snapshot" ? value.stdout : stdout + value.stdout; stderr = value.outputMode === "snapshot" ? value.stderr : stderr + value.stderr; }
       assert.notEqual(value.status, "running"); return { ...value, stdout, stderr };
     }
     try {

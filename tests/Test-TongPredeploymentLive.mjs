@@ -62,7 +62,7 @@ else {
   async function run(operation) {
     let result = await call("tong_agentdock_command", { ...command, operation }); assert.ok(!result.isError);
     let value = result.structuredContent, stdout = value.stdout, stderr = value.stderr; const sessionId = value.sessionId;
-    for (let i = 0; value.status === "running" && i < 100; i++) { await new Promise(ok => setTimeout(ok, 100)); result = await call("tong_agentdock_session_status", { ...command, sessionId }); assert.ok(!result.isError); value = result.structuredContent; stdout += value.stdout; stderr += value.stderr; }
+    for (let i = 0; value.status === "running" && i < 100; i++) { await new Promise(ok => setTimeout(ok, 100)); result = await call("tong_agentdock_session_status", { ...command, sessionId }); assert.ok(!result.isError); value = result.structuredContent; stdout = value.outputMode === "snapshot" ? value.stdout : stdout + value.stdout; stderr = value.outputMode === "snapshot" ? value.stderr : stderr + value.stderr; }
     assert.notEqual(value.status, "running"); return { ...value, stdout, stderr };
   }
   try {

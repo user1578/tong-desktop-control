@@ -62,7 +62,7 @@ const http = createServer(async (req, res) => {
     if (params.name === "search_text") data = { matches: [{ path: join(project, "hello.txt"), line: 1, column: 1, preview: "synthetic hello", match_text: "hello" }], truncated: false };
     if (mode === "workspace-relative") {
       if (params.name === "read_file") data.path = "project/hello.txt";
-      if (params.name === "list_dir") data.entries[0].path = "project/hello.txt";
+      if (params.name === "list_dir") data.path = "project";
     }
     if (mode === "workspace-relative-escape" && params.name === "read_file") data.path = "outside/secret.txt";
     return { structuredContent: data, content: [{ type: "text", text: JSON.stringify(data) }] };

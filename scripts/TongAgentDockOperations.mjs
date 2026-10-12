@@ -7,7 +7,7 @@ import { dockError } from "./TongAgentDockClient.mjs";
 const groups = new Map();
 export function agentDockOperationGroup(policyPath) {
   const key = process.platform === "win32" ? resolve(policyPath).toLowerCase() : resolve(policyPath);
-  if (!groups.has(key)) groups.set(key, { busy: new Set(), launching: 0, sessions: new Map() });
+  if (!groups.has(key)) groups.set(key, { busy: new Set(), launching: 0, sessions: new Map(), results: new Map(), owners: new Map() });
   return groups.get(key);
 }
 const hash = value => createHash("sha256").update(value).digest("hex");

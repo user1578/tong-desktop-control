@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv";
@@ -45,6 +46,7 @@ function localURL(value) {
 
 /** SDK handles MCP framing and negotiation. This wrapper only applies local transport limits and policy. */
 export class TongAgentDockClient {
+  #requestTimeout = new AsyncLocalStorage();
   #url; #tokenProvider; #token; #client; #transport; #connecting; #closed = false; #validators = new Map(); #tools = []; #discoveredCount = 0;
   constructor({ url = "http://127.0.0.1:18765/mcp", tokenProvider = () => process.env.TONG_AGENTDOCK_TOKEN,
     timeoutMs, maxRequestBytes, maxResponseBytes, controlledExecution = false } = {}) {
@@ -59,21 +61,29 @@ export class TongAgentDockClient {
   }
   get serverInfo() { return this.#client?.getServerVersion(); }
   get discoveredToolCount() { return this.#discoveredCount; }
+  get connected() { return !this.#closed && Boolean(this.#client?.transport); }
+  createPeer() {
+    if (this.#closed) throw dockError("CLOSED");
+    return new TongAgentDockClient({ url: this.#url.href, tokenProvider: this.#tokenProvider, timeoutMs: this.timeoutMs,
+      maxRequestBytes: this.maxRequestBytes, maxResponseBytes: this.maxResponseBytes,
+      controlledExecution: this.allowedTools.includes("exec_command") });
+  }
   async #fetch(input, init = {}) {
     const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-    if (url.href !== this.#url.href) throw dockError("INVALID_CONFIG");
+    const analyticsURL = new URL("/internal/runtime/analytics", this.#url);
+    if (url.href !== this.#url.href && !(url.href === analyticsURL.href && init.method === "GET")) throw dockError("INVALID_CONFIG");
     if (typeof init.body === "string" && Buffer.byteLength(init.body) > this.maxRequestBytes) throw dockError("REQUEST_TOO_LARGE");
-    const signal = AbortSignal.any([AbortSignal.timeout(this.timeoutMs), ...(init.signal ? [init.signal] : [])]);
+    const signal = AbortSignal.any([AbortSignal.timeout(this.#requestTimeout.getStore() ?? this.timeoutMs), ...(init.signal ? [init.signal] : [])]);
     let response;
     try { response = await fetch(input, { ...init, redirect: "error", signal }); }
     catch (error) { throw dockError(signal.aborted ? "TIMEOUT" : "UNAVAILABLE"); }
     if (response.status === 401 || response.status === 403) { await response.body?.cancel(); throw dockError("AUTH_FAILED"); }
-    if (Number(response.headers.get("content-length")) > this.maxResponseBytes) {
+    const limit = url.href === analyticsURL.href ? 2097152 : this.maxResponseBytes;
+    if (Number(response.headers.get("content-length")) > limit) {
       await response.body?.cancel(); throw dockError("OUTPUT_TOO_LARGE");
     }
     if (!response.body) return response;
     let bytes = 0;
-    const limit = this.maxResponseBytes;
     const stream = response.body.pipeThrough(new TransformStream({ transform(chunk, controller) {
       bytes += chunk.byteLength;
       if (bytes > limit) throw dockError("OUTPUT_TOO_LARGE");
@@ -132,14 +142,33 @@ export class TongAgentDockClient {
     }
   }
   async listTools() { await this.connect(); return structuredClone(this.#tools); }
-  async callTool(name, args) {
+  async backendInstance(generation = this.generation) {
+    if (!this.connected || this.generation !== generation) throw dockError("SESSION_DENIED");
+    try {
+      const response = await this.#fetch(new URL("/internal/runtime/analytics", this.#url), { method: "GET", headers: { Authorization: `Bearer ${this.#token}` } });
+      if (!response.ok) { await response.body?.cancel(); throw dockError("UNAVAILABLE"); }
+      const data = await response.json();
+      if (containsToken(data, this.#token)) throw dockError("SENSITIVE_RESULT");
+      if (data?.ok !== true || data.source !== "agentdock-api" || typeof data.started_at !== "string" || !Number.isFinite(Date.parse(data.started_at))) throw dockError("INVALID_RESULT");
+      if (!this.connected || this.generation !== generation) throw dockError("SESSION_DENIED");
+      return data.started_at;
+    } catch (error) {
+      const safe = this.#safeError(error);
+      if (["UNAVAILABLE", "TIMEOUT", "OUTPUT_TOO_LARGE"].includes(safe.code)) await this.#reset();
+      throw safe;
+    }
+  }
+  async callTool(name, args, { generation, timeoutMs = this.timeoutMs } = {}) {
     if (!this.allowedTools.includes(name)) throw dockError("TOOL_DENIED");
     if (Buffer.byteLength(JSON.stringify(args) ?? "") > this.maxRequestBytes) throw dockError("REQUEST_TOO_LARGE");
+    if (generation !== undefined && (!this.connected || this.generation !== generation)) throw dockError("SESSION_DENIED");
+    timeoutMs = bound(timeoutMs, this.timeoutMs, 50, 35000);
     await this.connect();
+    if (generation !== undefined && this.generation !== generation) throw dockError("SESSION_DENIED");
     if (!this.#validators.get(name)?.(args).valid) throw dockError("SCHEMA_ERROR");
     const token = this.#token;
     try {
-      const result = await this.#client.callTool({ name, arguments: args }, undefined, { timeout: this.timeoutMs });
+      const result = await this.#requestTimeout.run(timeoutMs, () => this.#client.callTool({ name, arguments: args }, undefined, { timeout: timeoutMs }));
       const encoded = JSON.stringify(result);
       if (Buffer.byteLength(encoded) > this.maxResponseBytes) throw dockError("OUTPUT_TOO_LARGE");
       if (containsToken(result, token)) throw dockError("SENSITIVE_RESULT");

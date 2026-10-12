@@ -129,7 +129,7 @@ export async function scopedCommand(client,args,records,oauth) {
   let result=await toolCall(client,'tong_agentdock_command',args,records,oauth); assert.ok(!result.isError);
   let value=result.structuredContent,stdout=value.stdout??'',stderr=value.stderr??'';
   const sessionId=value.sessionId;
-  for(let i=0;value.status==='running'&&i<200;i++) { await delay(100); result=await toolCall(client,'tong_agentdock_session_status',{projectId:args.projectId,taskId:args.taskId,approvalId:args.approvalId,sessionId},records,oauth); assert.ok(!result.isError); value=result.structuredContent; stdout+=value.stdout??''; stderr+=value.stderr??''; }
+  for(let i=0;value.status==='running'&&i<200;i++) { await delay(100); result=await toolCall(client,'tong_agentdock_session_status',{projectId:args.projectId,taskId:args.taskId,approvalId:args.approvalId,sessionId},records,oauth); assert.ok(!result.isError); value=result.structuredContent; stdout=value.outputMode==='snapshot'?value.stdout??'':stdout+(value.stdout??''); stderr=value.outputMode==='snapshot'?value.stderr??'':stderr+(value.stderr??''); }
   assert.notEqual(value.status,'running'); return {...value,stdout,stderr};
 }
 export function sqliteEvidence(codeRoot,path) {
