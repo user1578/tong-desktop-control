@@ -1,0 +1,31 @@
+﻿Tong cleanup dependency review (READ ONLY); local time: 2026-10-13 16:36:47 This is NOT deletion approval. Absence of references does not guarantee a path is unused. Scanned process executable/command line references, services and selected active configs without exporting command lines or credentials. Selected samples are NOT an exhaustive checksum comparison; estimated sizes are logical and cannot predict physical reclaimed bytes. No delete, move, ACL, service, environment or Git content changes were requested.  CANDIDATE INVENTORY (GiB figures from previous inventory; NOT newly rescanned):
+old-poc | 5.338 GiB | CHECK_ONLY | references found: 1 | D:\agentdock-poc-20261010
+old-poc-b23-switch | 3.542 GiB | CHECK_ONLY | references found: 0 | D:\agentdock-poc-20261010\isolated\state\b23-switch-c104fcca2aa9
+tong-state-b23-switch | 3.542 GiB | CHECK_ONLY | references found: 0 | D:\Tong\state\b23-switch-c104fcca2aa9
+old-tong-local | 2.502 GiB | CHECK_ONLY | references found: 0 | D:\tong-agentdock-local
+old-tong-checkout | 0.568 GiB | CHECK_ONLY | references found: 0 | D:\tong-desktop-control
+user-npm-cache | 4.506 GiB | CACHE_REVIEW | references found: 0 | C:\Users\Rune\AppData\Local\npm-cache
+user-codex-runtimes | 1.709 GiB | KEEP_UNTIL_CHECKED | references found: 0 | C:\Users\Rune\.cache\codex-runtimes
+codex-worktrees | 1.684 GiB | GIT_REVIEW | references found: 1 | C:\Users\Rune\.codex\worktrees
+
+REVIEW FLAGS:
+old-poc | active_config | REFERENCED | runtime\run\release-pin.json
+codex-worktrees | active_config | REFERENCED | runtime\run\release-pin.json
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | profile.json; Bytes=1474
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | production-root.json; Bytes=171
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | run\runtime.json; Bytes=2944
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | run\release-pin.json; Bytes=31896
+duplicate-b23-comparison | sample | SAMPLE_MISSING | run\switch-result.json
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | tong\package-lock.json; Bytes=183515
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | tong\README.md; Bytes=16420
+duplicate-b23-comparison | sample | SAME_CONTENT_SAMPLE | tong\package.json; Bytes=296
+duplicate-b23-comparison | sample | SAMPLE_MISSING | tong\oauth\README.md
+git-repos | git_status | CHECKED | D:\tong-desktop-control; ChangedOrUntrackedEntries=63
+git-repos | git_status | CHECKED | D:\Tong\development\tong-desktop-control; ChangedOrUntrackedEntries=20
+git-repos | git_status | CHECKED | C:\Users\Rune\.codex\worktrees\p2-agent-orchestration\tong-desktop-control; ChangedOrUntrackedEntries=0
+git-repos | git_status | CHECKED | C:\Users\Rune\.codex\worktrees\p23-trusted-agent\tong-desktop-control; ChangedOrUntrackedEntries=0
+git-repos | git_status | CHECKED | C:\Users\Rune\.codex\worktrees\p24-agentdock-client\tong-desktop-control; ChangedOrUntrackedEntries=8
+git-repos | registered_worktree | PRESENT | worktree D:/Tong/development/tong-desktop-control
+
+INSPECTION LIMITS / NOTES:
+No additional warnings.
