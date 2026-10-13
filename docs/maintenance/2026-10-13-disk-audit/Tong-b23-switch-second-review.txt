@@ -1,0 +1,34 @@
+﻿Tong B2.4 second-batch targeted dependency review; local time 2026-10-13 16:51:29
+Read-only inspection only. No deletion is authorized by this report.
+JSON references are reported by property path only; raw sensitive contents are not copied.
+A path not referenced in inspected fields can still be necessary for historical restore/other workflows.
+Apparent sizes: old PoC switch ~3.542 GiB; migrated Tong state switch ~3.542 GiB. Do NOT sum sizes to predict freed disk bytes.
+
+MATCHES
+JSON_PROPERTY_REFERENCE | codexWorktrees | D:\Tong\runtime\run\release-pin.json | $.sourceRepository
+JSON_PROPERTY_REFERENCE | oldPoc | D:\Tong\runtime\run\release-pin.json | $.releaseRoot
+CONFIG_CHECKED | - | D:\Tong\runtime\run\release-pin.json | JSON parsed; raw values not recorded
+CONFIG_CHECKED | - | D:\Tong\runtime\run\manager-pin.json | JSON parsed; raw values not recorded
+CONFIG_CHECKED | - | D:\Tong\runtime\run\runtime.json | JSON parsed; raw values not recorded
+CONFIG_CHECKED | - | D:\Tong\runtime\profile.json | JSON parsed; raw values not recorded
+CONFIG_CHECKED | - | D:\Tong\runtime\production-root.json | JSON parsed; raw values not recorded
+CONFIG_CHECKED | - | D:\Tong\app\config\tong.config.json | JSON parsed; raw values not recorded
+PROCESS_CHECKED | - | Win32_Process | Read 383 process records
+SERVICE_CHECKED | - | Win32_Service | Read 321 service records
+DIRECTORY | oldPoc | D:\agentdock-poc-20261010 | Exists; ReparsePoint=False; LastWrite=2026-10-11T03:49:03
+DIRECTORY | oldPocSwitch | D:\agentdock-poc-20261010\isolated\state\b23-switch-c104fcca2aa9 | Exists; ReparsePoint=False; LastWrite=2026-10-12T00:35:12
+DIRECTORY | migratedStateSwitch | D:\Tong\state\b23-switch-c104fcca2aa9 | Exists; ReparsePoint=False; LastWrite=2026-10-13T04:48:27
+DIRECTORY | oldDeployment | D:\tong-agentdock-local | Exists; ReparsePoint=False; LastWrite=2026-10-13T02:00:00
+DIRECTORY | codexWorktrees | C:\Users\Rune\.codex\worktrees | Exists; ReparsePoint=False; LastWrite=2026-10-10T23:19:08
+SAMPLE_FILE | both-switches | profile.json | SAME_SHA256
+SAMPLE_FILE | both-switches | production-root.json | SAME_SHA256
+SAMPLE_FILE | both-switches | run\runtime.json | SAME_SHA256
+SAMPLE_FILE | both-switches | run\release-pin.json | SAME_SHA256
+SAMPLE_FILE | both-switches | tong\package-lock.json | SAME_SHA256
+SAMPLE_FILE | both-switches | tong\README.md | SAME_SHA256
+SAMPLE_FILE | both-switches | tong\package.json | SAME_SHA256
+HARDLINK_SAMPLE | oldPocSwitch | profile.json | Hardlink paths returned=1; IncludesMigratedStatePath=False; DoesNotProveAllFilesUnique
+HARDLINK_SAMPLE | oldPocSwitch | tong\package-lock.json | Hardlink paths returned=1; IncludesMigratedStatePath=False; DoesNotProveAllFilesUnique
+
+NOTES
+None
