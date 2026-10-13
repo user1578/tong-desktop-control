@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { readFile, writeFile, lstat } from 'node:fs/promises';
+import { readFile, writeFile, lstat, realpath } from 'node:fs/promises';
 import { win32, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -8,7 +8,10 @@ import {recoveryApproval,recoveryProfile,validateLoginRecoveryDescriptor,loginRe
 
 export const PRODUCTION_ROOT = 'D:\\Tong\\runtime';
 export const PRODUCTION_SIMULATION_STATE_ROOT = 'D:\\Tong\\state';
-export const PRODUCTION_APPROVAL_STORE = win32.join(PRODUCTION_SIMULATION_STATE_ROOT, 'b23-production-approvals');
+// No legacy-store fallback: deployment must explicitly preserve/review the old
+// sealed permissions before adopting this location. Profile digests are unchanged.
+export const PRODUCTION_APPROVAL_STORE = win32.join(PRODUCTION_ROOT, 'secrets', 'runtime-permissions');
+export const SIMULATION_APPROVAL_STORE = win32.join(PRODUCTION_SIMULATION_STATE_ROOT, 'b23-simulation-approvals');
 const helper = fileURLToPath(new URL('TongProductionApproval.ps1', import.meta.url));
 const actions = new Set(['init','start','stop','enable-agentdock','disable-agentdock','backup','restore','manager']);
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -48,9 +51,24 @@ export function validateProductionProfile(profile) {
   return expected;
 }
 export function productionProfileDigest(profile) { return hash(validateProductionProfile(profile)); }
+export function runtimeApprovalStore(root) {
+  if(root===PRODUCTION_ROOT)return PRODUCTION_APPROVAL_STORE;
+  if(typeof root!=='string'||win32.dirname(root)!==PRODUCTION_SIMULATION_STATE_ROOT||!/^b23-[a-zA-Z0-9_-]{1,100}$/.test(win32.basename(root)))throw fail('PROFILE_DENIED');
+  return SIMULATION_APPROVAL_STORE;
+}
+export async function assertRuntimeApprovalPaths(root,paths=[]) {
+  const store=runtimeApprovalStore(root);
+  if(root===PRODUCTION_ROOT)return assertProtectedPaths([PRODUCTION_ROOT,win32.dirname(store),store,...paths]);
+  // Simulation receipts cannot authorize production. Their sandbox-writable
+  // container needs link/identity checks, not a production-only DACL.
+  for(const path of [PRODUCTION_SIMULATION_STATE_ROOT,store,...paths]) {
+    const info=await lstat(path);
+    if(info.isSymbolicLink()||info.isFile()&&info.nlink!==1||(await realpath(path)).toLowerCase()!==win32.resolve(path).toLowerCase())throw fail('ACL_DENIED');
+  }
+}
 export function runtimeApprovalPath(profile,action) {
   if (!actions.has(action)) throw fail('APPROVAL_DENIED');
-  return win32.join(PRODUCTION_APPROVAL_STORE,productionProfileDigest(profile)+'.'+action+'.dpapi.json');
+  return win32.join(runtimeApprovalStore(profile.root),productionProfileDigest(profile)+'.'+action+'.dpapi.json');
 }
 function approvedProfileIndex(root,action) {
   if(!actions.has(action)) throw fail('APPROVAL_DENIED');
@@ -60,14 +78,14 @@ function approvedProfileIndex(root,action) {
       || !/^b23-[a-zA-Z0-9_-]{1,100}$/.test(win32.basename(root))) throw fail('PROFILE_DENIED');
     prefix='simulation-'+createHash('sha256').update(root).digest('hex');
   }
-  return win32.join(PRODUCTION_APPROVAL_STORE,prefix+'.'+action+'.current.dpapi.json');
+  return win32.join(runtimeApprovalStore(root),prefix+'.'+action+'.current.dpapi.json');
 }
 // Bootstrap never reads the requested runtime root. Its only I/O is the fixed protected receipt store.
 export async function loadApprovedProfile(root,action) {
   const recovery=await recoveryProfile(root,action);if(recovery)return recovery;
   const path=approvedProfileIndex(root,action);
   try {
-    await assertProtectedPaths([PRODUCTION_SIMULATION_STATE_ROOT,PRODUCTION_APPROVAL_STORE,path]);
+    await assertRuntimeApprovalPaths(root,[path]);
     const sealed=await run('receipt-unseal',{path}),profile=validateProductionProfile(sealed.profile);
     if(profile.root!==root || sealed.action!==action || sealed.profileDigest!==productionProfileDigest(profile)) throw fail('APPROVAL_DENIED');
     const verified=await verifyRuntimeApproval(profile,action);
@@ -80,7 +98,7 @@ function descriptor(profile,action) {
   const valid=validateProductionProfile(profile);
   if (!actions.has(action)) throw fail('APPROVAL_DENIED');
   if (action==='enable-agentdock' && !valid.agentdockEnabled || action==='disable-agentdock' && valid.agentdockEnabled) throw fail('APPROVAL_DENIED');
-  return {...valid,profileDigest:productionProfileDigest(valid),action,receiptPath:runtimeApprovalPath(valid,action),approvalStore:PRODUCTION_APPROVAL_STORE};
+  return {...valid,profileDigest:productionProfileDigest(valid),action,receiptPath:runtimeApprovalPath(valid,action),approvalStore:runtimeApprovalStore(valid.root)};
 }
 function run(mode,input) {
   if (process.platform!=='win32') throw fail('APPROVAL_DENIED');
@@ -99,7 +117,7 @@ export async function verifyRuntimeApproval(profile,action) {
   const recovery=await recoveryApproval(profile,action);if(recovery)return recovery;
   const expected=descriptor(profile,action);
   try {
-    await assertProtectedPaths([PRODUCTION_SIMULATION_STATE_ROOT,PRODUCTION_APPROVAL_STORE,expected.receiptPath]);
+    await assertRuntimeApprovalPaths(profile.root,[expected.receiptPath]);
     const actual=await run('receipt-unseal',{path:expected.receiptPath});
     if (actual.schemaVersion!==1 || actual.purpose!=='tong-runtime-permission' || actual.scope!=='CurrentUser' || actual.mode!==expected.mode || actual.root!==expected.root
       || actual.action!==action || actual.profileDigest!==expected.profileDigest || actual.sourceDigest!==expected.sourceDigest || actual.releaseDigest!==expected.releaseDigest
@@ -127,11 +145,11 @@ export async function recordApprovedEnabledState(profile) {
   if(loginRecoveryGrantId())throw fail('APPROVAL_DENIED');
   const valid=validateProductionProfile(profile), action=valid.agentdockEnabled?'enable-agentdock':'disable-agentdock';
   await verifyRuntimeApproval(valid,action);
-  const path=win32.join(PRODUCTION_APPROVAL_STORE,productionProfileDigest(valid)+'.enabled.dpapi.json');
+  const path=win32.join(runtimeApprovalStore(valid.root),productionProfileDigest(valid)+'.enabled.dpapi.json');
   try {
-    try { const old=await lstat(path); if (!old.isFile()||old.nlink!==1) throw fail('APPROVAL_DENIED'); await assertProtectedPaths([path]); } catch(error){if(error.code!=='ENOENT')throw error;}
+    try { const old=await lstat(path); if (!old.isFile()||old.nlink!==1) throw fail('APPROVAL_DENIED'); await assertRuntimeApprovalPaths(valid.root,[path]); } catch(error){if(error.code!=='ENOENT')throw error;}
     await writeFile(path,await readFile(runtimeApprovalPath(valid,action)),{flag:'wx'});
-    await assertProtectedPaths([path]);
+    await assertRuntimeApprovalPaths(valid.root,[path]);
     return {path,agentdockEnabled:valid.agentdockEnabled,profileDigest:productionProfileDigest(valid)};
   } catch { throw fail('APPROVAL_DENIED'); }
 }
@@ -139,8 +157,8 @@ export async function readApprovedEnabledState(profile) {
   const recovery=await recoveryApproval(profile,'enable-agentdock');if(recovery)return recovery;
   const valid=validateProductionProfile(profile),action=valid.agentdockEnabled?'enable-agentdock':'disable-agentdock';
   await verifyRuntimeApproval(valid,action);
-  const path=win32.join(PRODUCTION_APPROVAL_STORE,productionProfileDigest(valid)+'.enabled.dpapi.json');
-  try {await assertProtectedPaths([path]);const actual=await run('receipt-unseal',{path});if(actual.profileDigest!==productionProfileDigest(valid)||actual.action!==action||actual.agentdockEnabled!==valid.agentdockEnabled)throw fail('APPROVAL_DENIED');return actual;}
+  const path=win32.join(runtimeApprovalStore(valid.root),productionProfileDigest(valid)+'.enabled.dpapi.json');
+  try {await assertRuntimeApprovalPaths(valid.root,[path]);const actual=await run('receipt-unseal',{path});if(actual.profileDigest!==productionProfileDigest(valid)||actual.action!==action||actual.agentdockEnabled!==valid.agentdockEnabled)throw fail('APPROVAL_DENIED');return actual;}
   catch {throw fail('APPROVAL_DENIED');}
 }
 

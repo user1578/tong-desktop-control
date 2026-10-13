@@ -10,10 +10,10 @@ try { api = await import('../scripts/TongProductionProfile.mjs'); } catch (error
 assert.ok(api, 'production profile implementation is required');
 const sourceDigest = 'a'.repeat(64), releaseDigest = 'b'.repeat(64);
 const fixed = api.createProductionProfile({ sourceDigest, releaseDigest });
-assert.equal(fixed.root, 'D:\\tong-agentdock-local');
-assert.equal(fixed.managerRoot, 'D:\\tong-agentdock-local\\releases\\manager');
-assert.equal(fixed.codeRoot, 'D:\\tong-desktop-control');
-assert.equal(fixed.runtimeDir, 'D:\\tong-desktop-control\\runtime');
+assert.equal(fixed.root, 'D:\\Tong\\runtime');
+assert.equal(fixed.managerRoot, 'D:\\Tong\\runtime\\releases\\manager');
+assert.equal(fixed.codeRoot, 'D:\\Tong\\app');
+assert.equal(fixed.runtimeDir, 'D:\\Tong\\app\\runtime');
 assert.equal(fixed.configDir, 'C:\\Users\\Rune\\.devspace');
 assert.equal(fixed.oauthStateDir, 'C:\\Users\\Rune\\.local\\share\\devspace');
 assert.equal(fixed.publicOrigin, 'https://retold-pointer-irregular.ngrok-free.dev');
@@ -26,7 +26,7 @@ assert.throws(() => api.createProductionProfile({sourceDigest,releaseDigest,root
 const simulationId = 'b23-profile-' + randomBytes(7).toString('hex');
 const sim = api.createProductionSimulationProfile({simulationId,sourceDigest,releaseDigest});
 assert.equal(sim.mode, 'production-simulation');
-assert.ok(sim.root.startsWith('D:\\agentdock-poc-20261010\\isolated\\state\\'));
+assert.ok(sim.root.startsWith('D:\\Tong\\state\\'));
 assert.ok(sim.codeRoot.startsWith(sim.root+'\\'));
 assert.equal(sim.managerRoot,sim.root+'\\releases\\manager');
 assert.ok(sim.originalStateRoot.startsWith(sim.root+'\\'));
@@ -68,7 +68,7 @@ assert.equal(initialized.created,true);
 assert.equal((await api.initializeProductionRoot(sim)).created,false,'known protected root may be reopened without resetting state');
 const { assertProtectedPaths } = await import('../scripts/TongRuntimeSecurity.mjs');
 const acl = await assertProtectedPaths([sim.root]);
-assert.equal(acl.items[0].protected,false,'simulation inherits protected PoC parent DACL without ACL mutation');
+assert.equal(acl.items[0].protected,true,'only the new runtime root is protected; ordinary state stays sandbox-writable');
 await writeFile(join(sim.root,'foreign.txt'),'retain');
 await assert.rejects(api.initializeProductionRoot(sim), /ROOT_DENIED/);
 assert.equal(await readFile(join(sim.root,'foreign.txt'),'utf8'),'retain');
@@ -81,7 +81,7 @@ await assert.rejects(api.readApprovedEnabledState({...enabled,releaseDigest:'d'.
 // A hardlinked bootstrap index must not overwrite another protected PoC file on renewal.
 const hardlinkTarget=join(sim.root,'bootstrap-hardlink.txt');
 await writeFile(hardlinkTarget,'preserved-hardlink-target');
-const index=join(api.PRODUCTION_APPROVAL_STORE,'simulation-'+createHash('sha256').update(sim.root).digest('hex')+'.start.current.dpapi.json');
+const index=join(api.runtimeApprovalStore(sim.root),'simulation-'+createHash('sha256').update(sim.root).digest('hex')+'.start.current.dpapi.json');
 await link(hardlinkTarget,index);
 await assert.rejects(api.issueSimulationApproval(sim,'start'), /APPROVAL_DENIED/);
 assert.equal(await readFile(hardlinkTarget,'utf8'),'preserved-hardlink-target');
@@ -103,4 +103,4 @@ const rejectedSimulation=spawnSync('powershell.exe',['-NoProfile','-NonInteracti
 assert.notEqual(rejectedSimulation.status,0);
 assert.equal(rejectedSimulation.error,undefined);
 assert.match(rejectedSimulation.stderr,/Tong production approval operation refused/);
-console.log(JSON.stringify({passed:true,evidenceRoot:sim.root,receiptStore:receipt.path,dpapiTamperRejected:true,typedConsoleGate:true,approvalBeforeRootIo:true,simulationInheritedAcl:acl.items[0].secure}));
+console.log(JSON.stringify({passed:true,evidenceRoot:sim.root,receiptStore:receipt.path,dpapiTamperRejected:true,typedConsoleGate:true,approvalBeforeRootIo:true,simulationRuntimeAcl:acl.items[0].secure}));

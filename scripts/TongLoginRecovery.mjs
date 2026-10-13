@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join,win32} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {PRODUCTION_ROOT,PRODUCTION_APPROVAL_STORE,validateProductionProfile,createProductionProfile,createProductionSimulationProfile,runLoginRecoveryHelper} from './TongProductionProfile.mjs';
+import {PRODUCTION_ROOT,runtimeApprovalStore,assertRuntimeApprovalPaths,validateProductionProfile,createProductionProfile,createProductionSimulationProfile,runLoginRecoveryHelper} from './TongProductionProfile.mjs';
 import {verifyRuntimeCandidate} from './TongRuntimeCandidate.mjs';
 import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
 const scope=new AsyncLocalStorage(),purpose='tong-login-recovery',self=fileURLToPath(import.meta.url);
@@ -20,8 +20,10 @@ function formalOnly(root){
   prefix(root);
   if(root===PRODUCTION_ROOT&&(self.toLowerCase()!==join(root,'releases','manager','scripts','TongLoginRecovery.mjs').toLowerCase()||process.execPath.toLowerCase()!=='d:\\node\\node.exe'))throw fail('APPROVAL_DENIED');
 }
-export const loginRecoveryPath=root=>join(PRODUCTION_APPROVAL_STORE,prefix(root)+'.login-recovery.current.dpapi.json');
-export const loginRecoveryAuditPath=root=>join(PRODUCTION_APPROVAL_STORE,prefix(root)+'.login-recovery.audit.jsonl');
+export const loginRecoveryPath=root=>join(runtimeApprovalStore(root),prefix(root)+'.login-recovery.current.dpapi.json');
+// Revocation history is protected metadata, not a secret envelope. Keeping it
+// in logs preserves the runtime backup's ciphertext-only secrets invariant.
+export const loginRecoveryAuditPath=root=>join(root===PRODUCTION_ROOT?join(root,'logs'):runtimeApprovalStore(root),prefix(root)+'.login-recovery.audit.jsonl');
 export function loginRecoveryGrantId(){return scope.getStore()?.grantId;}
 export function validateLoginRecoveryDescriptor(value){
   const runtimeProfile=validateProductionProfile(value?.runtimeProfile),managerProfile=validateProductionProfile(value?.managerProfile);
@@ -47,14 +49,14 @@ export async function loginRecoveryDescriptor(root){
 async function loadGrant(root,expectedId){
   formalOnly(root);
   try{
-    const path=loginRecoveryPath(root);await assertProtectedPaths([PRODUCTION_APPROVAL_STORE,path]);
+    const path=loginRecoveryPath(root);await assertRuntimeApprovalPaths(root,[path]);
     const grant=await runLoginRecoveryHelper('login-recovery-unseal',{path});
     const descriptor=validateLoginRecoveryDescriptor(grant.descriptor);
     if(grant.schemaVersion!==1||grant.purpose!==purpose||grant.enabled!==true||descriptor.root!==root
       ||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(grant.grantId??'')||expectedId!==undefined&&grant.grantId!==expectedId
       ||!Number.isFinite(Date.parse(grant.issuedAt))||Date.parse(grant.issuedAt)>Date.now()+5000||grant.expiresAt!==undefined
       ||Object.keys(grant).sort().join(',')!=='descriptor,enabled,grantId,issuedAt,purpose,schemaVersion')throw fail('APPROVAL_DENIED');
-    const auditPath=loginRecoveryAuditPath(root);await assertProtectedPaths([auditPath]);
+    const auditPath=loginRecoveryAuditPath(root);await assertRuntimeApprovalPaths(root,[auditPath]);
     const events=(await readFile(auditPath,'utf8')).trim().split(/\r?\n/).filter(Boolean).map(JSON.parse).filter(event=>event.root===root&&event.grantId===grant.grantId);
     // A retained revocation also rejects an accidentally restored old envelope.
     // An interrupted enable without a committed audit cannot grant capability.
@@ -63,10 +65,10 @@ async function loadGrant(root,expectedId){
   }catch{throw fail('APPROVAL_DENIED');}
 }
 async function audit(root,event,action,grant){
-  const path=loginRecoveryAuditPath(root);await assertProtectedPaths([PRODUCTION_APPROVAL_STORE]);
-  try{await assertProtectedPaths([path]);}catch(error){if(error.code!=='ENOENT')throw error;}
+  const path=loginRecoveryAuditPath(root);await assertRuntimeApprovalPaths(root);
+  try{await assertRuntimeApprovalPaths(root,[path]);}catch(error){if(error.code!=='ENOENT')throw error;}
   await writeFile(path,JSON.stringify({at:new Date().toISOString(),event,action,root,grantId:grant?.grantId??null,runtimeReleaseDigest:grant?.descriptor.runtimeProfile.releaseDigest??null,managerReleaseDigest:grant?.descriptor.managerProfile.releaseDigest??null,pid:process.pid})+'\n',{flag:'a'});
-  await assertProtectedPaths([path]);
+  await assertRuntimeApprovalPaths(root,[path]);
 }
 // No environment variable enables this context. Each process must explicitly
 // enter it with the CurrentUser sealed grant, then verify both pinned releases.

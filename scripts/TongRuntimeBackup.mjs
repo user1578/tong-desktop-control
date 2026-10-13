@@ -105,9 +105,11 @@ async function copyInventory(from,to,files) {
 }
 async function ciphertextOnly(root,files) {
   for(const file of files.filter(file=>file.path.startsWith('secrets/'))) {
-    if(!file.path.endsWith('.dpapi')) throw fail('CIPHERTEXT_REQUIRED');
+    const permission=file.path.startsWith('secrets/runtime-permissions/');
+    if(permission?!/^secrets\/runtime-permissions\/(?:[a-f0-9]{64}\.(?:init|start|stop|enable-agentdock|disable-agentdock|backup|restore|manager|enabled)|production\.(?:init|start|stop|enable-agentdock|disable-agentdock|backup|restore|manager|login-recovery)\.current)\.dpapi\.json$/.test(file.path):!file.path.endsWith('.dpapi')) throw fail('CIPHERTEXT_REQUIRED');
+    const purposes=permission?[file.path.endsWith('.login-recovery.current.dpapi.json')?'tong-login-recovery':'tong-runtime-permission']:['agentdock','oauth-owner'];
     let value;try {value=JSON.parse(await readFile(join(root,...file.path.split('/')),'utf8'));} catch {throw fail('CIPHERTEXT_REQUIRED');}
-    if(Object.keys(value).sort().join(',')!=='ciphertext,purpose,schemaVersion,scope,userSid' || value.schemaVersion!==1||value.scope!=='CurrentUser'||!['agentdock','oauth-owner'].includes(value.purpose)||!/^S-1-5-21-\d+-\d+-\d+-\d+$/.test(value.userSid??'')||typeof value.ciphertext!=='string') throw fail('CIPHERTEXT_REQUIRED');
+    if(Object.keys(value).sort().join(',')!=='ciphertext,purpose,schemaVersion,scope,userSid' || value.schemaVersion!==1||value.scope!=='CurrentUser'||!purposes.includes(value.purpose)||!/^S-1-5-21-\d+-\d+-\d+-\d+$/.test(value.userSid??'')||typeof value.ciphertext!=='string') throw fail('CIPHERTEXT_REQUIRED');
     const bytes=Buffer.from(value.ciphertext,'base64');
     if(bytes.toString('base64')!==value.ciphertext||bytes.length<64||bytes.subarray(0,20).toString('hex')!=='01000000d08c9ddf0115d1118c7a00c04fc297eb') throw fail('CIPHERTEXT_REQUIRED');
   }

@@ -10,6 +10,13 @@ export async function loginFixture({full=false}={}){
   const simulationId='b23-login-'+randomUUID().replaceAll('-','');
   const initial=createProductionSimulationProfile({simulationId,sourceDigest:'a'.repeat(64),releaseDigest:'b'.repeat(64),agentdockEnabled:true});
   const root=initial.root;
+  // Only this newly created runtime fixture needs the runtime's restricted ACL.
+  // Ordinary state and the separate simulation receipt store stay sandbox-writable.
+  await mkdir(root);
+  const encoded=Buffer.from(root).toString('base64');
+  const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>key.toUpperCase()!=='PSMODULEPATH'));
+  const protectedRoot=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`$ErrorActionPreference='Stop'; $target=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User; $acl=[Security.AccessControl.DirectorySecurity]::new(); $acl.SetAccessRuleProtection($true,$false); $acl.SetOwner($sid); foreach($allow in @($sid.Value,'S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($allow),'FullControl','ContainerInherit,ObjectInherit','None','Allow'))}; Set-Acl -LiteralPath $target -AclObject $acl`],{env,encoding:'utf8',windowsHide:true,timeout:10000});
+  if(protectedRoot.status!==0)throw Error('FIXTURE_ACL_FAILED:'+protectedRoot.stderr);
   for(const dir of ['backend-state','workspace','tong-policy/agentdock-operations','secrets','run','logs','temp','home','releases','tong/runtime','tong/demo-workspace','tong/home/.devspace','tong/oauth'])await mkdir(join(root,dir),{recursive:true});
   const git=spawnSync('git',['ls-files','scripts'],{cwd:project,encoding:'utf8',windowsHide:true});
   if(git.status!==0)throw Error('FIXTURE_SOURCE_INVENTORY_FAILED');
