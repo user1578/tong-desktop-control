@@ -16,10 +16,11 @@ const sourceRunner=await readFile(join(project,'scripts','TongLoginRuntime.ps1')
 let manager=String.raw`import {readFileSync,writeFileSync,appendFileSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 if(process.argv[2]==='preflight-login'){console.log(JSON.stringify({approved:true,loginRecoverySupported:true,runnerSha256:'@RUNNER_HASH@'}));process.exit(0);}
-if(!process.argv.includes('--login-recovery')){console.error('RECOVERY_CONTEXT_MISSING');process.exit(1);}
+const recovery=process.argv.includes('--login-recovery');
+if(!recovery&&process.argv[2]!=='status'){console.error('RECOVERY_CONTEXT_MISSING');process.exit(1);}
 const root=process.argv.includes('--root')?process.argv[process.argv.indexOf('--root')+1]:dirname(process.argv[1]);
 const path=join(root,'fixture.json'),s=JSON.parse(readFileSync(path,'utf8')),action=process.argv[2];
-appendFileSync(join(root,'calls.jsonl'),JSON.stringify({action})+'\n');
+appendFileSync(join(root,'calls.jsonl'),JSON.stringify({action,recovery})+'\n');
 if(s.refuse===action){console.error('APPROVAL_DENIED');process.exit(1);}
 if(action==='start'){s.phase='ready';s.supervisorAlive=true;s.runId='new-run';}
 if(action==='stop'||action==='stop-run'){
@@ -56,12 +57,13 @@ exit $LASTEXITCODE
 `;
   await writeFile(join(dir,'harness.ps1'),harness);
   const result=run(join(dir,'harness.ps1'),['-Mode',mode]);
-  const calls=(await readFile(join(dir,'calls.jsonl'),'utf8').catch(()=>'' )).trim().split('\n').filter(Boolean).map(line=>JSON.parse(line).action);
-  return {result,calls,dir};
+  const entries=(await readFile(join(dir,'calls.jsonl'),'utf8').catch(()=>'' )).trim().split('\n').filter(Boolean).map(line=>JSON.parse(line));
+  return {result,calls:entries.map(entry=>entry.action),entries,dir};
 }
 const ready={phase:'ready',supervisorAlive:true,runId:'old-run',healthy:true};
 let t=await runner('healthy-existing',ready,'start');
 assert.equal(t.result.status,0,t.result.stderr);assert.deepEqual(t.calls,['status','doctor']);
+assert.ok(t.entries.every(entry=>entry.recovery),'lifecycle queries must retain the recovery context');
 t=await runner('empty',{phase:'not_started',supervisorAlive:false},'start');
 assert.equal(t.result.status,0,t.result.stderr);assert.deepEqual(t.calls,['status','start','status','doctor']);
 t=await runner('stale',{phase:'stale_record',supervisorAlive:false},'start');
@@ -70,6 +72,7 @@ t=await runner('stale-refused',{phase:'stale_record',supervisorAlive:false,refus
 assert.notEqual(t.result.status,0);assert.deepEqual(t.calls,['status','reconcile-stale']);
 t=await runner('status',ready,'status');
 assert.equal(t.result.status,0,t.result.stderr);assert.equal(JSON.parse(t.result.stdout).tongPhase,'ready');assert.deepEqual(t.calls,['status']);
+assert.equal(t.entries[0].recovery,false,'standalone status must not depend on recovery authorization');
 t=await runner('stop',ready,'stop');
 assert.equal(t.result.status,0,t.result.stderr);assert.deepEqual(t.calls,['status','stop-run']);
 t=await runner('stop-refused',{...ready,refuse:'stop-run'},'stop');

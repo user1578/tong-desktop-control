@@ -5,7 +5,10 @@ $runtime='D:\Tong\runtime'
 $node='D:\node\node.exe'
 $manager=Join-Path $runtime 'releases\manager\scripts\TongAgentDockRuntime.mjs'
 function Runtime([string]$Action,[string]$ExpectedRunId) {
-    if($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId --login-recovery}else{$raw=& $node $manager $Action --root $runtime --login-recovery}
+    # Standalone status uses the manager's existing ACL-checked readonly path.
+    # Lifecycle queries still require the recovery grant before any side effect.
+    if($Action -ceq 'status' -and $Mode -eq 'status'){$raw=& $node $manager $Action --root $runtime}
+    elseif($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId --login-recovery}else{$raw=& $node $manager $Action --root $runtime --login-recovery}
     if($LASTEXITCODE -ne 0){throw ('Tong manager refused '+$Action)}
     return ($raw|ConvertFrom-Json)
 }
