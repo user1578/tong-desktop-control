@@ -13,6 +13,7 @@ try {
     $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$guardian+'" -Root "'+$Root+'" -RunId "'+$RunId+'" -NodeExe "'+$NodeExe+'" -Supervisor "'+$Supervisor+'"'
     # A separate hidden Windows console survives the initiating CLI's console exit.
     # No service, scheduled task, startup item, or credential argument is created.
-    $child=Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList $arguments -WindowStyle Hidden -PassThru
+    $guardianShell=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $child=Start-Process -FilePath $guardianShell -ArgumentList $arguments -WindowStyle Hidden -PassThru
     [pscustomobject]@{pid=$child.Id} | ConvertTo-Json -Compress
 } catch {[Console]::Error.WriteLine('Runtime launch refused');exit 2}

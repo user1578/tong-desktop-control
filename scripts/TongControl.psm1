@@ -30,8 +30,6 @@ function Get-TongConfiguration {
         Port = [int]$settings.port
         DevSpacePort = 7677
         WorkspacePath = $workspace
-        NgrokExecutable = [IO.Path]::GetFullPath([string]$settings.ngrokExecutable)
-        NgrokConfigPath = [IO.Path]::GetFullPath([string]$settings.ngrokConfigPath)
         PublicMcpUrl = ($origin.GetLeftPart([System.UriPartial]::Authority).TrimEnd('/') + '/mcp')
         LocalMcpUrl = "http://127.0.0.1:$([int]$settings.port)/mcp"
         DevSpaceMcpUrl = "http://127.0.0.1:7677/mcp"
@@ -98,12 +96,12 @@ function Initialize-TongRuntimeDirectories {
 }
 
 function Get-TongRecordPath {
-    param([ValidateSet('devspace', 'gateway', 'ngrok')][string]$Name)
+    param([ValidateSet('devspace', 'gateway')][string]$Name)
     Join-Path $script:RuntimePath "$Name.json"
 }
 
 function Get-TongManagedProcess {
-    param([ValidateSet('devspace', 'gateway', 'ngrok')][string]$Name)
+    param([ValidateSet('devspace', 'gateway')][string]$Name)
 
     $recordPath = Get-TongRecordPath $Name
     if (-not (Test-Path -LiteralPath $recordPath)) { return $null }
@@ -289,81 +287,8 @@ function Start-TongGateway {
     Write-Output "MCP gateway started (PID $($process.Id)); local MCP: $($Settings.LocalMcpUrl)."
 }
 
-function Start-TongNgrok {
-    param($Settings)
-
-    if (-not (Test-Path -LiteralPath $Settings.NgrokExecutable)) { throw "ngrok.exe not found at $($Settings.NgrokExecutable)." }
-    if (-not (Test-Path -LiteralPath $Settings.NgrokConfigPath)) { throw "ngrok config not found at $($Settings.NgrokConfigPath)." }
-
-    $existing = Get-TongManagedProcess 'ngrok'
-    if ($existing) {
-        if ($existing.Record.publicOrigin -ne $Settings.PublicOrigin) {
-            Stop-TongManagedProcess 'ngrok'
-        }
-        else {
-            Write-Output "ngrok already running (PID $($existing.Process.ProcessId))."
-            return
-        }
-    }
-
-    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $stdout = Join-Path $script:LogPath "ngrok-$stamp.stdout.log"
-    $stderr = Join-Path $script:LogPath "ngrok-$stamp.stderr.log"
-    $publicHost = ([uri]$Settings.PublicOrigin).Host
-    $marker = "$publicHost"
-    $target = "http://127.0.0.1:$($Settings.Port)"
-    $proxyNames = @('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY')
-    $savedProxyValues = @{}
-    foreach ($name in $proxyNames) {
-        $savedProxyValues[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-        [Environment]::SetEnvironmentVariable($name, $null, 'Process')
-    }
-    try {
-        $process = Start-Process -FilePath $Settings.NgrokExecutable `
-            -ArgumentList @('http', '--url', $Settings.PublicOrigin, $target, '--config', $Settings.NgrokConfigPath, '--log', 'stdout', '--log-format', 'json', '--log-level', 'info') `
-            -WorkingDirectory $script:ProjectRoot -RedirectStandardOutput $stdout `
-            -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
-    }
-    finally {
-        foreach ($name in $proxyNames) {
-            [Environment]::SetEnvironmentVariable($name, $savedProxyValues[$name], 'Process')
-        }
-    }
-    $processInfo = Get-Process -Id $process.Id -ErrorAction Stop
-    $record = [ordered]@{
-        processId = $process.Id
-        processStartUtcTicks = $processInfo.StartTime.ToUniversalTime().Ticks
-        executablePath = [IO.Path]::GetFullPath($Settings.NgrokExecutable)
-        commandMarker = $marker
-        publicOrigin = $Settings.PublicOrigin
-        port = $Settings.Port
-        startedAt = (Get-Date).ToString('o')
-        stdoutLog = $stdout
-        stderrLog = $stderr
-    }
-    $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Get-TongRecordPath 'ngrok') -Encoding utf8
-    $connected = $false
-    for ($attempt = 0; $attempt -lt 50; $attempt++) {
-        if (-not (Get-Process -Id $process.Id -ErrorAction SilentlyContinue)) {
-            throw "ngrok exited before confirming the tunnel. See $stderr."
-        }
-        $logText = ''
-        if (Test-Path -LiteralPath $stdout) { $logText += Get-Content -LiteralPath $stdout -Raw }
-        if (Test-Path -LiteralPath $stderr) { $logText += Get-Content -LiteralPath $stderr -Raw }
-        if ($logText.Contains($publicHost)) {
-            $connected = $true
-            break
-        }
-        Start-Sleep -Milliseconds 500
-    }
-    if (-not $connected) {
-        throw "ngrok stayed running but did not confirm $publicHost. See $stdout and $stderr."
-    }
-    Write-Output "ngrok started (PID $($process.Id)); public MCP: $($Settings.PublicMcpUrl)."
-}
-
 function Stop-TongManagedProcess {
-    param([ValidateSet('devspace', 'gateway', 'ngrok')][string]$Name)
+    param([ValidateSet('devspace', 'gateway')][string]$Name)
 
     $recordPath = Get-TongRecordPath $Name
     $managed = Get-TongManagedProcess $Name
@@ -396,22 +321,17 @@ function Start-TongDesktopControl {
 
     $server = Get-TongManagedProcess 'devspace'
     $gateway = Get-TongManagedProcess 'gateway'
-    $tunnel = Get-TongManagedProcess 'ngrok'
     if (($server -and ($server.Record.publicOrigin -ne $settings.PublicOrigin -or [int]$server.Record.port -ne $settings.DevSpacePort)) -or
-        ($gateway -and ($gateway.Record.publicOrigin -ne $settings.PublicOrigin -or [int]$gateway.Record.port -ne $settings.Port)) -or
-        ($tunnel -and $tunnel.Record.publicOrigin -ne $settings.PublicOrigin)) {
-        Stop-TongManagedProcess 'ngrok'
+        ($gateway -and ($gateway.Record.publicOrigin -ne $settings.PublicOrigin -or [int]$gateway.Record.port -ne $settings.Port))) {
         Stop-TongManagedProcess 'gateway'
         Stop-TongManagedProcess 'devspace'
     }
     Sync-TongPublicOrigin -Settings $settings
     Start-TongDevSpace -Settings $settings
     Start-TongGateway -Settings $settings
-    Start-TongNgrok -Settings $settings
 }
 
 function Stop-TongDesktopControl {
-    Stop-TongManagedProcess 'ngrok'
     Stop-TongManagedProcess 'gateway'
     Stop-TongManagedProcess 'devspace'
 }
@@ -420,18 +340,16 @@ function Get-TongDesktopControlStatus {
     $settings = Get-TongConfiguration
     $server = Get-TongManagedProcess 'devspace'
     $gateway = Get-TongManagedProcess 'gateway'
-    $tunnel = Get-TongManagedProcess 'ngrok'
     $listeners = Get-TongPortListeners $settings.Port
     $upstreamListeners = Get-TongPortListeners $settings.DevSpacePort
     $serverState = if ($server) { "running (PID $($server.Process.ProcessId)) on port $($settings.DevSpacePort)" } elseif ($upstreamListeners.Count -gt 0) { "occupied by untracked PID $($upstreamListeners[0].OwningProcess)" } else { 'stopped' }
     $gatewayState = if ($gateway) { "running (PID $($gateway.Process.ProcessId)) on port $($settings.Port)" } elseif ($listeners.Count -gt 0) { "occupied by untracked PID $($listeners[0].OwningProcess)" } else { 'stopped' }
-    $tunnelState = if ($tunnel) { "running (PID $($tunnel.Process.ProcessId))" } else { 'stopped or not started by this project' }
     [pscustomobject]@{
         DevSpace = $serverState
         Gateway = $gatewayState
         LocalMcp = $settings.LocalMcpUrl
         DevSpaceUpstream = $settings.DevSpaceMcpUrl
-        Ngrok = $tunnelState
+        Ngrok = 'external Windows service; not managed by Tong'
         PublicMcp = $settings.PublicMcpUrl
         Logs = $script:LogPath
     } | Format-List
