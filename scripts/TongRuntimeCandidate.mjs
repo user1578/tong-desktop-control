@@ -4,6 +4,7 @@ import {join,resolve,isAbsolute,sep} from 'node:path';
 import {verifyRelease} from './TongRuntimeRelease.mjs';
 import {validateProductionProfile,loadApprovedProfile} from './TongProductionProfile.mjs';
 import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
+import {loginRecoveryGrantId} from './TongLoginRecovery.mjs';
 const fail=code=>new Error(code),hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 function member(root,name){
   if(typeof name!=='string'||!name||name.includes('\\')||name.includes(':')||name.startsWith('/')||name.split('/').some(p=>!p||p==='.'||p==='..'||/[<>"|?*\x00-\x1f]/.test(p)||/[. ]$/.test(p)))throw fail('CANDIDATE_DENIED');
@@ -14,6 +15,7 @@ function bound(profile,manifest,bytes){
   if(manifest.schemaVersion!==1||hash(bytes)!==profile.releaseDigest||manifest.files?.find(f=>f.path==='code/source.tar')?.sha256!==profile.sourceDigest||!Array.isArray(manifest.sourceFiles)||!Array.isArray(manifest.native))throw fail('CANDIDATE_DENIED');
 }
 export async function pinRuntimeRelease(profile,releaseRoot,{replace=false,manager=false}={}){
+  if(loginRecoveryGrantId())throw fail('APPROVAL_DENIED');
   profile=validateProductionProfile(profile);const manifest=await verifyRelease({releaseRoot});
   const bytes=await regularFile(join(releaseRoot,'release-manifest.json'));bound(profile,manifest,bytes);
   const path=join(profile.root,'run',manager?'manager-pin.json':'release-pin.json');await assertProtectedPaths([profile.root,join(profile.root,'run')]);
@@ -23,9 +25,9 @@ export async function pinRuntimeRelease(profile,releaseRoot,{replace=false,manag
   else await writeFile(path,bytes,{flag:'wx'});
   await assertProtectedPaths([path]);return manifest;
 }
-export async function verifyRuntimeCandidate(profile,{manager=false}={}){
+export async function verifyRuntimeCandidate(profile,{manager=false,reviewedManagerProfile}={}){
   profile=validateProductionProfile(profile);
-  if(manager){const permission=await loadApprovedProfile(profile.root,'manager');if(permission.managerRoot!==profile.managerRoot)throw fail('CANDIDATE_DENIED');profile=permission;}
+  if(manager){const permission=reviewedManagerProfile?validateProductionProfile(reviewedManagerProfile):await loadApprovedProfile(profile.root,'manager');if(permission.root!==profile.root||permission.managerRoot!==profile.managerRoot)throw fail('CANDIDATE_DENIED');profile=permission;}
   const pin=join(profile.root,'run',manager?'manager-pin.json':'release-pin.json');await assertProtectedPaths([profile.root,join(profile.root,'run'),pin]);
   const bytes=await regularFile(pin),manifest=JSON.parse(bytes);bound(profile,manifest,bytes);
   if(manifest.node?.executable.toLowerCase()!==process.execPath.toLowerCase()||manifest.node.version!==process.version||manifest.node.abi!==process.versions.modules||manifest.node.platform!==process.platform||manifest.node.arch!==process.arch||hash(await regularFile(process.execPath))!==manifest.node.sha256)throw fail('CANDIDATE_DENIED');

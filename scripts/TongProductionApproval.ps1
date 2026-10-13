@@ -1,5 +1,5 @@
-param(
-    [Parameter(Mandatory=$true)][ValidateSet('approve','receipt-simulation','receipt-unseal','init-root')][string]$Mode,
+﻿param(
+    [Parameter(Mandatory=$true)][ValidateSet('approve','receipt-simulation','receipt-unseal','init-root','approve-login-recovery','revoke-login-recovery','login-recovery-simulation','login-recovery-unseal')][string]$Mode,
     [string]$ProfileJson,
     [ValidateSet('init','start','stop','enable-agentdock','disable-agentdock','backup','restore','manager')][string]$Action
 )
@@ -13,6 +13,7 @@ $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $allowedSids=@($sid,'S-1-5-18','S-1-5-32-544')
 $js=Join-Path $PSScriptRoot 'TongProductionProfile.mjs'
 $entropy=[Text.Encoding]::UTF8.GetBytes('Tong-B2.3:noncredential-runtime-permission:v1')
+$recoveryEntropy=[Text.Encoding]::UTF8.GetBytes('Tong:fixed-login-recovery:v1')
 function Assert-NoReparse([string]$Path) {
     $current=[IO.Path]::GetFullPath($Path)
     while ($current) {
@@ -45,7 +46,62 @@ function Get-Descriptor($Profile,[string]$RequestedAction,[bool]$Verify=$false) 
 }
 function Assert-StoreFile([string]$Path) {
     $full=[IO.Path]::GetFullPath($Path)
-    if ([IO.Path]::GetDirectoryName($full) -cne $store -or [IO.Path]::GetFileName($full) -notmatch '^(?:[a-f0-9]{64}\.(?:init|start|stop|enable-agentdock|disable-agentdock|backup|restore|manager|enabled)|(?:production|simulation-[a-f0-9]{64})\.(?:init|start|stop|enable-agentdock|disable-agentdock|backup|restore|manager)\.current)\.dpapi\.json$') {throw 'Receipt path refused'}
+    if ([IO.Path]::GetDirectoryName($full) -cne $store -or [IO.Path]::GetFileName($full) -notmatch '^(?:[a-f0-9]{64}\.(?:init|start|stop|enable-agentdock|disable-agentdock|backup|restore|manager|enabled)|(?:production|simulation-[a-f0-9]{64})\.(?:init|start|stop|enable-agentdock|disable-agentdock|backup|restore|manager|login-recovery)\.current)\.dpapi\.json$') {throw 'Receipt path refused'}
+}
+function Recovery-Descriptor($Value) {
+    $encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($Value|ConvertTo-Json -Depth 12 -Compress)))
+    $raw=& 'D:\node\node.exe' $js --validate-login-recovery-descriptor $encoded
+    if($LASTEXITCODE -ne 0){throw 'Recovery descriptor refused'}
+    return ($raw|ConvertFrom-Json)
+}
+function Recovery-Prefix($Descriptor) {
+    if($Descriptor.runtimeProfile.mode -ceq 'production'){return 'production'}
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{return 'simulation-'+([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Descriptor.root)))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+}
+function Open-Recovery([string]$Path) {
+    Assert-StoreFile $Path
+    if([IO.Path]::GetFileName($Path) -notmatch '\.login-recovery\.current\.dpapi\.json$'){throw 'Recovery path refused'}
+    Assert-Protected $stateRoot;Assert-Protected $store;Assert-Protected $Path
+    if((Get-Item -LiteralPath $Path).Length -gt 65536){throw 'Recovery size refused'}
+    $envelope=Get-Content -LiteralPath $Path -Raw -Encoding UTF8|ConvertFrom-Json
+    if($envelope.schemaVersion -ne 1 -or $envelope.purpose -cne 'tong-login-recovery' -or $envelope.scope -cne 'CurrentUser' -or $envelope.userSid -cne $sid){throw 'Recovery envelope refused'}
+    $plain=[Security.Cryptography.ProtectedData]::Unprotect([Convert]::FromBase64String($envelope.ciphertext),$recoveryEntropy,[Security.Cryptography.DataProtectionScope]::CurrentUser)
+    try{$grant=[Text.Encoding]::UTF8.GetString($plain)|ConvertFrom-Json}finally{[Array]::Clear($plain,0,$plain.Length)}
+    if($grant.schemaVersion -ne 1 -or $grant.purpose -cne 'tong-login-recovery'){throw 'Recovery purpose refused'}
+    return $grant
+}
+function Save-Recovery($Descriptor,[bool]$Enabled,[string]$ExpectedGrantId) {
+    $Descriptor=Recovery-Descriptor $Descriptor
+    $prefix=Recovery-Prefix $Descriptor
+    $path=Join-Path $store ($prefix+'.login-recovery.current.dpapi.json')
+    $auditPath=Join-Path $store ($prefix+'.login-recovery.audit.jsonl')
+    Ensure-Store;Assert-StoreFile $path
+    if(Test-Path -LiteralPath $auditPath){Assert-Protected $auditPath}
+    $grantId=[guid]::NewGuid().ToString()
+    if(Test-Path -LiteralPath $path){Assert-Protected $path}
+    if(-not $Enabled){
+        $previous=Open-Recovery $path
+        if($previous.grantId -cne $ExpectedGrantId){throw 'Recovery grant changed'}
+        $Descriptor=Recovery-Descriptor $previous.descriptor
+        $grantId=$previous.grantId
+    }
+    $at=[DateTime]::UtcNow.ToString('o')
+    $grant=[ordered]@{schemaVersion=1;purpose='tong-login-recovery';grantId=$grantId;enabled=$Enabled;issuedAt=$at;descriptor=$Descriptor}
+    $plain=[Text.Encoding]::UTF8.GetBytes(($grant|ConvertTo-Json -Depth 12 -Compress))
+    try{$encrypted=[Security.Cryptography.ProtectedData]::Protect($plain,$recoveryEntropy,[Security.Cryptography.DataProtectionScope]::CurrentUser)}finally{[Array]::Clear($plain,0,$plain.Length)}
+    $envelope=[ordered]@{schemaVersion=1;purpose='tong-login-recovery';scope='CurrentUser';userSid=$sid;ciphertext=[Convert]::ToBase64String($encrypted)}
+    # Audit must be writable before granting capability. The current envelope
+    # is replaced atomically, preserving its ACL; no old state is deleted.
+    $event=if($Enabled){'enabled'}else{'revoked'}
+    [IO.File]::AppendAllText($auditPath,((@{at=$at;event=$event;grantId=$grantId;root=$Descriptor.root;runtimeReleaseDigest=$Descriptor.runtimeProfile.releaseDigest;managerReleaseDigest=$Descriptor.managerProfile.releaseDigest;runnerSha256=$Descriptor.runnerSha256;phase='intent'}|ConvertTo-Json -Compress)+[Environment]::NewLine),[Text.UTF8Encoding]::new($false))
+    Assert-Protected $auditPath
+    $temporary=$path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+    [IO.File]::WriteAllText($temporary,($envelope|ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false));Assert-Protected $temporary
+    if(Test-Path -LiteralPath $path){[IO.File]::Replace($temporary,$path,[NullString]::Value)}else{[IO.File]::Move($temporary,$path)}
+    Assert-Protected $path
+    [IO.File]::AppendAllText($auditPath,((@{at=$at;event=$event;grantId=$grantId;root=$Descriptor.root;runtimeReleaseDigest=$Descriptor.runtimeProfile.releaseDigest;managerReleaseDigest=$Descriptor.managerProfile.releaseDigest;runnerSha256=$Descriptor.runnerSha256;phase='committed'}|ConvertTo-Json -Compress)+[Environment]::NewLine),[Text.UTF8Encoding]::new($false))
+    return $grant
 }
 function Ensure-Store {
     Assert-Protected $stateRoot
@@ -93,7 +149,36 @@ function Seal-Receipt($Descriptor,$Profile,[string]$ExpiresAt) {
 }
 try {
     Add-Type -AssemblyName System.Security
-    if($Mode -eq 'approve') {
+    if($Mode -in @('approve-login-recovery','revoke-login-recovery')) {
+        if($PSCommandPath -cne 'D:\Tong\runtime\releases\manager\scripts\TongProductionApproval.ps1'){throw 'Formal manager entry required'}
+        if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Environment]::UserInteractive -or $Host.Name -cne 'ConsoleHost'){throw 'Human interactive console required'}
+        if($Host.UI.RawUI.WindowSize.Width -le 0 -or $Host.UI.RawUI.WindowSize.Height -le 0){throw 'Visible console required'}
+        $enabled=$Mode -eq 'approve-login-recovery'
+        if($enabled){
+            $raw=& 'D:\node\node.exe' $js --login-recovery-descriptor
+            if($LASTEXITCODE -ne 0){throw 'Installed recovery version refused'}
+            $descriptor=$raw|ConvertFrom-Json;$expectedGrantId=''
+        }else{
+            $previous=Open-Recovery (Join-Path $store 'production.login-recovery.current.dpapi.json')
+            $descriptor=Recovery-Descriptor $previous.descriptor;$expectedGrantId=$previous.grantId
+        }
+        $descriptor=Recovery-Descriptor $descriptor
+        if($descriptor.root -cne 'D:\Tong\runtime' -or $descriptor.runtimeProfile.mode -cne 'production'){throw 'Production recovery scope refused'}
+        [Console]::WriteLine('本次仅'+$(if($enabled){'启用'}else{'撤销'})+'固定 Tong 登录恢复授权：Gateway、DevSpace、AgentDock 的启动、按运行身份停止和陈旧状态核对。')
+        [Console]::WriteLine('影响 D:\Tong\runtime 的已核验运行版本及 D:\Tong\state 中的独立恢复凭据；不修改 ngrok、计划任务或生产代码。')
+        [Console]::WriteLine('这是固定运行环境的持续授权，与普通任务的30分钟审批分开；不授权 Shell、Codex任务、项目修改、部署或权限扩张。')
+        [Console]::WriteLine('失败时安全拒绝恢复；可用 revoke-login-recovery 撤销，新版本必须重新启用。撤销不停止当前健康服务。')
+        [Console]::WriteLine('有效至本人撤销或核验版本改变；仅包含上述后续恢复操作，不包含后续任务执行。')
+        $nonce=[guid]::NewGuid().ToString('N')
+        $challenge='APPROVE TongLoginRecovery '+$Mode+' '+$descriptor.runtimeProfile.releaseDigest+' '+$descriptor.managerProfile.releaseDigest+' '+$nonce
+        [Console]::WriteLine('请本人输入下面的完整挑战：');[Console]::WriteLine($challenge)
+        if([Console]::ReadLine() -cne $challenge){throw 'Typed recovery challenge refused'}
+        if($enabled){
+            $raw=& 'D:\node\node.exe' $js --login-recovery-descriptor
+            if($LASTEXITCODE -ne 0 -or ($raw|ConvertFrom-Json|ConvertTo-Json -Depth 12 -Compress) -cne ($descriptor|ConvertTo-Json -Depth 12 -Compress)){throw 'Reviewed recovery changed'}
+        }
+        Save-Recovery $descriptor $enabled $expectedGrantId|ConvertTo-Json -Depth 12 -Compress
+    }elseif($Mode -eq 'approve') {
         # This is the sole production minting path. Redirected stdin/console-less automation cannot approve.
         if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Environment]::UserInteractive){throw 'Interactive console required'}
         if($Host.Name -cne 'ConsoleHost' -or $null -eq $Host.UI -or $null -eq $Host.UI.RawUI){throw 'Interactive console host required'}
@@ -112,7 +197,14 @@ try {
         $raw=[Console]::In.ReadToEnd()
         if($raw.Length -gt 65536){throw 'Input size refused'}
         $data=$raw|ConvertFrom-Json
-        if($Mode -eq 'receipt-simulation') {
+        if($Mode -eq 'login-recovery-unseal') {
+            Open-Recovery $data.path|ConvertTo-Json -Depth 12 -Compress
+        }elseif($Mode -eq 'login-recovery-simulation') {
+            $descriptor=Recovery-Descriptor $data.descriptor
+            if($descriptor.runtimeProfile.mode -cne 'production-simulation' -or $data.enabled -isnot [bool]){throw 'Simulation recovery only'}
+            $expected='';if($data.PSObject.Properties['grantId']){$expected=[string]$data.grantId}
+            Save-Recovery $descriptor $data.enabled $expected|ConvertTo-Json -Depth 12 -Compress
+        }elseif($Mode -eq 'receipt-simulation') {
             $descriptor=Get-Descriptor $data.profile $data.action
             if($descriptor.mode -cne 'production-simulation' -or -not $descriptor.root.StartsWith($stateRoot+'\',[StringComparison]::Ordinal)){throw 'Simulation only'}
             Seal-Receipt $descriptor $data.profile $data.expiresAt|ConvertTo-Json -Compress

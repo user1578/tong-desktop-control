@@ -5,7 +5,7 @@ $runtime='D:\Tong\runtime'
 $node='D:\node\node.exe'
 $manager=Join-Path $runtime 'releases\manager\scripts\TongAgentDockRuntime.mjs'
 function Runtime([string]$Action,[string]$ExpectedRunId) {
-    if($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId}else{$raw=& $node $manager $Action --root $runtime}
+    if($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId --login-recovery}else{$raw=& $node $manager $Action --root $runtime --login-recovery}
     if($LASTEXITCODE -ne 0){throw ('Tong manager refused '+$Action)}
     return ($raw|ConvertFrom-Json)
 }
@@ -35,7 +35,7 @@ try {
             Enter-RuntimeLock $mutex;$locked=$true
             $status=Runtime 'status'
             if($Mode -eq 'stop') {
-                if($status.supervisorAlive){$null=Runtime 'stop'}
+                if($status.supervisorAlive){$null=Runtime 'stop-run' $status.runId}
                 Write-Output 'Tong stopped. State and PID evidence retained.'
             }else {
                 if(-not $status.supervisorAlive) {

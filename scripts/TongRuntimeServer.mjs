@@ -4,6 +4,11 @@ import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
 const [settings] = await once(process, 'message');
 if (settings.schemaVersion !== 1 || !['devspace','gateway'].includes(settings.role)) throw new Error('Runtime child settings rejected');
+if(settings.recoveryGrantId){
+  const {withLoginRecovery}=await import('./TongLoginRecovery.mjs');
+  await withLoginRecovery(settings.root,'child',()=>serve(settings),{grantId:settings.recoveryGrantId});
+}else await serve(settings);
+async function serve(settings){
 const preserved=settings.profile!==undefined;
 const stage=name=>process.send({event:'stage',stage:name});
 stage('settings_received');
@@ -72,3 +77,4 @@ async function stop() {
 process.on('message',message=>{if(message?.event==='stop') void stop().catch(()=>{process.exitCode=1;process.disconnect();});});
 process.on('disconnect',()=>{if(!closing) void stop().catch(()=>{process.exitCode=1;});});
 process.on('SIGTERM',()=>{void stop();});
+}

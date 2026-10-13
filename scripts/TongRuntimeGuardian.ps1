@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$RunId,[Parameter(Mandatory)][string]$NodeExe,[Parameter(Mandatory)][string]$Supervisor)
+param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$RunId,[Parameter(Mandatory)][string]$NodeExe,[Parameter(Mandatory)][string]$Supervisor,[string]$RecoveryGrantId)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $job=[IntPtr]::Zero
@@ -10,7 +10,7 @@ try {
     $Root=[IO.Path]::GetFullPath($Root)
     if($Root -ceq 'D:\Tong\runtime') {
         if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
-        & $NodeExe $Supervisor preflight-production | Out-Null
+        if($RecoveryGrantId){& $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null}else{& $NodeExe $Supervisor preflight-production | Out-Null}
         if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
     }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     $approvedRoot=$true
@@ -35,6 +35,11 @@ public static class TongRuntimeJob {
     $stage='read-request'
     $request=Get-Content -LiteralPath (Join-Path $Root 'run\request.json') -Raw | ConvertFrom-Json
     if ($request.runId -ne $RunId) { throw 'Run identity mismatch' }
+    if($RecoveryGrantId){
+        if($RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$' -or $request.recoveryGrantId -cne $RecoveryGrantId){throw 'Recovery grant identity mismatch'}
+        & $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null
+        if($LASTEXITCODE -ne 0){throw 'Recovery authorization refused'}
+    }elseif($request.PSObject.Properties['recoveryGrantId']){throw 'Recovery request requires explicit guardian authorization'}
     $stage='create-job'
     $job=[TongRuntimeJob]::Create()
     $info=[Diagnostics.ProcessStartInfo]::new()

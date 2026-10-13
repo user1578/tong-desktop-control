@@ -2,7 +2,7 @@ param([ValidateSet('prepare','install','rollback','status','start','stop','recov
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 # Keep the old preparation (including its tunnel artifacts) for diagnosis only.
-$preparation='D:\Tong\state\p26-login-preparation-v2'
+$preparation='D:\Tong\state\p26-login-preparation-v3'
 $deployment='D:\Tong\runtime\login-management'
 $taskName='TongLoginRuntime'
 $taskShell='C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -16,10 +16,11 @@ function Assert-SafeDirectory([string]$Path) {
     foreach($ace in $acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])){if($ace.AccessControlType -eq 'Allow' -and $ace.IdentityReference.Value -notin $allowed){throw 'Foreign directory access refused'}}
 }
 function ManagerPreflight {
-    $raw=& 'D:\node\node.exe' 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs' preflight-production --login-recovery
+    $raw=& 'D:\node\node.exe' 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs' preflight-login --root 'D:\Tong\runtime'
     if($LASTEXITCODE -ne 0){throw 'Current formal runtime permission/pin refused; no task installed'}
     $checked=$raw|ConvertFrom-Json
-    if(-not $checked.approved -or -not $checked.PSObject.Properties['stopRunSupported'] -or -not $checked.stopRunSupported){throw 'Pinned manager update required for guarded login recovery'}
+    if(-not $checked.approved -or -not $checked.PSObject.Properties['loginRecoverySupported'] -or -not $checked.loginRecoverySupported){throw 'Pinned manager update required for persistent login recovery'}
+    return $checked
 }
 function Invoke-Runner([string]$Action) {
     & $taskShell -NoLogo -NoProfile -NonInteractive -File (Join-Path $deployment 'TongLoginRuntime.ps1') -Mode $Action
@@ -39,17 +40,18 @@ if($Mode -eq 'prepare') {
     $settingsTask=New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval ([TimeSpan]::FromMinutes(1)) -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     $task=New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -Settings $settingsTask -Description 'Restore the pinned local Tong runtime at Rune login; external tunnel managed separately; no credentials in task arguments.'
     $task|Export-ScheduledTask|Set-Content -LiteralPath (Join-Path $preparation 'TongLoginRuntime.review.xml') -Encoding Unicode
-    $manifest=[ordered]@{schemaVersion=2;runnerHash=(Get-FileHash -LiteralPath (Join-Path $preparation 'TongLoginRuntime.ps1')).Hash;taskHash=(Get-FileHash -LiteralPath (Join-Path $preparation 'TongLoginRuntime.review.xml')).Hash;productionSwitched=$false;preparedAt=[DateTime]::UtcNow.ToString('o')}
+    $manifest=[ordered]@{schemaVersion=3;runnerHash=(Get-FileHash -LiteralPath (Join-Path $preparation 'TongLoginRuntime.ps1')).Hash;taskHash=(Get-FileHash -LiteralPath (Join-Path $preparation 'TongLoginRuntime.review.xml')).Hash;productionSwitched=$false;preparedAt=[DateTime]::UtcNow.ToString('o')}
     [IO.File]::WriteAllText((Join-Path $preparation 'preparation.json'),($manifest|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
     Write-Output ('Prepared only: '+$preparation)
 }elseif($Mode -eq 'install') {
     # Run only after the user has approved installing the login task.
     Assert-SafeDirectory $preparation
-    ManagerPreflight
+    $checked=ManagerPreflight
     if(Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue){throw 'New task already exists'}
     $manifest=Get-Content -LiteralPath (Join-Path $preparation 'preparation.json') -Raw -Encoding UTF8|ConvertFrom-Json
-    if($manifest.schemaVersion -ne 2){throw 'Legacy preparation refused'}
+    if($manifest.schemaVersion -ne 3){throw 'Legacy preparation refused'}
     foreach($pair in @(@('TongLoginRuntime.ps1',$manifest.runnerHash),@('TongLoginRuntime.review.xml',$manifest.taskHash))){if((Get-FileHash -LiteralPath (Join-Path $preparation $pair[0])).Hash -ine $pair[1]){throw 'Reviewed preparation changed'}}
+    if($manifest.runnerHash -ine $checked.runnerSha256){throw 'Login runner differs from the approved manager release'}
     Assert-SafeDirectory 'D:\Tong\runtime'
     if(Test-Path -LiteralPath $deployment) {
         # Resume a failed registration only when the retained reviewed payload

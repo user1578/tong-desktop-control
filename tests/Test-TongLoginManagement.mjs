@@ -4,6 +4,7 @@ import {once} from 'node:events';
 import {mkdtemp,mkdir,readFile,writeFile,readdir} from 'node:fs/promises';
 import {join,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
 
 // Only filesystem copies with remapped fixed paths and fake lifecycle boundaries
 // are executed. No real task, service, production manager or tunnel is invoked.
@@ -11,9 +12,11 @@ const shell=process.argv[2]??'powershell.exe';
 const project=fileURLToPath(new URL('../',import.meta.url));
 const root=await mkdtemp('D:\\Tong\\state\\login-test-');
 const quote=value=>"'"+value.replaceAll("'","''")+"'";
-const manager=String.raw`import {readFileSync,writeFileSync,appendFileSync} from 'node:fs';
+const sourceRunner=await readFile(join(project,'scripts','TongLoginRuntime.ps1'),'utf8');
+let manager=String.raw`import {readFileSync,writeFileSync,appendFileSync} from 'node:fs';
 import {join,dirname} from 'node:path';
-if(process.argv[2]==='preflight-production'){console.log(JSON.stringify({approved:true,stopRunSupported:true}));process.exit(0);}
+if(process.argv[2]==='preflight-login'){console.log(JSON.stringify({approved:true,loginRecoverySupported:true,runnerSha256:'@RUNNER_HASH@'}));process.exit(0);}
+if(!process.argv.includes('--login-recovery')){console.error('RECOVERY_CONTEXT_MISSING');process.exit(1);}
 const root=process.argv.includes('--root')?process.argv[process.argv.indexOf('--root')+1]:dirname(process.argv[1]);
 const path=join(root,'fixture.json'),s=JSON.parse(readFileSync(path,'utf8')),action=process.argv[2];
 appendFileSync(join(root,'calls.jsonl'),JSON.stringify({action})+'\n');
@@ -68,9 +71,9 @@ assert.notEqual(t.result.status,0);assert.deepEqual(t.calls,['status','reconcile
 t=await runner('status',ready,'status');
 assert.equal(t.result.status,0,t.result.stderr);assert.equal(JSON.parse(t.result.stdout).tongPhase,'ready');assert.deepEqual(t.calls,['status']);
 t=await runner('stop',ready,'stop');
-assert.equal(t.result.status,0,t.result.stderr);assert.deepEqual(t.calls,['status','stop']);
-t=await runner('stop-refused',{...ready,refuse:'stop'},'stop');
-assert.notEqual(t.result.status,0);assert.deepEqual(t.calls,['status','stop']);
+assert.equal(t.result.status,0,t.result.stderr);assert.deepEqual(t.calls,['status','stop-run']);
+t=await runner('stop-refused',{...ready,refuse:'stop-run'},'stop');
+assert.notEqual(t.result.status,0);assert.deepEqual(t.calls,['status','stop-run']);
 t=await runner('unhealthy',{...ready,healthy:false},'start');
 assert.notEqual(t.result.status,0);assert.equal(t.calls.filter(x=>x==='doctor').length,3);assert.equal(t.calls.at(-1),'stop-run');
 t=await runner('transient',{...ready,health:[false,false,true]},'start');
@@ -111,9 +114,11 @@ await mkdir(join(runtime,'releases','manager','scripts'),{recursive:true});
 await writeFile(join(runtime,'releases','manager','scripts','TongAgentDockRuntime.mjs'),manager);
 await writeFile(join(dir,'fixture.json'),JSON.stringify(ready));
 let installer=await readFile(join(project,'scripts','Install-TongLoginManagement.ps1'),'utf8');
-installer=installer.replaceAll('D:\\Tong\\state\\p26-login-preparation-v2','@PREPARATION@').replaceAll('D:\\Tong\\state\\p26-login-preparation','@PREPARATION@').replaceAll('D:\\Tong\\state','@STATE@').replaceAll('D:\\Tong\\runtime','@RUNTIME@').replaceAll('@PREPARATION@',preparation).replaceAll('@STATE@',dir).replaceAll('@RUNTIME@',runtime);
+installer=installer.replaceAll('D:\\Tong\\state\\p26-login-preparation-v3','@PREPARATION@').replaceAll('D:\\Tong\\state\\p26-login-preparation','@PREPARATION@').replaceAll('D:\\Tong\\state','@STATE@').replaceAll('D:\\Tong\\runtime','@RUNTIME@').replaceAll('@PREPARATION@',preparation).replaceAll('@STATE@',dir).replaceAll('@RUNTIME@',runtime);
 await writeFile(join(dir,'Install-TongLoginManagement.ps1'),installer);
 await writeFile(join(dir,'TongLoginRuntime.ps1'),(await readFile(join(project,'scripts','TongLoginRuntime.ps1'),'utf8')).replaceAll('D:\\Tong\\runtime',runtime));
+manager=manager.replaceAll('@RUNNER_HASH@',createHash('sha256').update(sourceRunner.replaceAll('D:\\Tong\\runtime',runtime)).digest('hex'));
+await writeFile(join(runtime,'releases','manager','scripts','TongAgentDockRuntime.mjs'),manager);
 const taskFile=join(dir,'task.json'),taskCalls=join(dir,'task-calls.jsonl'),registerFailure=join(dir,'fail-register');
 await writeFile(join(dir,'harness.ps1'),`param([string]$Mode)
 $ErrorActionPreference='Stop'
@@ -140,7 +145,7 @@ assert.deepEqual((await readdir(preparation)).sort(),['TongLoginRuntime.ps1','To
 const task=JSON.parse(await readFile(join(preparation,'TongLoginRuntime.review.xml'),'utf16le').then(x=>x.replace(/^\uFEFF/,'')));
 assert.equal(task.Principal.RunLevel,'Limited');assert.equal(task.Settings.MultipleInstances,'IgnoreNew');assert.equal(task.Settings.RestartCount,3);assert.equal(task.Settings.ExecutionTimeLimit.Ticks,0);
 const managerPath=join(runtime,'releases','manager','scripts','TongAgentDockRuntime.mjs');
-await writeFile(managerPath,manager.replace(',stopRunSupported:true',''));
+await writeFile(managerPath,manager.replace(',loginRecoverySupported:true',''));
 result=run(join(dir,'harness.ps1'),['-Mode','install']);assert.notEqual(result.status,0);assert.match(result.stderr,/Pinned manager update required/);
 await assert.rejects(readFile(taskFile),{code:'ENOENT'});
 await writeFile(managerPath,manager);

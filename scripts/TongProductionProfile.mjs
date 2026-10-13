@@ -4,6 +4,7 @@ import { win32, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { assertProtectedPaths } from './TongRuntimeSecurity.mjs';
+import {recoveryApproval,recoveryProfile,validateLoginRecoveryDescriptor,loginRecoveryDescriptor,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
 
 export const PRODUCTION_ROOT = 'D:\\Tong\\runtime';
 export const PRODUCTION_SIMULATION_STATE_ROOT = 'D:\\Tong\\state';
@@ -63,6 +64,7 @@ function approvedProfileIndex(root,action) {
 }
 // Bootstrap never reads the requested runtime root. Its only I/O is the fixed protected receipt store.
 export async function loadApprovedProfile(root,action) {
+  const recovery=await recoveryProfile(root,action);if(recovery)return recovery;
   const path=approvedProfileIndex(root,action);
   try {
     await assertProtectedPaths([PRODUCTION_SIMULATION_STATE_ROOT,PRODUCTION_APPROVAL_STORE,path]);
@@ -94,6 +96,7 @@ function run(mode,input) {
   });
 }
 export async function verifyRuntimeApproval(profile,action) {
+  const recovery=await recoveryApproval(profile,action);if(recovery)return recovery;
   const expected=descriptor(profile,action);
   try {
     await assertProtectedPaths([PRODUCTION_SIMULATION_STATE_ROOT,PRODUCTION_APPROVAL_STORE,expected.receiptPath]);
@@ -121,6 +124,7 @@ export async function initializeProductionRoot(profile) {
   return run('init-root',{profile:valid,action:'init'});
 }
 export async function recordApprovedEnabledState(profile) {
+  if(loginRecoveryGrantId())throw fail('APPROVAL_DENIED');
   const valid=validateProductionProfile(profile), action=valid.agentdockEnabled?'enable-agentdock':'disable-agentdock';
   await verifyRuntimeApproval(valid,action);
   const path=win32.join(PRODUCTION_APPROVAL_STORE,productionProfileDigest(valid)+'.enabled.dpapi.json');
@@ -132,6 +136,7 @@ export async function recordApprovedEnabledState(profile) {
   } catch { throw fail('APPROVAL_DENIED'); }
 }
 export async function readApprovedEnabledState(profile) {
+  const recovery=await recoveryApproval(profile,'enable-agentdock');if(recovery)return recovery;
   const valid=validateProductionProfile(profile),action=valid.agentdockEnabled?'enable-agentdock':'disable-agentdock';
   await verifyRuntimeApproval(valid,action);
   const path=win32.join(PRODUCTION_APPROVAL_STORE,productionProfileDigest(valid)+'.enabled.dpapi.json');
@@ -140,11 +145,15 @@ export async function readApprovedEnabledState(profile) {
 }
 
 // The private PS helper asks this module to validate full descriptors; no configurable production root exists.
+export function runLoginRecoveryHelper(mode,input){if(!['login-recovery-simulation','login-recovery-unseal'].includes(mode))throw fail('APPROVAL_DENIED');return run(mode,input);}
 if (process.argv[1] && win32.resolve(process.argv[1]).toLowerCase()===win32.resolve(fileURLToPath(import.meta.url)).toLowerCase()) {
   try {
-    const [command,encoded,action]=process.argv.slice(2),profile=JSON.parse(Buffer.from(encoded??'','base64').toString('utf8'));
+    const [command,encoded,action]=process.argv.slice(2);
+    if(command==='--login-recovery-descriptor'){console.log(JSON.stringify(await loginRecoveryDescriptor(PRODUCTION_ROOT)));}
+    else if(command==='--validate-login-recovery-descriptor'){console.log(JSON.stringify(validateLoginRecoveryDescriptor(JSON.parse(Buffer.from(encoded??'','base64').toString('utf8')))));}
+    else {const profile=JSON.parse(Buffer.from(encoded??'','base64').toString('utf8'));
     if(command==='--approval-descriptor') console.log(JSON.stringify(descriptor(profile,action)));
     else if(command==='--verify-approval-profile') {await verifyRuntimeApproval(profile,action); console.log(JSON.stringify(descriptor(profile,action)));}
-    else throw fail('APPROVAL_DENIED');
+    else throw fail('APPROVAL_DENIED');}
   } catch {console.error('Production approval refused');process.exitCode=2;}
 }
