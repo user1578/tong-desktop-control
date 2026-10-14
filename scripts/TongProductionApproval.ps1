@@ -18,6 +18,13 @@ $allowedSids=@($sid,'S-1-5-18','S-1-5-32-544')
 $js=Join-Path $PSScriptRoot 'TongProductionProfile.mjs'
 $entropy=[Text.Encoding]::UTF8.GetBytes('Tong-B2.3:noncredential-runtime-permission:v1')
 $recoveryEntropy=[Text.Encoding]::UTF8.GetBytes('Tong:fixed-login-recovery:v1')
+$approvalStage='operation'
+function Read-TypedChallenge {
+    # Framework's default console reader has a 256-character buffer. A manager
+    # challenge is 259 characters; read the whole line before the exact compare.
+    $reader=[IO.StreamReader]::new([Console]::OpenStandardInput(4096),[Console]::InputEncoding,$false,4096,$true)
+    try {return $reader.ReadLine()} finally {$reader.Dispose()}
+}
 function Assert-NoReparse([string]$Path) {
     $current=[IO.Path]::GetFullPath($Path)
     while ($current) {
@@ -220,6 +227,7 @@ function Seal-Receipt($Descriptor,$Profile,[string]$ExpiresAt) {
 try {
     Add-Type -AssemblyName System.Security
     if($Mode -in @('approve-login-recovery','revoke-login-recovery')) {
+        $approvalStage='interactive-entry'
         if($PSCommandPath -cne 'D:\Tong\runtime\releases\manager\scripts\TongProductionApproval.ps1'){throw 'Formal manager entry required'}
         if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Environment]::UserInteractive -or $Host.Name -cne 'ConsoleHost'){throw 'Human interactive console required'}
         if($Host.UI.RawUI.WindowSize.Width -le 0 -or $Host.UI.RawUI.WindowSize.Height -le 0){throw 'Visible console required'}
@@ -242,18 +250,22 @@ try {
         $nonce=[guid]::NewGuid().ToString('N')
         $challenge='APPROVE TongLoginRecovery '+$Mode+' '+$descriptor.runtimeProfile.releaseDigest+' '+$descriptor.managerProfile.releaseDigest+' '+$nonce
         [Console]::WriteLine('请本人输入下面的完整挑战：');[Console]::WriteLine($challenge)
-        if([Console]::ReadLine() -cne $challenge){throw 'Typed recovery challenge refused'}
+        $approvalStage='typed-challenge'
+        if((Read-TypedChallenge) -cne $challenge){throw 'Typed recovery challenge refused'}
+        $approvalStage='save-recovery'
         if($enabled){
             $raw=& 'D:\node\node.exe' $js --login-recovery-descriptor
             if($LASTEXITCODE -ne 0 -or ($raw|ConvertFrom-Json|ConvertTo-Json -Depth 12 -Compress) -cne ($descriptor|ConvertTo-Json -Depth 12 -Compress)){throw 'Reviewed recovery changed'}
         }
         Save-Recovery $descriptor $enabled $expectedGrantId|ConvertTo-Json -Depth 12 -Compress
     }elseif($Mode -eq 'approve') {
+        $approvalStage='interactive-entry'
         # This is the sole production minting path. Redirected stdin/console-less automation cannot approve.
         if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Environment]::UserInteractive){throw 'Interactive console required'}
         if($Host.Name -cne 'ConsoleHost' -or $null -eq $Host.UI -or $null -eq $Host.UI.RawUI){throw 'Interactive console host required'}
         if($Host.UI.RawUI.WindowSize.Width -le 0 -or $Host.UI.RawUI.WindowSize.Height -le 0){throw 'Interactive console window required'}
         $profile=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($ProfileJson))|ConvertFrom-Json
+        $approvalStage='descriptor'
         $descriptor=Get-Descriptor $profile $Action
         $nonce=[Guid]::NewGuid().ToString('N')
         $challenge='APPROVE '+$descriptor.root+' '+$descriptor.action+' '+$descriptor.profileDigest+' '+$descriptor.sourceDigest+' '+$descriptor.releaseDigest+' '+$nonce
@@ -261,7 +273,9 @@ try {
         [Console]::WriteLine('Code root: '+$descriptor.codeRoot+'; manager root: '+$descriptor.managerRoot)
         [Console]::WriteLine('Type the exact challenge to authorize this path, action, profile and reviewed source/release hashes:')
         [Console]::WriteLine($challenge)
-        if([Console]::ReadLine() -cne $challenge){throw 'Typed challenge refused'}
+        $approvalStage='typed-challenge'
+        if((Read-TypedChallenge) -cne $challenge){throw 'Typed challenge refused'}
+        $approvalStage='seal-receipt'
         Seal-Receipt $descriptor $profile ([DateTime]::UtcNow.AddMinutes(30).ToString('o'))|ConvertTo-Json -Compress
     } else {
         $raw=[Console]::In.ReadToEnd()
@@ -348,4 +362,12 @@ try {
             [pscustomobject]$paths|ConvertTo-Json -Compress
         }
     }
-} catch {[Console]::Error.WriteLine('Tong production approval operation refused');exit 2}
+} catch {
+    # Keep fail-closed behavior and expose the failing stage/location without
+    # dumping input, profiles, plaintext receipts or ciphertext into stderr.
+    $cause=$_.Exception
+    while($null -ne $cause.InnerException){$cause=$cause.InnerException}
+    [Console]::Error.WriteLine('Tong production approval operation refused (stage='+$approvalStage+'; type='+$_.Exception.GetType().FullName+'; cause='+$cause.GetType().FullName+'; hresult=0x'+$cause.HResult.ToString('X8')+'; line='+$_.InvocationInfo.ScriptLineNumber+')')
+    [Console]::Error.WriteLine($_.ScriptStackTrace)
+    exit 2
+}
