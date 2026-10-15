@@ -46,7 +46,7 @@ try {
   const projects = await client.callTool({ name: "tong_list_projects", arguments: {} });
   assert.equal(projects.isError, undefined);
   assert.equal(projects.structuredContent.projects[1].id, "registered");
-  assert.deepEqual(projects.structuredContent.projects[1].effectiveCapabilities, ["project.metadata"]);
+  assert.deepEqual(projects.structuredContent.projects[1].effectiveCapabilities, ["project.metadata", "project.read", "project.write"]);
   const startRequest = { projectId: "registered", agent: "codex", task: "synthetic task", scope: "project files",
     idempotencyKey: "mcp-client-request-0001" };
   const deniedStart = await client.callTool({ name: "tong_agent_start", arguments: startRequest });

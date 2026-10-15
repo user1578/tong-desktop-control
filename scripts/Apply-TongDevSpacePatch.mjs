@@ -47,6 +47,14 @@ function extendRestrictedServer(source) {
   }
   if (!source.includes("await closeTongMcpTools();")) source = replaceOnce(source,
     "const results = await transports.closeAll();", "const results = await transports.closeAll();\n                await closeTongMcpTools();", "await owned AgentDock cleanup before process exit");
+  if (!source.includes('registerTongWorkspaceTools(server, registerAppTool, z, workspaces)')) {
+    source = replaceOnce(source, newImport, `${newImport}\nimport { registerTongWorkspaceTools } from "../../../../scripts/TongWorkspaceTools.mjs";`, 'workspace tools import');
+    source = replaceOnce(source, agentDockToolSet, agentDockToolSet.replace(']);', ', "tong_list_directory", "tong_move_file", "tong_delete_file", "tong_run_command"]);'), 'workspace tools allowlist');
+    source = replaceOnce(source, '    registerTongMcpTools(server, registerAppTool, z);', '    registerTongWorkspaceTools(server, registerAppTool, z, workspaces);\n    registerTongMcpTools(server, registerAppTool, z);', 'workspace tools registration');
+    source = replaceOnce(source, '.describe("Absolute path, or a leading-tilde home path such as ~/project, to a project directory inside an allowed root.")', '.optional()\n                .describe("Authorized project directory. Omit to use the default workspace.")', 'default workspace schema');
+    source = replaceOnce(source, '        await assertTongWorkspaceRoot(path, mode);', '        path = await assertTongWorkspaceRoot(path, mode);\n        if (process.env.TONG_RESTRICTED_MCP === "1" && !config.allowedRoots.includes(path)) config.allowedRoots.push(path);', 'authorized workspace registry root');
+    source = replaceOnce(source, 'Use open_workspace for the authorized checkout, then read, write, and edit files in that workspace.', 'Use open_workspace with an authorized project path, or omit path for the default. Reuse workspaceId for read/write/edit, tong_list_directory, tong_move_file, tong_delete_file and tong_run_command. Commands require a separate local agent.execute grant.', 'workspace instructions');
+  }
   return source;
 }
 
@@ -87,7 +95,8 @@ const files = [
     previousHash3: "ea21bce39c54f32ddd966840dbeb3d87bc2fe117619f5ac517a31d9528f7fc67",
     previousHash4: "3457bd2cc9158e3e93fb22028e81446528c92b94a522913fb081a82f0c0d6df5",
     previousHash5: "e397438fd44a400f85d052cfd89396ac5a1a565962a285789017a608eb807a0d",
-    patchedHash: "b71a8e616ffb337c38cba6109f922e163d82bcfa34f1bdf94a830130bcc5979c",
+    previousHash6: "b71a8e616ffb337c38cba6109f922e163d82bcfa34f1bdf94a830130bcc5979c",
+    patchedHash: "c4a4a03e31cbebcba197fd890bf318199c2a902a077dcd49987cb7cdc517758a",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -142,9 +151,9 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
-  if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}`);
+  if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}: ${sha256(patched)}`);
   await writeFile(target, patched, "utf8");
   process.stdout.write(`Patched ${file.name}: ${sha256(patched)}\n`);
 }

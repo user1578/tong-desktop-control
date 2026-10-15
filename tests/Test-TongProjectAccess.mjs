@@ -71,8 +71,8 @@ try {
   const added = await access.addProject({ id: "synthetic", name: "Synthetic", root: outside, permission: "write" });
   assert.equal(added.id, "synthetic");
   assert.equal(await access.authorize("project.metadata", "synthetic"), true);
-  assert.equal(await access.authorize("project.read", "synthetic"), false);
-  assert.equal(await access.authorize("project.write", "synthetic"), false);
+  assert.equal(await access.authorize("project.read", "synthetic"), true);
+  assert.equal(await access.authorize("project.write", "synthetic"), true);
   assert.equal(await access.authorize("agent.execute", "synthetic"), false,
     "project registration and file permissions must not imply agent.execute");
   await access.grantAgentExecution("synthetic");

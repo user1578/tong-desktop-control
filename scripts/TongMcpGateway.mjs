@@ -1,10 +1,10 @@
 import { createServer, request as httpRequest } from "node:http";
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, realpath } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { AGENTDOCK_PUBLIC_TOOLS, validateAgentDockGatewayCall } from "./TongAgentDockTools.mjs";
+const WORKSPACE_TOOLS = ['tong_list_directory', 'tong_move_file', 'tong_delete_file', 'tong_run_command'];
 
 const LISTEN_HOST = "127.0.0.1";
 const LISTEN_PORT = 7676;
@@ -20,7 +20,7 @@ const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
 ]);
-const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
+const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...WORKSPACE_TOOLS, ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
 const MCP_METHODS = new Set([
   "initialize",
   "notifications/initialized",
@@ -314,58 +314,6 @@ export function findDisallowedToolCall(message) {
   );
 }
 
-function samePath(left, right) {
-  const normalizedLeft = resolve(left);
-  const normalizedRight = resolve(right);
-  return process.platform === "win32"
-    ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
-    : normalizedLeft === normalizedRight;
-}
-
-async function validateWorkspaceFilePath(inputPath, workspaceRoot = WORKSPACE_ROOT) {
-  if (
-    typeof inputPath !== "string" ||
-    inputPath.length === 0 ||
-    inputPath.includes("\0") ||
-    isAbsolute(inputPath) ||
-    (process.platform === "win32" && inputPath.includes(":"))
-  ) {
-    return false;
-  }
-
-  let canonicalRoot;
-  try {
-    canonicalRoot = await realpath(workspaceRoot);
-  } catch {
-    return false;
-  }
-  if (!samePath(canonicalRoot, workspaceRoot)) return false;
-
-  const target = resolve(canonicalRoot, inputPath);
-  const relativeTarget = relative(canonicalRoot, target);
-  if (
-    relativeTarget === "" ||
-    isAbsolute(relativeTarget) ||
-    relativeTarget === ".." ||
-    relativeTarget.startsWith(`..${sep}`)
-  ) {
-    return false;
-  }
-
-  let current = canonicalRoot;
-  for (const segment of relativeTarget.split(/[\\/]/)) {
-    current = resolve(current, segment);
-    try {
-      const details = await lstat(current);
-      if (details.isSymbolicLink()) return false;
-    } catch (error) {
-      if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return true;
-      return false;
-    }
-  }
-  return true;
-}
-
 export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE_ROOT) {
   const name = String(request?.params?.name ?? "");
   if (!ALLOWED_TOOLS.has(name)) {
@@ -384,11 +332,10 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
     const path = args.path;
     const mode = args.mode;
     if (
-      typeof path !== "string" ||
-      !samePath(path, workspaceRoot) ||
+      (path !== undefined && (typeof path !== 'string' || !isAbsolute(path) || path.includes('\0') || /^[\\/]{2}/.test(path))) ||
       (mode !== undefined && mode !== "checkout")
     ) {
-      return { code: -32602, message: "Only the demo workspace checkout is available" };
+      return { code: -32602, message: "Use an authorized absolute workspace path and checkout mode" };
     }
     return null;
   }
@@ -396,8 +343,12 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
   if (typeof args.workspaceId !== "string" || args.workspaceId.length === 0) {
     return { code: -32602, message: "Invalid workspaceId" };
   }
-  if (!(await validateWorkspaceFilePath(args.path, workspaceRoot))) {
-    return { code: -32602, message: "File path must stay inside the demo workspace and avoid links" };
+  // Only DevSpace owns workspaceId -> root and current grants. Do not resolve a
+  // different workspace's relative paths against the default directory here.
+  if (name === 'tong_run_command') return null;
+  const paths = name === 'tong_move_file' ? [args.path, args.destination] : [args.path ?? (name === 'tong_list_directory' ? '.' : undefined)];
+  if (paths.some(path => typeof path !== 'string' || !path || path.includes('\0') || isAbsolute(path) || /[:]/.test(path) || path.split(/[\\/]/).includes('..'))) {
+    return { code: -32602, message: "File paths must be relative to the authorized workspace" };
   }
   return null;
 }

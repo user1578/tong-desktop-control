@@ -1,7 +1,8 @@
-import { TongProjectAccess } from "./TongProjectAccess.mjs";
+import { TongProjectAccess, configureTongWorkspaceState } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
 import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
+import { closeTongWorkspaceTools } from './TongWorkspaceTools.mjs';
 import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
@@ -12,13 +13,14 @@ export function configureTongMcpState({stateDir,demoRoot,scanRoots}={}) {
   if(!isAbsolute(stateDir??'')||!isAbsolute(demoRoot??'')||scanRoots!==undefined&&(!Array.isArray(scanRoots)||scanRoots.some(root=>!isAbsolute(root))))throw new Error('Preserved Tong state paths must be absolute');
   if(defaultTaskManager||preservedState)throw new Error('Tong state is already configured');
   preservedState=Object.freeze({stateDir,demoRoot,...(scanRoots!==undefined?{scanRoots:[...scanRoots]}:{})});
+  configureTongWorkspaceState(preservedState);
 }
 const dockClosures = new Set();
 export async function closeTongMcpTools({ timeoutMs = 10000 } = {}) {
   let timer;
   const cleanup = (async () => {
     const results = await Promise.allSettled([...dockClosures].map(close => close()).concat(defaultTaskManager ? [defaultTaskManager.close()] : []));
-    results.push(...await Promise.allSettled([closeAgentDockSessionCoordinators()]));
+    results.push(...await Promise.allSettled([closeAgentDockSessionCoordinators(), closeTongWorkspaceTools()]));
     return results;
   })();
   try {
@@ -119,7 +121,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_list_projects", {
     title: "List locally registered projects",
-    description: "Show local project registrations and effective permissions. Real project file content access is disabled in this phase.",
+    description: "Show local project registrations and effective read, write and independent execution permissions.",
     inputSchema: {},
     _meta: {},
     annotations: { readOnlyHint: true },

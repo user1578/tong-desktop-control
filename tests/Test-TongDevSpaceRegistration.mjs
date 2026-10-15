@@ -40,6 +40,7 @@ try {
   await client.connect(clientTransport);
   const names = (await client.listTools()).tools.map(({ name }) => name);
   assert.deepEqual(names, ["open_workspace", "read", "write", "edit",
+    "tong_list_directory", "tong_delete_file", "tong_move_file", "tong_run_command",
     "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status",
     "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
   const secondServer = createMcpServer(config, workspaces, null, null, () => [], []);
@@ -105,7 +106,7 @@ try {
   const linkedWorkspace = await new WorkspaceRegistry(config).openWorkspace({ path: workspaceRoot, mode: "checkout" });
   assert.doesNotMatch(JSON.stringify(linkedWorkspace.agentsFiles), /synthetic outside instructions/);
   assert.deepEqual(linkedWorkspace.availableAgentsFiles, []);
-  console.log("PASS: restricted DevSpace registers the existing seven tools plus seven agent tools and rejects Shell aliases and unauthorized workspace modes.");
+  console.log("PASS: restricted DevSpace registers file, workspace and agent tools and rejects Shell aliases and unauthorized workspace modes.");
 } finally {
   await client.close();
   await server.close();

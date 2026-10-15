@@ -79,7 +79,7 @@ else {
   async function stopTong() {
     if (tong?.connected) { const stopped = once(tong, "exit"); tong.send({ event: "stop" }); await stopped; }
   }
-  async function connect(auth) { const value = await auth.connect(21); connections.push(value); return value; }
+  async function connect(auth) { const value = await auth.connect(25); connections.push(value); return value; }
   const call = async (client, tool, input) => toolCall(client, `tong_agentdock_${tool}`, input, records, oauth);
   async function final(client, sessionId) {
     let value;
@@ -97,9 +97,16 @@ else {
     const first = await connect(oauth);
     const schemas = (await first.client.listTools()).tools;
     const baseline = JSON.parse(await readFile("D:\\tong-agentdock-local\\logs\\b24-on-tools-schema.json", "utf8"));
-    assert.deepEqual(schemas.map(item => item.name), baseline.map(item => item.name));
-    assert.deepEqual(schemas.map(item => item.inputSchema), baseline.map(item => item.inputSchema), "all 21 public input Schemas must remain unchanged");
-    results.schemas = { count: schemas.length, unchanged: true };
+    for (const previous of baseline) {
+      const current = schemas.find(item => item.name === previous.name);
+      assert.ok(current, `Existing tool missing: ${previous.name}`);
+      if (previous.name === 'open_workspace') {
+        assert.equal(current.inputSchema.properties.path.type, 'string');
+        assert.ok(!current.inputSchema.required?.includes('path'), 'P0 allows the default workspace');
+      } else assert.deepEqual(current.inputSchema, previous.inputSchema, `Existing schema changed: ${previous.name}`);
+    }
+    for (const name of ['tong_list_directory','tong_move_file','tong_delete_file','tong_run_command']) assert.ok(schemas.some(item => item.name === name));
+    results.schemas = { count: schemas.length, existingOperationsUnchanged: true, defaultWorkspacePathOptional: true, addedWorkspaceTools: 4 };
     const listing = await call(first.client, "list_dir", { projectId: base.projectId, path: ".", maxDepth: 2 });
     assert.ok(!listing.isError); assert.ok(listing.structuredContent.entries.some(item => item.path === entry));
     const nested = await call(first.client, "list_dir", { projectId: base.projectId, path: "tests" }); assert.equal(nested.structuredContent.entries[0].path, entry);
@@ -147,7 +154,7 @@ else {
     assert.equal((await call(afterRestart.client, "command", { ...base, operation: "pytest", async: true, idempotencyKey: restartKey })).structuredContent.code, "REPLAY_DENIED", "the durable journal must survive a Tong process restart");
     results.tongRestartDenied = true; results.replayAfterRestartDenied = true;
     done = true;
-    console.log("PASS: independent Gateway → verified DevSpace OAuth → AgentDock v1.0.1; 21 unchanged Schemas; directory/read/write; pytest 0/1/timeout/cancel; refreshed identity across transports; retained repeat result; foreign identity/task/approval/revocation/replay/restart denial.");
+    console.log("PASS: independent Gateway → verified DevSpace OAuth → AgentDock v1.0.1; 25 tools with compatible existing operations and optional workspace path; directory/read/write; pytest 0/1/timeout/cancel; refreshed identity across transports; retained repeat result; foreign identity/task/approval/revocation/replay/restart denial.");
   } catch (error) {
     const message = String(error.message);
     oauth?.assertRedacted(message); otherOAuth?.assertRedacted(message);

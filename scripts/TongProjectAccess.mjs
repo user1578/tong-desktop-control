@@ -8,6 +8,16 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_REGISTRY = join(projectRoot, "runtime", "project-access.json");
 const DEFAULT_AGENT_ACCESS = join(projectRoot, "runtime", "agent-execution.json");
 const DEFAULT_DEMO = join(projectRoot, "demo-workspace");
+let workspaceState;
+export function configureTongWorkspaceState(state) { workspaceState = state; }
+export function createTongProjectAccess() {
+  const stateDir = workspaceState?.stateDir ?? process.env.TONG_LOCAL_STATE_DIR;
+  const demoRoot = workspaceState?.demoRoot ?? process.env.TONG_RESTRICTED_ROOT ?? DEFAULT_DEMO;
+  if (stateDir && !isAbsolute(stateDir)) throw new Error('Tong local state directory must be absolute');
+  return new TongProjectAccess({ demoRoot, ...(stateDir ? {
+    registryPath: join(stateDir, 'project-access.json'), agentAccessPath: join(stateDir, 'agent-execution.json'),
+  } : {}), ...(workspaceState?.scanRoots ? { scanRoots: workspaceState.scanRoots } : {}) });
+}
 const LEVELS = new Set(["metadata", "read", "write"]);
 const STATUSES = new Set(["enabled", "disabled", "revoked"]);
 const PROTECTED_PARTS = new Set([
@@ -206,9 +216,8 @@ export class TongProjectAccess {
       try { await checkedDirectory(record.root); available = true; } catch { /* fail closed */ }
       return { ...record, available,
         effectiveCapabilities: record.status === "enabled" && available
-          ? record.id === "demo"
-            ? ["project.metadata", "project.read", "project.write", ...(agentProjects.has(record.id) ? ["agent.execute"] : [])]
-            : ["project.metadata", ...(agentProjects.has(record.id) ? ["agent.execute"] : [])]
+          ? ["project.metadata", ...(["read", "write"].includes(record.permission) ? ["project.read"] : []),
+            ...(record.permission === "write" ? ["project.write"] : []), ...(agentProjects.has(record.id) ? ["agent.execute"] : [])]
           : [],
       };
     }));

@@ -1,5 +1,6 @@
 import { lstat, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createTongProjectAccess } from './TongProjectAccess.mjs';
 
 export class TongAccessDeniedError extends Error {
   constructor() {
@@ -23,9 +24,13 @@ function inside(root, target) {
   return part !== "" && !isAbsolute(part) && part !== ".." && !part.startsWith(`..${sep}`);
 }
 
-async function checkedRoot(root) {
-  const configured = process.env.TONG_RESTRICTED_ROOT;
-  if (typeof root !== "string" || !configured || !samePath(root, configured)) denied();
+export async function checkedRoot(root, capability = 'project.read') {
+  if (typeof root !== 'string' || !isAbsolute(root)) denied();
+  const access = createTongProjectAccess();
+  if (!samePath(root, access.demoRoot) || capability === 'agent.execute') {
+    const project = (await access.listProjects()).find(entry => samePath(entry.root, root));
+    if (!project?.effectiveCapabilities.includes(capability)) denied();
+  }
   try {
     const info = await lstat(root);
     if (!info.isDirectory() || info.isSymbolicLink()) denied();
@@ -37,9 +42,10 @@ async function checkedRoot(root) {
 }
 
 export async function assertTongWorkspaceRoot(path, mode) {
-  if (process.env.TONG_RESTRICTED_MCP !== "1") return;
+  if (process.env.TONG_RESTRICTED_MCP !== "1") return path;
+  path ??= createTongProjectAccess().demoRoot;
   if (typeof path !== "string" || mode && mode !== "checkout") denied();
-  await checkedRoot(path);
+  return checkedRoot(path);
 }
 
 export function assertTongRestrictedConfig(config) {
@@ -62,8 +68,9 @@ export async function assertTongSafeFilePath(inputPath, context, operation) {
     const withoutDrive = /^[A-Za-z]:[\\/]/.test(inputPath) ? inputPath.slice(2) : inputPath;
     if (withoutDrive.includes(":")) denied();
   }
-  const root = await checkedRoot(context.root);
+  const root = await checkedRoot(context.root, ['write', 'edit', 'delete', 'move'].includes(operation) ? 'project.write' : 'project.read');
   const target = resolve(context.cwd, inputPath);
+  if (operation === 'directory' && samePath(root, target)) return;
   if (!inside(root, target)) denied();
   const components = relative(root, target).split(/[\\/]/);
   let current = root;
@@ -84,7 +91,7 @@ export async function assertTongSafeFilePath(inputPath, context, operation) {
       denied();
     }
     const last = index === components.length - 1;
-    if (last ? !details.isFile() : !details.isDirectory()) denied();
+    if (last && operation !== 'directory' ? !details.isFile() : !details.isDirectory()) denied();
     if (last && details.nlink > 1) denied();
   }
 }

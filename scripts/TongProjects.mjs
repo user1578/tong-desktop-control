@@ -1,6 +1,6 @@
-import { TongProjectAccess } from "./TongProjectAccess.mjs";
+import { createTongProjectAccess } from "./TongProjectAccess.mjs";
 
-const access = new TongProjectAccess();
+const access = createTongProjectAccess();
 const [command, ...args] = process.argv.slice(2);
 
 function usage() {
@@ -25,7 +25,7 @@ try {
     const value = options(args);
     const created = await access.addProject({ id: value["--id"], name: value["--name"],
       root: value["--path"], permission: value["--permission"] });
-    console.log(`Registered ${created.id}. Real project content access remains disabled in this phase.`);
+    console.log(`Registered ${created.id} with ${created.permission} permission. Command execution requires a separate grant-agent authorization.`);
   } else if (command === "disable" && args.length === 1) {
     await access.disableProject(args[0]);
     console.log(`Disabled ${args[0]}.`);

@@ -92,7 +92,7 @@ else {
     client = new Client({ name: "b1-local-e2e-client", version: "1" });
     transport = new StreamableHTTPClientTransport(new URL(resource), { requestInit: { headers: { Authorization: `Bearer ${tokens.access_token}` } }, reconnectionOptions: { maxRetries: 0 } });
     await client.connect(transport); const session = transport.sessionId; assert.ok(session);
-    const tools = (await client.listTools()).tools.map(tool => tool.name); assert.equal(tools.length, 21); assert.ok(!tools.includes("exec_command") && !tools.includes("file_edit"));
+    const tools = (await client.listTools()).tools.map(tool => tool.name); assert.equal(tools.length, 25); assert.ok(!tools.includes("exec_command") && !tools.includes("file_edit"));
     checks.oauthPkceAndInitialize = true; checks.fixedTools = tools;
     const projects = await call("tong_list_projects", {}); assert.ok(projects.structuredContent.projects.some(entry => entry.id === "b1-synthetic" && !entry.effectiveCapabilities.includes("agent.execute")));
     const read = await call("tong_agentdock_read_file", { projectId: "b1-synthetic", path: "calculator.py" }); assert.ok(read.structuredContent.content.includes("a - b"));

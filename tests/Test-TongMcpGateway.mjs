@@ -107,10 +107,10 @@ try {
     params: { name: "open_workspace", arguments: { path: workspaceRoot } },
   };
   assert.equal(await validateAllowedToolCall(openWorkspaceCall, workspaceRoot), null);
-  assert.ok(await validateAllowedToolCall({
+  assert.equal(await validateAllowedToolCall({
     ...openWorkspaceCall,
     params: { name: "open_workspace", arguments: { path: outsideRoot } },
-  }, workspaceRoot));
+  }, workspaceRoot), null, 'DevSpace resolves authorized roots from current local grants');
   assert.equal(await validateAllowedToolCall({
     method: "tools/call",
     params: { name: "tong_scan_directory", arguments: { path: "C:\\" } },
@@ -123,10 +123,10 @@ try {
     method: "tools/call",
     params: { name: "write", arguments: { workspaceId: "test", path: "..\\outside.txt", content: "blocked" } },
   }, workspaceRoot));
-  assert.ok(await validateAllowedToolCall({
+  assert.equal(await validateAllowedToolCall({
     method: "tools/call",
     params: { name: "read", arguments: { workspaceId: "test", path: "escape\\outside.txt" } },
-  }, workspaceRoot));
+  }, workspaceRoot), null, 'DevSpace checks links against the actual workspace root');
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
@@ -134,7 +134,7 @@ try {
 console.log("PASS: gateway exposes the four file tools, three metadata tools, and seven constrained agent task tools in JSON and SSE lists.");
 console.log("PASS: gateway detects direct and batched calls to disallowed tools.");
 console.log("PASS: gateway rejects agent executable injection and malformed task identifiers while retaining the Shell deny list.");
-console.log("PASS: gateway restricts workspace opening and blocks traversal/junction paths.");
+console.log("PASS: gateway blocks traversal; authenticated DevSpace owns workspace grants and junction checks.");
 
 const upstreamPaths = [];
 const upstream = createServer((req, res) => {

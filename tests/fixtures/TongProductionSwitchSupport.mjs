@@ -83,7 +83,7 @@ export async function connectMcp(origin,accessToken,expectedTools) {
     assert.equal(tools.length,expectedTools);
     assert.ok(tools.includes('tong_agent_start')&&tools.includes('tong_agent_status')&&tools.includes('tong_agent_list'));
     assert.ok(!tools.includes('exec_command')&&!tools.includes('file_edit'));
-    assert.equal(tools.includes('tong_agentdock_file_edit'),expectedTools===21);
+    assert.equal(tools.includes('tong_agentdock_file_edit'),[21,25].includes(expectedTools));
     return {client,transport,tools};
   } catch(error) { await client.close().catch(()=>{}); throw error; }
 }

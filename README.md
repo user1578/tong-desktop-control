@@ -2,6 +2,34 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P0 local workspace tools (2026-10-16 development build)
+
+This build reuses DevSpace workspace IDs, its read/write/edit tools, the Gateway and the existing local project registry. `open_workspace({})` selects the configured default (`TONG_RESTRICTED_ROOT`); `open_workspace({path: "D:\\作业\\111"})` selects a locally registered, enabled project with read or write permission. File permissions and execution grants are rechecked on every call. Opening a workspace does not create a grant. File writes need `project.write`; commands additionally need the existing independent `agent.execute` grant. Existing Guardian, OAuth, AgentDock and Codex task approval flows are unchanged.
+
+| MCP tool | Arguments beyond `workspaceId` | Result |
+| --- | --- | --- |
+| `read`, `write`, `edit` | Existing relative path/content/edit schemas | Existing DevSpace result |
+| `tong_list_directory` | Optional `path` (default `.`), `limit` (1–1000) | Entries, actual path, truncation flag |
+| `tong_move_file` | `path`, `destination` | Actual move; rejects existing destination |
+| `tong_delete_file` | `path` | Actual single-file deletion; no recursive deletion |
+| `tong_run_command` | `program`: `python`, `node`, `git`, `npm`, `pwsh`; optional `args` array, `timeoutMs` (100–120000, default 30000) | Exit code, stdout, stderr, error, timeout/cancellation, duration, cwd, file changes |
+
+Example after obtaining `workspaceId`: `tong_run_command({workspaceId, program: "python", args: ["test.py"]})`. PowerShell uses PowerShell 7 (`pwsh`); npm on Windows runs its CLI through Node without a shell wrapper. Executables must be installed on the service's PATH. Nonzero exit, spawn errors and timeout return `isError: true` with structured results. Output is limited to 64 KiB per stream, with an explicit truncation flag. File change observations use content hashes, with limits of 2000 entries, 32 MiB and 3 seconds per scan; dependency/VCS directories and links are skipped and `complete: false` is reported. Changes outside the workspace and transient files created then deleted during a command are not observed.
+
+Commands are trusted execution under the Windows service account, **not an OS sandbox**: Python, Node, PowerShell and project scripts can access anything that account can. The execution grant therefore authorizes local execution, not just a working-directory change. Only a small OS environment allowlist is inherited; Tong/OAuth credentials are not passed in the child environment. A private PowerShell 7 host uses a kill-on-close Windows Job Object to terminate descendants on timeout, cancellation and host exit, including children whose immediate parent already exited. PowerShell 7 is required for all Windows commands; its small native helper is compiled in memory. No new account, ACL or authorization system is introduced.
+
+Local registration still uses `node scripts/TongProjects.mjs add --id homework --name Homework --path "D:\\作业\\111" --permission write`, then `grant-agent homework` when execution is authorized. For an isolated development instance, set `TONG_LOCAL_STATE_DIR` to its state directory and `TONG_RESTRICTED_ROOT` to its default workspace before running that CLI and server. Do not point these commands at production state without authorization. Revoking `agent.execute` blocks subsequent commands; disabling/revoking the project blocks subsequent file calls. An already running command finishes or reaches its timeout; grant revocation does not kill it.
+
+Real Windows acceptance, through OAuth and HTTP Gateway, without touching production configuration:
+
+```powershell
+node tests/Test-TongLocalWorkspace.mjs --http 'D:\作业\111'
+```
+
+The test creates uniquely named files, verifies Python output and exit codes, moves/deletes its files and compares the final directory listing with the original. Its small isolated state is retained at the printed `D:\tong-p0-*` path. Dependencies are reused; no release build is needed. The development interface is ready for MCP discovery, but this change does **not** deploy/restart the production service or refresh the existing ChatGPT connection. That connection will retain its old schemas until an authorized release is activated and its tools refreshed.
+
+The sections below describe the earlier production baseline and deployment history; their demo-only/14-tool statements do not describe the P0 development toolset above.
+
 ## Connection
 
 - Local MCP gateway: `http://127.0.0.1:7676/mcp`
