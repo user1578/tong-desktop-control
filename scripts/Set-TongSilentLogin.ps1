@@ -23,6 +23,18 @@ function Assert-PrivateDirectory([string]$Path){
     if(-not $acl.AreAccessRulesCanonical -or $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin $allowed){throw 'Untrusted directory owner or ACL'}
     foreach($ace in $acl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])){if($ace.AccessControlType -eq 'Allow' -and $ace.IdentityReference.Value -notin $allowed){throw 'Foreign directory access refused'}}
 }
+function Restore-LoginMonitoring($Folder,$OldInstance,$NewInstance,[string]$OriginalXml){
+    # Restore first: cleanup errors must never prevent the definition rollback.
+    $restored=$Folder.RegisterTask('TongLoginRuntime',$OriginalXml,4,$null,$null,3)
+    $instances=@($restored.GetInstances(0))
+    $oldAlive=@($instances|Where-Object InstanceGuid -eq $OldInstance.InstanceGuid).Count -gt 0
+    if($oldAlive -and $NewInstance){
+        try{$NewInstance.Refresh();if($NewInstance.State -eq 4){$NewInstance.Stop()}}catch{Write-Warning ('New instance cleanup failed: '+$_.Exception.Message)}
+    }
+    # Never remove the only living monitor. If both have already exited, run the
+    # restored definition explicitly instead of relying on a pending retry.
+    if(@($restored.GetInstances(0)).Count -eq 0){$null=$restored.Run($null)}
+}
 $EvidenceRoot=[IO.Path]::GetFullPath($EvidenceRoot)
 if(-not $EvidenceRoot.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase) -and -not $EvidenceRoot.StartsWith(($deployment+'\'),[StringComparison]::OrdinalIgnoreCase)){throw 'Evidence must be in Tong state or login-management'}
 $service=New-Object -ComObject Schedule.Service
@@ -110,9 +122,9 @@ try{
     [IO.File]::WriteAllText((Join-Path $EvidenceRoot 'takeover.json'),(@{at=[DateTime]::UtcNow.ToString('o');oldPid=$manifest.oldPid;hostPid=$newInstance.EnginePID;runnerPid=$newRunner.ProcessId;runId=$state.runId;supervisorPid=$state.supervisor.pid;guardianPid=$manifest.guardianPid}|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
     Write-Output 'Silent task monitor took over; production run identity unchanged. Original definition and entry retained.'
 }catch{
+    $failure=$_
     if(-not $handedOver){
-        if($newInstance){$newInstance.Stop()}
-        $null=$folder.RegisterTask('TongLoginRuntime',(Get-Content -LiteralPath (Join-Path $EvidenceRoot 'original-task.xml') -Raw),4,$null,$null,3)
+        try{Restore-LoginMonitoring $folder $oldInstance $newInstance (Get-Content -LiteralPath (Join-Path $EvidenceRoot 'original-task.xml') -Raw)}catch{Write-Warning ('Monitor rollback requires attention: '+$_.Exception.Message)}
     }
-    throw
+    throw $failure
 }
