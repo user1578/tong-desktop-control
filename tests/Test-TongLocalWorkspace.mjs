@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readdir, writeFile, symlink } from 'node:fs/promises';
+import { mkdir, readdir, writeFile, symlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createServer as netServer } from 'node:net';
-import { join, parse } from 'node:path';
+import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer, createServer } from '../node_modules/@waishnav/devspace/dist/server.js';
@@ -13,42 +13,45 @@ import { startMcpGateway } from '../scripts/TongMcpGateway.mjs';
 import { issueOAuth } from './fixtures/TongProductionSwitchSupport.mjs';
 import { registerTongWorkspaceTools } from '../scripts/TongWorkspaceTools.mjs';
 import * as z from 'zod/v4';
+import { closeTongMcpTools } from '../scripts/TongMcpTools.mjs';
+import { createTongTestDirectory } from './fixtures/TongTestDirectory.mjs';
 
-const state = await mkdtemp(join(parse(process.cwd()).root, 'tong-p0-'));
+const temporary = await createTongTestDirectory('tong-p0-');
+const state = temporary.path;
 const demo = join(state, 'default');
 const root = process.argv.slice(2).find(arg => arg !== '--http') ?? join(state, '工作目录');
 const http = process.argv.includes('--http');
-await mkdir(demo); await mkdir(root, { recursive: true });
-Object.assign(process.env, { TONG_RESTRICTED_MCP: '1', TONG_RESTRICTED_ROOT: demo, TONG_LOCAL_STATE_DIR: state });
-const access = new TongProjectAccess({ registryPath: join(state, 'project-access.json'), agentAccessPath: join(state, 'agent-execution.json'), demoRoot: demo });
-await access.addProject({ id: 'acceptance', name: 'P0 acceptance', root, permission: 'write' });
-await access.grantAgentExecution('acceptance');
-const config = { allowedRoots: [demo], agentDir: demo, toolMode: 'minimal', widgets: 'off', skillsEnabled: false, artifactsEnabled: false, subagents: { enabled: false, providers: [] }, logging: { level: 'silent', format: 'json' } };
-config.publicBaseUrl = 'http://127.0.0.1:7677';
-let server, client, gateway, upstream;
-if (http) {
-  const reservation = netServer(); reservation.listen(0, '127.0.0.1'); await once(reservation, 'listening');
-  const gatewayPort = reservation.address().port; await new Promise(done => reservation.close(done));
-  const ownerToken = randomUUID();
-  config.publicBaseUrl = `http://127.0.0.1:${gatewayPort}`;
-  Object.assign(config, { host: '127.0.0.1', port: 0, allowedHosts: ['127.0.0.1', 'localhost'], stateDir: join(state, 'oauth'), worktreeRoot: join(state, 'unused'), oauth: { ownerToken, accessTokenTtlSeconds: 3600, refreshTokenTtlSeconds: 7200, scopes: ['devspace'], allowedRedirectHosts: ['127.0.0.1'] } });
-  server = createServer(config);
-  upstream = server.app.listen(0, '127.0.0.1'); await once(upstream, 'listening');
-  gateway = startMcpGateway({ listenPort: gatewayPort, upstreamPort: upstream.address().port, workspaceRoot: demo, logSink: () => {} }); await once(gateway, 'listening');
-  const oauth = await issueOAuth(config.publicBaseUrl, ownerToken);
-  ({ client } = await oauth.connect(18));
-} else {
-  server = createMcpServer(config, new WorkspaceRegistry(config), null, null, () => [], []);
-  client = new Client({ name: 'tong-p0-windows', version: '1' });
-  const [left, right] = InMemoryTransport.createLinkedPair();
-  await server.connect(right); await client.connect(left);
-}
-const call = async (name, args) => {
-  try { return await client.callTool({ name, arguments: args }); }
-  catch (error) { if (error.code === -32602) return { isError: true, error: error.message }; throw error; }
-};
-const ok = async (name, args) => { const result = await call(name, args); assert.ok(!result.isError, JSON.stringify(result)); return result.structuredContent; };
+let server, client, gateway, upstream, passed = false;
 try {
+  await mkdir(demo); await mkdir(root, { recursive: true });
+  Object.assign(process.env, { TONG_RESTRICTED_MCP: '1', TONG_RESTRICTED_ROOT: demo, TONG_LOCAL_STATE_DIR: state });
+  const access = new TongProjectAccess({ registryPath: join(state, 'project-access.json'), agentAccessPath: join(state, 'agent-execution.json'), demoRoot: demo });
+  await access.addProject({ id: 'acceptance', name: 'P0 acceptance', root, permission: 'write' });
+  await access.grantAgentExecution('acceptance');
+  const config = { allowedRoots: [demo], agentDir: demo, toolMode: 'minimal', widgets: 'off', skillsEnabled: false, artifactsEnabled: false, subagents: { enabled: false, providers: [] }, logging: { level: 'silent', format: 'json' } };
+  config.publicBaseUrl = 'http://127.0.0.1:7677';
+  if (http) {
+    const reservation = netServer(); reservation.listen(0, '127.0.0.1'); await once(reservation, 'listening');
+    const gatewayPort = reservation.address().port; await new Promise(done => reservation.close(done));
+    const ownerToken = randomUUID();
+    config.publicBaseUrl = `http://127.0.0.1:${gatewayPort}`;
+    Object.assign(config, { host: '127.0.0.1', port: 0, allowedHosts: ['127.0.0.1', 'localhost'], stateDir: join(state, 'oauth'), worktreeRoot: join(state, 'unused'), oauth: { ownerToken, accessTokenTtlSeconds: 3600, refreshTokenTtlSeconds: 7200, scopes: ['devspace'], allowedRedirectHosts: ['127.0.0.1'] } });
+    server = createServer(config);
+    upstream = server.app.listen(0, '127.0.0.1'); await once(upstream, 'listening');
+    gateway = startMcpGateway({ listenPort: gatewayPort, upstreamPort: upstream.address().port, workspaceRoot: demo, logSink: () => {} }); await once(gateway, 'listening');
+    const oauth = await issueOAuth(config.publicBaseUrl, ownerToken);
+    ({ client } = await oauth.connect(18));
+  } else {
+    server = createMcpServer(config, new WorkspaceRegistry(config), null, null, () => [], []);
+    client = new Client({ name: 'tong-p0-windows', version: '1' });
+    const [left, right] = InMemoryTransport.createLinkedPair();
+    await server.connect(right); await client.connect(left);
+  }
+  const call = async (name, args) => {
+    try { return await client.callTool({ name, arguments: args }); }
+    catch (error) { if (error.code === -32602) return { isError: true, error: error.message }; throw error; }
+  };
+  const ok = async (name, args) => { const result = await call(name, args); assert.ok(!result.isError, JSON.stringify(result)); return result.structuredContent; };
   const initialNames = (await readdir(root)).sort();
   assert.equal((await ok('open_workspace', {})).root, demo);
   const { workspaceId } = await ok('open_workspace', { path: root });
@@ -111,10 +114,19 @@ try {
   await access.disableProject('acceptance');
   assert.equal((await call('read', { workspaceId, path: 'any.txt' })).isError, true);
   console.log(`PASS: real ${process.platform} ${http ? 'OAuth HTTP Gateway -> DevSpace' : 'MCP'} default/selected workspace, Python edit/read/run exit 0/7, command file changes, timeout, node/git/npm/pwsh, move/delete/list, boundaries and live revocation. Root: ${root}`);
-  console.log(`Small isolated state retained: ${state}`);
+  passed = true;
 } finally {
-  await client?.close();
-  if (gateway) { gateway.closeAllConnections(); await new Promise(done => gateway.close(done)); }
-  await server?.close();
-  if (upstream) { upstream.closeAllConnections(); await new Promise(done => upstream.close(done)); }
+  const closed = await Promise.allSettled([
+    client?.close(),
+    (async () => {
+      if (gateway) { gateway.closeAllConnections(); await new Promise(done => gateway.close(done)); }
+      await server?.close();
+      if (upstream) { upstream.closeAllConnections(); await new Promise(done => upstream.close(done)); }
+    })(),
+  ]);
+  // HTTP server.close owns task cleanup; await it before the idempotent final close.
+  closed.push(...await Promise.allSettled([(async () => assert.equal((await closeTongMcpTools()).complete, true))()]));
+  const failures = closed.filter(result => result.status === 'rejected');
+  await temporary.finish(passed && failures.length === 0);
+  if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Test resource shutdown failed');
 }

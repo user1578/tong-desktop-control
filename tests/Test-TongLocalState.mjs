@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, access as exists } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, parse } from "node:path";
+import { mkdir, access as exists } from "node:fs/promises";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -9,8 +8,10 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import * as z from "zod/v4";
 import * as tong from "../scripts/TongMcpTools.mjs";
 import { TongProjectAccess } from "../scripts/TongProjectAccess.mjs";
-const prefix = join(parse(process.cwd()).root, "tong-local-state-");
-const root = await mkdtemp(prefix), state = join(root, "state"), demo = join(root, "demo"), project = join(root, "project");
+import { createTongTestDirectory } from './fixtures/TongTestDirectory.mjs';
+const temporary = await createTongTestDirectory('tong-local-state-');
+let passed = false;
+const root = temporary.path, state = join(root, "state"), demo = join(root, "demo"), project = join(root, "project");
 await mkdir(state); await mkdir(demo); await mkdir(project);
 process.env.TONG_RESTRICTED_MCP = "1"; process.env.TONG_RESTRICTED_ROOT = demo; process.env.TONG_LOCAL_STATE_DIR = state;
 const local = new TongProjectAccess({ registryPath: join(state, "project-access.json"), agentAccessPath: join(state, "agent-execution.json"), demoRoot: demo, scanRoots: [] });
@@ -27,4 +28,5 @@ try {
   assert.equal((await tong.closeTongMcpTools()).complete, true);
   await assert.rejects(exists(join(state, "agent-tasks.json.manager.lock")));
   console.log("PASS: default registration uses independent local state and awaitable shutdown releases the task lock.");
-} finally { await client.close(); await server.close(); await tong.closeTongMcpTools?.(); assert.ok(root.startsWith(prefix)); await rm(root, { recursive: true, force: true }); }
+  passed = true;
+} finally { await client.close(); await server.close(); await tong.closeTongMcpTools?.(); await temporary.finish(passed); }

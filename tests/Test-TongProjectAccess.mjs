@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
-import { join, parse } from "node:path";
+import { mkdir, readFile, rename, symlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { TongProjectAccess } from "../scripts/TongProjectAccess.mjs";
+import { createTongTestDirectory } from './fixtures/TongTestDirectory.mjs';
 
-const temp = await mkdtemp(join(parse(process.cwd()).root, "tong-project-access-"));
+const temporary = await createTongTestDirectory('tong-project-access-');
+const temp = temporary.path;
+let passed = false;
 const scanRoot = join(temp, "scan");
 const outside = join(temp, "outside");
 const demo = join(temp, "demo");
@@ -108,8 +111,7 @@ try {
   console.log("PASS: bounded metadata scan omits content, protected paths and reparse targets; C/D metadata query is read-only.");
   if (!fileSymlinkCreated) console.log("SKIP: Windows did not permit a synthetic file symlink; junction coverage ran.");
   console.log("PASS: local project registry validates roots, permissions, duplicates, disable and revoke.");
+  passed = true;
 } finally {
-  const actual = await realpath(temp);
-  assert.ok(actual.startsWith(parse(process.cwd()).root + "tong-project-access-"));
-  await rm(actual, { recursive: true, force: true });
+  await temporary.finish(passed);
 }

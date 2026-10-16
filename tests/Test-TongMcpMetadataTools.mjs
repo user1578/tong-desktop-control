@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { join, parse } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -9,8 +9,11 @@ import * as z from "zod/v4";
 import { TongProjectAccess } from "../scripts/TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "../scripts/TongAgentTasks.mjs";
 import { registerTongMcpTools } from "../scripts/TongMcpTools.mjs";
+import { createTongTestDirectory } from './fixtures/TongTestDirectory.mjs';
 
-const temp = await mkdtemp(join(parse(process.cwd()).root, "tong-mcp-metadata-"));
+const temporary = await createTongTestDirectory('tong-mcp-metadata-');
+const temp = temporary.path;
+let passed = false;
 const scanRoot = join(temp, "scan");
 const registered = join(temp, "registered");
 const demo = join(temp, "demo");
@@ -59,12 +62,11 @@ try {
   assert.deepEqual((await client.callTool({ name: "tong_agent_list", arguments: {} })).structuredContent.tasks, []);
   assert.equal(await readFile(join(scanRoot, "sample.txt"), "utf8"), "SYNTHETIC_FILE_BODY");
   console.log("PASS: MCP tool handlers expose bounded metadata and effective project permissions only.");
+  passed = true;
 } finally {
   await client.close();
   await server.close();
   await tasks.close();
   delete process.env.TONG_RESTRICTED_MCP;
-  const actual = await realpath(temp);
-  assert.ok(actual.startsWith(parse(process.cwd()).root + "tong-mcp-metadata-"));
-  await rm(actual, { recursive: true, force: true });
+  await temporary.finish(passed);
 }
