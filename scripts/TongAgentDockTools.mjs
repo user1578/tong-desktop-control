@@ -75,7 +75,7 @@ function filteredResult(tool, data, checked, input, backendWorkspaceRoot) {
   return { matches, truncated: data.truncated === true };
 }
 
-/** Independent synthetic-project grants. agent.execute is never consulted or promoted. */
+/** Legacy synthetic grants or locally confirmed, root-bound development grants. */
 export class TongAgentDockRouter {
   #closed = false;
   constructor({ client, access, policyPath = join(process.env.TONG_LOCAL_STATE_DIR ?? join(projectRoot, "runtime"), "agentdock-access.json"), audit = writeAgentDockAudit, maxOwnedSessions, now } = {}) {
@@ -96,7 +96,7 @@ export class TongAgentDockRouter {
       if (request) {
         const started = performance.now(); let delegated = false;
         try {
-          await resolveAgentDockProject(this.access, this.policyPath, input?.projectId);
+          if(tool !== 'session_cancel')await resolveAgentDockProject(this.access, this.policyPath, input?.projectId);
           if (this.#closed) throw dockError("CLOSED");
           return await this.coordinator.call(request.authInfo, this.executionOptions, tool, input,
             () => { if (this.#closed) throw dockError("CLOSED"); }, () => { delegated = true; });
@@ -163,12 +163,12 @@ export function registerAgentDockTools(server, registerTool, z, router, onClosed
     { name: AGENTDOCK_PUBLIC_TOOLS[0], tool: "list_dir", inputSchema: { ...common, path: common.path.optional(), maxDepth: z.number().int().min(1).max(3).optional(), maxEntries: z.number().int().min(1).max(200).optional() } },
     { name: AGENTDOCK_PUBLIC_TOOLS[1], tool: "read_file", inputSchema: { ...common, startLine: z.number().int().min(1).max(1000000).optional(), endLine: z.number().int().min(1).max(1000000).optional(), maxBytes: z.number().int().min(1).max(65536).optional() } },
     { name: AGENTDOCK_PUBLIC_TOOLS[2], tool: "search_text", inputSchema: { ...common, path: common.path.optional(), query: z.string().min(1).max(512), caseSensitive: z.boolean().optional(), maxResults: z.number().int().min(1).max(100).optional() } },
-    { name: AGENTDOCK_PUBLIC_TOOLS[3], tool: "file_edit", inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80), idempotencyKey: z.string().min(16).max(128).optional(), action: z.enum(["add", "replace", "patch"]), path: common.path.optional(), content: z.string().max(65536).optional(), old: z.string().min(1).max(65536).optional(), new: z.string().max(65536).optional(), expectedMatches: z.literal(1).optional(), patch: z.string().min(1).max(65536).optional(), dryRun: z.boolean().optional(), overwrite: z.boolean().optional() } },
-    { name: AGENTDOCK_PUBLIC_TOOLS[4], tool: "command", inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80), idempotencyKey: z.string().min(16).max(128), operation: z.enum(["git_status", "git_diff", "pytest"]), timeoutMs: z.number().int().min(100).max(30000).optional(), async: z.boolean().optional() } },
-    ...["session_status", "session_cancel"].map((tool, index) => ({ name: AGENTDOCK_PUBLIC_TOOLS[5 + index], tool, inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80), sessionId: z.string().min(2).max(80) } })),
+    { name: AGENTDOCK_PUBLIC_TOOLS[3], tool: "file_edit", inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80).optional(), idempotencyKey: z.string().min(16).max(128).optional(), action: z.enum(["add", "replace", "patch"]), path: common.path.optional(), content: z.string().max(65536).optional(), old: z.string().min(1).max(65536).optional(), new: z.string().max(65536).optional(), expectedMatches: z.literal(1).optional(), patch: z.string().min(1).max(65536).optional(), dryRun: z.boolean().optional(), overwrite: z.boolean().optional() } },
+    { name: AGENTDOCK_PUBLIC_TOOLS[4], tool: "command", inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80).optional(), idempotencyKey: z.string().min(16).max(128), operation: z.enum(["git_status", "git_diff", "pytest"]), timeoutMs: z.number().int().min(100).max(30000).optional(), async: z.boolean().optional() } },
+    ...["session_status", "session_cancel"].map((tool, index) => ({ name: AGENTDOCK_PUBLIC_TOOLS[5 + index], tool, inputSchema: { projectId: common.projectId, taskId: z.string().min(2).max(80), approvalId: z.string().min(2).max(80).optional(), sessionId: z.string().min(2).max(80) } })),
   ];
   for (const definition of definitions) registerTool(server, definition.name, {
-    title: `AgentDock ${definition.tool}`, description: "Use a fixed local AgentDock operation with independent project and task approval. No arbitrary Shell or grant mutation.",
+    title: `AgentDock ${definition.tool}`, description: "Use a fixed local AgentDock operation. Persistent project-development grants need no task challenge; legacy synthetic grants still require approvalId. Replay protection, project paths and caller ownership remain enforced. No arbitrary Shell or grant mutation.",
     inputSchema: z.object(definition.inputSchema).strict(), _meta: {}, annotations: { readOnlyHint: AGENTDOCK_READ_TOOLS.includes(definition.tool) || definition.tool === "session_status", destructiveHint: !AGENTDOCK_READ_TOOLS.includes(definition.tool) && definition.tool !== "session_status" },
   }, async (input, extra) => {
     try { const value = await router.call(definition.tool, input, { authInfo: extra?.authInfo }); return { structuredContent: value, content: [{ type: "text", text: JSON.stringify(value) }] }; }

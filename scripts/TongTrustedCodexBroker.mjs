@@ -8,13 +8,22 @@ import { CodexAppServerAdapter } from "./TongCodexAppServer.mjs";
 const runtime = resolve(dirname(fileURLToPath(import.meta.url)), "..", "runtime");
 const PROJECT_ID = /^[a-z][a-z0-9-]{1,39}$/;
 const TASK_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const TASK_FIELDS = new Set(["taskId", "projectId", "cwd", "task", "scope", "prompt", "timeoutMs", "threadId", "continuationMessage", "resumeCount"]);
+const TASK_FIELDS = new Set(["taskId", "projectId", "cwd", "task", "scope", "prompt", "timeoutMs", "threadId", "continuationMessage", "resumeCount", "workType", "requiredCapabilities"]);
+export const DEVELOPMENT_CAPABILITIES = Object.freeze(['project.read','project.write','command.execute','dependency.install','codex.session']);
+const developmentCapabilities = new Set([...DEVELOPMENT_CAPABILITIES,'git.commit','git.push']);
+export function requestedCapabilities(input) {
+  if (input.workType !== undefined && !['development','high-impact'].includes(input.workType)) throw new Error('Invalid work type');
+  const requested = input.requiredCapabilities ?? DEVELOPMENT_CAPABILITIES;
+  if (!Array.isArray(requested) || !requested.length || requested.some(c => !developmentCapabilities.has(c)) || new Set(requested).size !== requested.length) throw new Error('Invalid required capabilities');
+  return requested;
+}
 const disabled = () => new Error("Trusted Codex execution is disabled locally");
 const samePath = (left, right) => process.platform === "win32"
   ? resolve(left).toLowerCase() === resolve(right).toLowerCase() : resolve(left) === resolve(right);
 const fingerprint = (task) => createHash("sha256").update(JSON.stringify([
   task.taskId, task.projectId, resolve(task.cwd), task.task, task.scope,
   task.threadId ?? null, task.continuationMessage ?? null, task.resumeCount ?? 0,
+  task.workType ?? 'development', task.requiredCapabilities ?? DEVELOPMENT_CAPABILITIES,task.timeoutMs,
 ])).digest("hex");
 
 function validatePolicy(value) {
@@ -24,6 +33,11 @@ function validatePolicy(value) {
       || !Array.isArray(value.approvals) || value.approvals.some((item) =>
         !TASK_ID.test(item?.taskId) || !/^[a-f0-9]{64}$/.test(item?.fingerprint))
       || !Number.isSafeInteger(value.generation) || value.generation < 0
+      || (value.developmentGrants !== undefined && (!Array.isArray(value.developmentGrants)
+        || new Set(value.developmentGrants.map(g => g?.projectId)).size !== value.developmentGrants.length
+        || value.developmentGrants.some(g => !PROJECT_ID.test(g?.projectId) || !value.projects.includes(g.projectId)
+          || typeof g.root !== 'string' || !isAbsolute(g.root) || !Array.isArray(g.capabilities)
+          || g.capabilities.some(c => !developmentCapabilities.has(c)) || !DEVELOPMENT_CAPABILITIES.every(c => g.capabilities.includes(c)))))
       || (value.executable !== null && (typeof value.executable !== "string"
         || !isAbsolute(value.executable) || extname(value.executable).toLowerCase() !== ".exe"
         || (process.platform === "win32" && !/^[A-Za-z]:[\\/]/.test(value.executable))))) {
@@ -93,9 +107,9 @@ export class TongTrustedPolicy {
   }
 
   async status() {
-    const { enabled, executable, projects, generation, approvals, emergencyStopped = false } = await this.read();
+    const { enabled, executable, projects, generation, approvals, emergencyStopped = false, developmentGrants = [] } = await this.read();
     return { mode: enabled ? "trusted-windows" : "isolated", enabled, executable,
-      projects, pendingApprovals: approvals.length, generation, emergencyStopped };
+      projects, pendingApprovals: approvals.length, generation, emergencyStopped, developmentGrants };
   }
 
   async enable(executable) {
@@ -137,23 +151,49 @@ export class TongTrustedPolicy {
     if (!PROJECT_ID.test(projectId)) throw new Error("Invalid project id");
     await this.mutate("revoke", (value) => { value.projects = value.projects.filter((id) => id !== projectId);
       value.approvals = value.approvals.filter((item) => item.projectId !== projectId);
+      value.developmentGrants = (value.developmentGrants ?? []).filter(item => item.projectId !== projectId);
       value.generation += 1;
     }, { projectId });
   }
 
-  async approveTask(taskId) {
+  async authorizeDevelopment(projectId, access, {gitCommit = false, gitPush = false,expectedRoot} = {}) {
+    if (typeof gitCommit !== 'boolean' || typeof gitPush !== 'boolean') throw new Error('Invalid Git authorization');
+    if (!await access.authorize('agent.execute',projectId) || !await access.authorize('project.write',projectId)) throw new Error('Project requires write and agent.execute authorization');
+    const project = (await access.listProjects()).find(p => p.id === projectId && p.available && p.status === 'enabled');
+    if (!project || !samePath(await realpath(project.root),project.root)) throw new Error('Authorized project root is invalid');
+    if(expectedRoot !== undefined && !samePath(project.root,expectedRoot)) throw new Error('Project changed during confirmation');
+    const contains = (root,path) => { const part=resolve(path).toLowerCase();const base=resolve(root).toLowerCase();return part===base || part.startsWith(base+'\\') || part.startsWith(base+'/'); };
+    if ([this.policyPath,this.taskStatePath,this.auditPath].some(p => contains(project.root,p))) throw new Error('Authorization state must be outside the project');
+    const grant = {projectId,grantId:randomUUID(),root:project.root,capabilities:[...DEVELOPMENT_CAPABILITIES,...(gitCommit?['git.commit']:[]),...(gitPush?['git.push']:[])],issuedAt:new Date().toISOString()};
+    await this.mutate('authorize-development',value => {
+      if (!value.enabled || !value.projects.includes(projectId)) throw disabled();
+      value.developmentGrants = [...(value.developmentGrants ?? []).filter(g => g.projectId !== projectId),grant];
+      value.generation += 1;
+    },grant);
+    return grant;
+  }
+
+  async approveTask(taskId, expectedFingerprint) {
     if (!TASK_ID.test(taskId)) throw new Error("Invalid task id");
     const state = JSON.parse(await readFile(this.taskStatePath, "utf8"));
     const task = state?.tasks?.find((item) => item.taskId === taskId);
     if (!task || task.status !== "waiting_user_action" || task.pendingApproval !== true) {
       throw new Error("Task is not awaiting local approval");
     }
+    const taskFingerprint = fingerprint({...task,cwd:task.projectRoot,threadId:task.codexSessionId});
+    if (expectedFingerprint !== undefined && taskFingerprint !== expectedFingerprint) throw new Error('Task changed during confirmation');
     await this.mutate("approve-task", (value) => {
       if (!value.enabled || !value.projects.includes(task.projectId)) throw disabled();
       value.approvals = value.approvals.filter((item) => item.taskId !== taskId);
-      value.approvals.push({ taskId, projectId: task.projectId, fingerprint: fingerprint({ ...task, cwd: task.projectRoot,
-        threadId: task.codexSessionId }) });
+      value.approvals.push({ taskId, projectId: task.projectId, fingerprint: taskFingerprint });
     }, { taskId, projectId: task.projectId });
+  }
+
+  async taskForConfirmation(taskId) {
+    const state=JSON.parse(await readFile(this.taskStatePath,'utf8'));
+    const task=state?.tasks?.find(t => t.taskId === taskId && t.status === 'waiting_user_action' && t.pendingApproval === true);
+    if(!task) throw new Error('Task is not awaiting local approval');
+    return {task, fingerprint:fingerprint({...task,cwd:task.projectRoot,threadId:task.codexSessionId})};
   }
 
   async consumeApproval(task) {
@@ -191,7 +231,7 @@ export class TongTrustedCodexBroker {
     this.closed = false;
   }
 
-  async preflight({ projectId, projectRoot } = {}) {
+  async preflight({ projectId, projectRoot, workType, requiredCapabilities } = {}) {
     if (this.closed) throw new Error("Trusted broker is closed");
     const config = await this.policy.read();
     if (!config.enabled || !config.executable) throw disabled();
@@ -202,7 +242,11 @@ export class TongTrustedCodexBroker {
         || !isAbsolute(project.root) || !samePath(project.root, projectRoot)) throw new Error("Trusted project is unavailable or mismatched");
     const actual = await realpath(config.executable);
     if (!samePath(actual, config.executable) || !(await stat(actual)).isFile()) throw new Error("Configured Codex executable changed");
-    return { config, project };
+    const requested = requestedCapabilities({workType,requiredCapabilities});
+    const grant = (config.developmentGrants ?? []).find(g => g.projectId === projectId && samePath(g.root,projectRoot));
+    if(grant && (!await this.access.authorize('project.write',projectId) || !await this.access.authorize('project.read',projectId))) throw new Error('Project is not authorized for agent.execute');
+    if (grant && workType !== 'high-impact' && requested.some(c => !grant.capabilities.includes(c))) throw new Error('Required capability is outside project authorization');
+    return { config, project, authorization:{mode:grant && workType !== 'high-impact'?'project-development':'local-task-confirmation',requiredCapabilities:requested,capabilities:grant?.capabilities ?? [],root:projectRoot} };
   }
 
   async sessionAccess(input) {
@@ -245,7 +289,7 @@ export class TongTrustedCodexBroker {
         || !Number.isInteger(task.timeoutMs) || task.timeoutMs < 1_000 || task.timeoutMs > 3_600_000) {
       throw new Error("Invalid trusted task");
     }
-    const { config } = await this.preflight({ projectId: task.projectId, projectRoot: task.cwd });
+    const { config, authorization } = await this.preflight({ projectId: task.projectId, projectRoot: task.cwd,workType:task.workType,requiredCapabilities:task.requiredCapabilities });
     const controller = new AbortController();
     const abort = () => controller.abort(signal?.reason ?? new Error("Trusted task cancelled"));
     signal?.addEventListener("abort", abort, { once: true });
@@ -255,9 +299,13 @@ export class TongTrustedCodexBroker {
     let projectLock;
     let projectLockPath;
     try {
-      await onState("waiting_user_action");
-      onLog("Waiting for local task approval.", "status");
-      while (!controller.signal.aborted) {
+      if (authorization.mode === 'project-development') {
+        await this.policy.audit('project-authorization-used',{taskId:task.taskId,projectId:task.projectId,root:task.cwd,capabilities:authorization.requiredCapabilities});
+      } else {
+        await onState("waiting_user_action");
+        onLog("Waiting for local confirmation of this task and scope. Use TongTrustedControl approve locally; no chat text or tool parameter can approve it.", "status");
+      }
+      while (authorization.mode !== 'project-development' && !controller.signal.aborted) {
         const current = await this.policy.read();
         if (!current.enabled || current.generation !== config.generation
             || !current.projects.includes(task.projectId)) throw disabled();
@@ -267,7 +315,7 @@ export class TongTrustedCodexBroker {
         await delay(this.pollMs, undefined, { signal: controller.signal });
       }
       if (controller.signal.aborted) throw controller.signal.reason ?? new Error("Trusted task cancelled");
-      await this.preflight({ projectId: task.projectId, projectRoot: task.cwd });
+      await this.preflight({ projectId: task.projectId, projectRoot: task.cwd,workType:task.workType,requiredCapabilities:task.requiredCapabilities });
       const lockDirectory = join(dirname(this.policy.policyPath), "trusted-project-locks");
       await mkdir(lockDirectory, { recursive: true });
       projectLockPath = join(lockDirectory, `${task.projectId}.lock`);
@@ -281,22 +329,25 @@ export class TongTrustedCodexBroker {
       if (controller.signal.aborted) throw controller.signal.reason ?? new Error("Trusted task cancelled");
       await projectLock.writeFile(`${JSON.stringify({ taskId: task.taskId, pid: process.pid,
         createdAt: new Date().toISOString() })}\n`);
-      const locked = await this.preflight({ projectId: task.projectId, projectRoot: task.cwd });
+      const locked = await this.preflight({ projectId: task.projectId, projectRoot: task.cwd,workType:task.workType,requiredCapabilities:task.requiredCapabilities });
       if (locked.config.generation !== config.generation || controller.signal.aborted) throw disabled();
       await onState("running");
       await this.policy.audit("run", { taskId: task.taskId, projectId: task.projectId });
       timer = setInterval(() => {
-        void this.policy.read().then((current) => {
+        void this.preflight({projectId:task.projectId,projectRoot:task.cwd,workType:task.workType,requiredCapabilities:task.requiredCapabilities}).then(({config:current}) => {
           if (!current.enabled || current.generation !== config.generation
               || !current.projects.includes(task.projectId)) controller.abort(disabled());
         }).catch(() => controller.abort(disabled()));
       }, this.pollMs);
       const latest = await this.policy.read();
       if (!latest.enabled || latest.generation !== config.generation || controller.signal.aborted) throw disabled();
-      const result = await this.adapterFactory(config.executable).runTask(task, {
+      const approvedTask=authorization.mode !== 'project-development' && task.workType === 'high-impact'
+        ? {...task,prompt:task.prompt+'\nLocally confirmed capabilities for this single workflow: '+JSON.stringify(authorization.requiredCapabilities)+'. This does not expand the OS sandbox.'}:task;
+      const result = await this.adapterFactory(config.executable).runTask(approvedTask, {
         signal: controller.signal, onSessionId, onLog, onState,
+        authorizedCapabilities:authorization.mode === 'project-development'?authorization.capabilities:[],
       });
-      const finalPolicy = await this.policy.read();
+      const {config:finalPolicy} = await this.preflight({projectId:task.projectId,projectRoot:task.cwd,workType:task.workType,requiredCapabilities:task.requiredCapabilities});
       if (!finalPolicy.enabled || finalPolicy.generation !== config.generation) throw disabled();
       if (controller.signal.aborted && !signal?.aborted) throw controller.signal.reason ?? disabled();
       return result;
@@ -329,15 +380,19 @@ export class TongExecutorRouter {
   }
 
   async preflight(input) {
+    requestedCapabilities(input);
     const mode = input.executorMode ?? ((await this.policy.read()).enabled ? "trusted-windows" : "isolated");
     if (mode === "trusted-windows") return { ...(await this.trusted.preflight(input)), mode };
-    if (mode === "isolated") return { ...(await this.isolated.preflight(input)), mode };
+    if (mode === "isolated") {
+      if(input.workType === 'high-impact') throw new Error('High-impact tasks require trusted local confirmation');
+      return { ...(await this.isolated.preflight(input)), mode };
+    }
     throw new Error("Unsupported executor mode");
   }
 
   async runTask(task, callbacks) {
-    const { executorMode, resumeCount, ...spec } = task;
-    if (executorMode === "trusted-windows") return this.trusted.runTask({ ...spec, resumeCount }, callbacks);
+    const { executorMode, resumeCount, workType, requiredCapabilities, ...spec } = task;
+    if (executorMode === "trusted-windows") return this.trusted.runTask({ ...spec, resumeCount,workType,requiredCapabilities }, callbacks);
     if (executorMode === "isolated") return this.isolated.runTask(spec, callbacks);
     throw new Error("Unsupported executor mode");
   }

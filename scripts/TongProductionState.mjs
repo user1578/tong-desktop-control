@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { PRODUCTION_ROOT, getApprovedProductionProfile, validateProductionProfile, verifyRuntimeApproval, productionProfileDigest } from './TongProductionProfile.mjs';
 import { assertProtectedPaths, processIdentity, sameProcess } from './TongRuntimeSecurity.mjs';
+import {revokeRestoredTrustedAuthorization} from './TongRestoredAuthorization.mjs';
 
 const helper=fileURLToPath(new URL('TongProductionState.ps1',import.meta.url));
 const fail=code=>new Error(code),sha=value=>createHash('sha256').update(value).digest('hex');
@@ -106,7 +107,7 @@ export async function verifyProductionStateBackup(input,{backupRoot}) {
 }
 function sanitize(logical,value) {
   if(logical==='runtime/agent-execution.json') {value.projects=[];}
-  if(logical==='runtime/trusted-codex.json') {value.enabled=false;value.projects=[];value.approvals=[];value.generation=(value.generation??0)+1;}
+  if(logical==='runtime/trusted-codex.json') revokeRestoredTrustedAuthorization(value);
   if(logical==='runtime/project-access.json') {if(!Array.isArray(value.projects))throw fail('STATE_INVALID');for(const project of value.projects)project.status='disabled';}
   if(logical==='runtime/agent-tasks.json') {if(!Array.isArray(value.tasks))throw fail('STATE_INVALID');for(const task of value.tasks){task.restoreOriginalStatus=task.status;if(['queued','running','waiting_user_action'].includes(task.status))task.status='failed';task.pendingApproval=false;task.codexSessionId=null;task.restoreRequiresReconciliation=true;}}
   if(logical==='policy/agentdock-access.json') {value.projects=[];value.approvals=[];value.enabled=false;}

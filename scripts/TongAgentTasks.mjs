@@ -5,7 +5,7 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { TongWorkerBroker } from "./TongWorkerBroker.mjs";
-import { TongTrustedPolicy, TongTrustedCodexBroker, TongExecutorRouter } from "./TongTrustedCodexBroker.mjs";
+import { TongTrustedPolicy, TongTrustedCodexBroker, TongExecutorRouter, requestedCapabilities } from "./TongTrustedCodexBroker.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_STATE_PATH = resolve(projectRoot, "runtime", "agent-tasks.json");
@@ -60,6 +60,10 @@ function publicTask(task, now = Date.now()) {
     codexSessionId: task.codexSessionId,
     codexTurnId: task.codexTurnId ?? null,
     pendingApproval: Boolean(task.pendingApproval),
+    userActionRequired: Boolean(task.pendingApproval || task.status === 'waiting_user_action'
+      || task.status === 'queued' && task.authorization?.mode === 'local-task-confirmation'),
+    authorization: task.authorization ?? null,
+    workType: task.workType ?? 'development',
     sessionMode: task.sessionMode ?? "new",
     resumeAvailable: Boolean(task.codexSessionId && ["waiting_user_action", "success"].includes(task.status) && !task.pendingApproval),
     error: task.error,
@@ -119,12 +123,13 @@ async function collectGitResult(cwd, baselineFiles = []) {
 
 function normalizeRequest(input) {
   const allowedKeys = new Set(["projectId", "agent", "task", "scope", "idempotencyKey", "timeoutSeconds",
-    "sessionMode", "codexSessionId", "sessionSearch"]);
+    "sessionMode", "codexSessionId", "sessionSearch", "workType", "requiredCapabilities"]);
   if (!input || typeof input !== "object" || Array.isArray(input)
       || Object.keys(input).some((key) => !allowedKeys.has(key))) {
     throw new Error("Invalid task request: unsupported fields");
   }
   const { projectId, agent, task, scope, idempotencyKey, timeoutSeconds } = input;
+  requestedCapabilities(input);
   if (typeof projectId !== "string" || !/^[a-z][a-z0-9-]{1,39}$/.test(projectId)) throw new Error("Invalid project id");
   if (agent !== "codex") throw new Error("Unsupported agent; only codex is available in this phase");
   if (typeof task !== "string" || task.trim().length < 1 || task.length > MAX_TASK_TEXT_CHARS || /\0/.test(task)) {
@@ -147,6 +152,8 @@ function normalizeRequest(input) {
     throw new Error("Invalid native session selection");
   }
   return { projectId, agent, task: task.trim(), scope: scope.trim(), idempotencyKey, timeoutSeconds,
+    ...(input.workType !== undefined ? {workType:input.workType} : {}),
+    ...(input.requiredCapabilities !== undefined ? {requiredCapabilities:input.requiredCapabilities} : {}),
     ...(sessionMode !== undefined ? { sessionMode } : {}), ...(codexSessionId !== undefined ? { codexSessionId } : {}),
     ...(sessionSearch !== undefined ? { sessionSearch: sessionSearch.trim() } : {}) };
 }
@@ -350,7 +357,7 @@ export class TongAgentTaskManager {
     await this.ensureOpen();
     const request = normalizeRequest(input);
     const project = await this.projectForExecution(request.projectId);
-    const preflight = await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
+    const preflight = await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,workType:request.workType,requiredCapabilities:request.requiredCapabilities });
     const idempotencyHash = digest(request.idempotencyKey);
     const requestHash = digest(JSON.stringify({ ...request, idempotencyKey: undefined }));
     const existingRequest = () => {
@@ -381,6 +388,9 @@ export class TongAgentTaskManager {
         taskId: randomUUID(), idempotencyHash, requestHash,
         projectId: request.projectId, projectRoot: project.root, agent: request.agent,
         executorMode: preflight?.mode ?? "isolated", task: request.task, scope: request.scope,
+        ...(request.workType !== undefined ? {workType:request.workType} : {}),
+        ...(request.requiredCapabilities !== undefined ? {requiredCapabilities:request.requiredCapabilities} : {}),
+        authorization:preflight?.authorization ?? null,
         timeoutMs, status: "queued", createdAt, startedAt: null, updatedAt: createdAt, finishedAt: null,
         codexSessionId, sessionMode, codexTurnId: null, pendingApproval: false, resumeCount: 0, summary: null, result: null, error: null,
         baselineFiles: [], logs: [], logBytes: 0, logsTruncated: false,
@@ -471,9 +481,10 @@ export class TongAgentTaskManager {
     const pendingLogs = [];
     try {
       const project = await this.projectForExecution(task.projectId);
-      await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
-        executorMode: task.executorMode ?? "isolated" });
+      const livePreflight=await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
+        executorMode: task.executorMode ?? "isolated",workType:task.workType,requiredCapabilities:task.requiredCapabilities });
       await this.updateTask(taskId, (record) => {
+        record.authorization=livePreflight?.authorization ?? null;
         record.status = "running";
         record.startedAt ??= new Date(this.now()).toISOString();
         record.finishedAt = null;
@@ -488,12 +499,15 @@ export class TongAgentTaskManager {
         "Follow the allowed work scope and task. Do not attempt to access credentials, private files, other projects, or operating-system settings.",
         `Allowed work scope: ${current.scope}`,
         `Task: ${current.task}`,
+        'Routine development uses persistent project authorization. Stop and notify the user before production deployment, system/permission/service changes, important data deletion or work outside this project. A project grant does not approve those actions.',
+        `Git commit/push require the user's permission and the corresponding project capability: ${JSON.stringify(current.authorization?.capabilities ?? [])}`,
       ].join("\n\n");
       const result = await this.workerBroker.runTask({
         taskId, projectId: project.id, cwd: project.root, task: current.task, scope: current.scope,
         prompt: instructions, timeoutMs, threadId: current.codexSessionId ?? undefined,
         continuationMessage, ...(this.workerBroker instanceof TongExecutorRouter
-          ? { executorMode: task.executorMode ?? "isolated", resumeCount: current.resumeCount ?? 0 } : {}),
+          ? { executorMode: task.executorMode ?? "isolated", resumeCount: current.resumeCount ?? 0,
+            workType:current.workType,requiredCapabilities:current.requiredCapabilities } : {}),
       }, {
         signal: controller.signal,
         onSessionId: async (id) => {
@@ -538,7 +552,8 @@ export class TongAgentTaskManager {
           record.error = null;
         } else if (result?.turnStatus === "interrupted") {
           record.status = "waiting_user_action";
-          record.error = { message: "Codex interrupted before completing the task.",
+          if(result?.approvalRequired)record.workType='high-impact';
+          record.error = { message: result?.approvalRequired ? 'User decision required: Codex requested access beyond the authorized sandbox.' : "Codex interrupted before completing the task.",
             suggestion: "Use tong_agent_resume to continue the saved Codex session after reviewing its logs." };
         } else {
           record.status = "failed";
@@ -654,13 +669,14 @@ export class TongAgentTaskManager {
       throw new Error("Task has no resumable Codex session");
     }
     const project = await this.projectForExecution(task.projectId);
-    await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
-      executorMode: task.executorMode ?? "isolated" });
+    const livePreflight=await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
+      executorMode: task.executorMode ?? "isolated",workType:task.workType,requiredCapabilities:task.requiredCapabilities });
     await this.updateTask(taskId, (record) => {
       if (!["waiting_user_action", "success"].includes(record.status) || record.pendingApproval || this.active.has(taskId)) {
         throw new Error("Task has no resumable Codex session");
       }
       record.status = "queued";
+      record.authorization=livePreflight?.authorization ?? null;
       record.updatedAt = new Date(this.now()).toISOString();
       record.finishedAt = null;
       record.startedAt = null;

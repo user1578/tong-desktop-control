@@ -1,5 +1,6 @@
 import { TongProjectAccess, configureTongWorkspaceState } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
+import {TongTrustedPolicy} from './TongTrustedCodexBroker.mjs';
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
 import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
 import { closeTongWorkspaceTools } from './TongWorkspaceTools.mjs';
@@ -62,6 +63,10 @@ const AGENT_ERRORS = new Set([
   "Project is not authorized for agent.execute",
   "Project is missing, disabled, or unavailable",
   "Authorized project root is invalid",
+  "Invalid work type",
+  "Invalid required capabilities",
+  "Required capability is outside project authorization",
+  "High-impact tasks require trusted local confirmation",
   "Worker execution is disabled until a verified Windows isolation launcher is configured",
   "Trusted Codex execution is disabled locally",
   "Trusted project grant is missing",
@@ -133,16 +138,24 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     inputSchema: {},
     _meta: {},
     annotations: { readOnlyHint: true },
-  }, safe(async () => ({ projects: await access.listProjects() })));
+  }, safe(async () => {
+    let policy,authorizationPolicyAvailable=true;
+    try{policy=await new TongTrustedPolicy(stateDir?{policyPath:join(stateDir,'trusted-codex.json')}:{}).status();}
+    catch{authorizationPolicyAvailable=false;policy={enabled:false,developmentGrants:[]};}
+    return {projects:(await access.listProjects()).map(project=>({...project,developmentAuthorization:policy.enabled&&project.effectiveCapabilities.includes('project.write')&&project.effectiveCapabilities.includes('agent.execute')?(policy.developmentGrants.find(g=>g.projectId===project.id&&g.root===project.root)??null):null})),authorizationPolicyAvailable,
+      confirmation:{clientElicitationAvailable:Boolean(server.server?.getClientCapabilities?.()?.elicitation),verifiedUserPresence:false,authorizationMethod:'local-interactive-console',chatTextCanAuthorize:false}};
+  }));
 
   registerTool(server, "tong_agent_start", {
     title: "Start a Codex project task",
-    description: "Queue a Codex task with a project grant and local task approval. Trusted Windows defaults to the project's latest suitable native session; use new or existing to choose explicitly. Requires an idempotency key, scope, and bounded timeout.",
+    description: "Queue a Codex task. A persistent root-bound development grant starts normal work without task challenges; high-impact work waits for local confirmation. Declare requiredCapabilities before long work. Defaults to the latest suitable project session. Requires an idempotency key, scope and bounded timeout.",
     inputSchema: {
       projectId: z.string().min(2).max(40).describe("Registered local project ID with an independent agent.execute grant."),
       agent: z.enum(["codex"]).describe("Agent to use. This phase supports Codex only."),
       task: z.string().min(1).max(16_000).describe("Complete task instructions."),
       scope: z.string().min(1).max(2_000).describe("Allowed project work scope for this task."),
+      workType: z.enum(['development','high-impact']).optional().describe('Production, system, permission/service changes, important data deletion or out-of-project work MUST be high-impact. Project authorization never grants those rights.'),
+      requiredCapabilities: z.array(z.enum(['project.read','project.write','command.execute','dependency.install','codex.session','git.commit','git.push'])).min(1).max(7).optional().describe('Declare all development capabilities needed for the workflow before starting. Missing Git authorization is rejected before queueing.'),
       idempotencyKey: z.string().min(16).max(128).describe("Client-generated retry key; reusing it cannot start a duplicate task."),
       timeoutSeconds: z.number().int().min(1).max(3_600).optional().describe("Maximum task runtime in seconds; defaults to the local configured limit."),
       sessionMode: z.enum(["latest", "new", "existing"]).optional().describe("Trusted Windows session selection. Defaults to latest suitable project session, or creates one if none exists."),
@@ -206,7 +219,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_resume", {
     title: "Resume a Codex session",
-    description: "Send a follow-up to a completed or interrupted task in its saved native Codex session. Requires a fresh local task approval in trusted Windows mode; does not create a replacement session.",
+    description: "Continue a saved native Codex session. Persistent development authorization is reused; high-impact or legacy tasks require a fresh local scoped confirmation. Never expands project permissions.",
     inputSchema: {
       taskId: z.string().uuid(),
       message: z.string().min(1).max(2_000).optional(),

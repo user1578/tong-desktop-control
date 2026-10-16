@@ -225,7 +225,7 @@ export class CodexAppServerAdapter {
     return result.thread;
   }
 
-  async runTask(spec, { signal, onSessionId = () => {}, onLog = () => {}, onState = () => {} } = {}) {
+  async runTask(spec, { signal, onSessionId = () => {}, onLog = () => {}, onState = () => {}, authorizedCapabilities = [] } = {}) {
     if (!spec || typeof spec.cwd !== "string" || typeof spec.prompt !== "string") throw new Error("Invalid Codex task specification");
     signal?.throwIfAborted();
     const child = this.spawnProcess(this.executable, ["app-server", "--listen", "stdio://"], {
@@ -250,6 +250,7 @@ export class CodexAppServerAdapter {
     const agentMessages = new Map();
     const testRuns = new Map();
     let completed = false;
+    let approvalRequired = null;
     const captureCommand = (item) => {
       if (item?.type !== "commandExecution" || typeof item.command !== "string"
           || !/\b(test|tests|spec|lint|typecheck|check|build|verify|pytest|vitest|jest)\b/i.test(item.command)) return;
@@ -270,6 +271,9 @@ export class CodexAppServerAdapter {
       } else if (message.method === "item/commandExecution/outputDelta" && typeof params.delta === "string") {
         onLog(params.delta, "command_output");
       } else if (message.method === "turn/completed") {
+        // A fast server completion after decline cannot erase a latched policy
+        // boundary while onState is still persisting the user-action status.
+        if(approvalRequired)return;
         const turn = params.turn ?? {};
         if ((params.threadId && params.threadId !== threadId) || (turnId && turn.id && turn.id !== turnId)) return;
         if (!turnId && typeof turn.id === "string") turnId = turn.id;
@@ -297,6 +301,10 @@ export class CodexAppServerAdapter {
     };
     const serverRequest = async (message) => {
       const method = String(message.method ?? "");
+      if(method.endsWith('/requestApproval')) {
+        approvalRequired={method,reason:'outside-configured-sandbox'};
+        completed=true;
+      }
       onLog(`Approval request declined by policy: ${method}`, "policy");
       try {
         if (method === "item/commandExecution/requestApproval") {
@@ -310,6 +318,14 @@ export class CodexAppServerAdapter {
         } else {
           peer.write({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "Unsupported App Server request" } });
         }
+        if(method.endsWith('/requestApproval')) {
+          // Do not silently let a task continue after asking for wider rights.
+          // No accept/acceptForSession response is synthesized by the agent.
+          onLog('User decision required: requested access is outside project authorization. Task paused; no additional rights granted.','user_action');
+          await onState('waiting_user_action');
+          requestInterrupt(true);
+          completionResolve({turnStatus:'interrupted',summary:'User decision required before expanding project authorization.',approvalRequired,tests:[...testRuns.values()].slice(0,100)});
+        }
       } catch (error) { completionReject(error); }
     };
     const peer = new JsonRpcPeer(child, { onLog, onNotification: notify, onServerRequest: serverRequest,
@@ -318,8 +334,8 @@ export class CodexAppServerAdapter {
     const killOwnProcess = () => {
       if (!didExit && !child.killed) child.kill();
     };
-    const requestInterrupt = () => {
-      if (!threadId || !turnId || completed) return;
+    const requestInterrupt = (force = false) => {
+      if (!threadId || !turnId || completed && !force) return;
       void peer.request("turn/interrupt", { threadId, turnId }).catch((error) => {
         onLog(error.message, "interrupt_error");
       });
@@ -369,6 +385,9 @@ export class CodexAppServerAdapter {
         cwd: spec.cwd,
         runtimeWorkspaceRoots: [spec.cwd],
         approvalPolicy: "on-request",
+        // This capability comes only from the broker's locally confirmed grant.
+        // Package downloads need networking, but filesystem writes stay scoped.
+        ...(authorizedCapabilities.includes('dependency.install') ? {sandboxPolicy:{type:'workspaceWrite',writableRoots:[spec.cwd],networkAccess:true}} : {}),
         input: [{ type: "text", text: prompt }],
       });
       turnId = started?.turn?.id ?? null;

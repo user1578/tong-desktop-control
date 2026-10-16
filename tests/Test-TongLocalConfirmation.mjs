@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {confirmLocally} from '../scripts/TongLocalConfirmation.mjs';
+import {revokeRestoredTrustedAuthorization} from '../scripts/TongRestoredAuthorization.mjs';
+if(!process.stdin.isTTY||!process.stdout.isTTY)await assert.rejects(confirmLocally({action:'test'}),/local interactive terminal/);
+const descriptor={action:'synthetic project only',targets:'synthetic',scope:'single workflow',risk:'synthetic',recovery:'fixture',duration:'one run'};
+const result=spawnSync('C:\\Program Files\\PowerShell\\7\\pwsh.exe',['-NoLogo','-NoProfile','-File',fileURLToPath(new URL('../scripts/TongLocalConfirmation.ps1',import.meta.url)),'-DescriptorBase64',Buffer.from(JSON.stringify(descriptor)).toString('base64')],{input:'Y\nAPPROVE\n',encoding:'utf8',windowsHide:true});
+assert.equal(result.status,1);assert.match(result.stderr,/管道或重定向不能授权/);
+const restored=revokeRestoredTrustedAuthorization({enabled:true,projects:['development'],approvals:[{taskId:'pending'}],developmentGrants:[{projectId:'development'}],generation:9});
+assert.deepEqual(restored,{enabled:false,projects:[],approvals:[],developmentGrants:[],generation:10});
+console.log('PASS: piped chat text cannot confirm locally; restore revokes all persistent execution grants');

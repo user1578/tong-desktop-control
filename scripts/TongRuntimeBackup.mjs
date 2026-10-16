@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir, readdir, lstat, realpath, open, unlink, cop
 import { resolve, join, dirname, relative, isAbsolute, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertProtectedPaths, processIdentity, sameProcess, safeEnvironment } from './TongRuntimeSecurity.mjs';
+import {revokeRestoredTrustedAuthorization} from './TongRestoredAuthorization.mjs';
 
 const isolated = resolve('D:\\Tong\\state');
 const codeBase = 'b96795840cf5a320090861389b63796a1be164bd';
@@ -225,7 +226,7 @@ export async function restoreRuntimeBackup({backupRoot,restoreRoot,pythonExecuta
     let value; try {value=JSON.parse(await readFile(path,'utf8'));} catch {throw fail('STATE_INVALID');}
     value=remap(value,manifest.sourceRoot,restoreRoot);
     if(file.path.endsWith('/agentdock-access.json')) {value.projects=[];value.approvals=[];value.enabled=false;}
-    if(file.path.endsWith('/trusted-codex.json')) {value.enabled=false;value.projects=[];value.approvals=[];value.generation=(value.generation??0)+1;}
+    if(file.path.endsWith('/trusted-codex.json')) revokeRestoredTrustedAuthorization(value);
     if(file.path.endsWith('/agent-execution.json')) value.projects=[];
     if(file.path.endsWith('/project-access.json')) {if(!Array.isArray(value.projects)) throw fail('STATE_INVALID');for(const project of value.projects) {if(!within(restoreRoot,resolve(project.root))) throw fail('PATH_DENIED');project.status='disabled';}}
     if(file.path.endsWith('/agent-tasks.json')) {if(!Array.isArray(value.tasks)) throw fail('STATE_INVALID');for(const task of value.tasks) {task.restoreOriginalStatus=task.status;if(['queued','running','waiting_user_action'].includes(task.status)) task.status='failed';task.pendingApproval=false;task.codexSessionId=null;task.restoreRequiresReconciliation=true;}}

@@ -13,7 +13,7 @@ const text = value => typeof value === "string" && !value.includes("\0") && Buff
 function invalid() { throw dockError("INVALID_ARGUMENT"); }
 export function validateExecutionInput(tool, input) {
   if (!input || typeof input !== "object" || Array.isArray(input) || !/^[a-z][a-z0-9-]{1,39}$/.test(input.projectId ?? "")
-      || !identifier.test(input.taskId ?? "") || !identifier.test(input.approvalId ?? "")) invalid();
+      || !identifier.test(input.taskId ?? "") || input.approvalId !== undefined && !identifier.test(input.approvalId)) invalid();
   const common = ["projectId", "taskId", "approvalId"];
   let keys;
   if (tool === "file_edit") {
@@ -306,6 +306,10 @@ export class TongAgentDockExecution {
       const current = await this.#context(input); if (current.project.root !== session.root) throw dockError("PROJECT_DENIED");
       operationApproval(current, input, "command.execute", session.operation, session.targets);
     }
+    if(tool === 'session_cancel') {
+      if(value.status !== 'running')this.#forget(input.sessionId);
+      return {toolOk:true,status:value.status,sessionId:input.sessionId,...(Number.isInteger(value.exitCode)?{exitCode:value.exitCode}:{})};
+    }
     return value;
   }
   #accumulate(session, value) {
@@ -329,6 +333,9 @@ export class TongAgentDockExecution {
   }
   async call(tool, input, assertCaller = () => {}) {
     if (this.#closing) throw dockError("CLOSED");
+    // A stable project source identifier preserves replay/session ownership.
+    // resolveAgentDockProject and operationApproval still check the live grant.
+    input={...input,approvalId:input?.approvalId ?? 'project-development'};
     const pending = this.#runCall(tool, input, assertCaller); this.#inflight.add(pending);
     try { return await pending; } finally { this.#inflight.delete(pending); }
   }
@@ -338,7 +345,7 @@ export class TongAgentDockExecution {
     try {
       validateExecutionInput(tool, input); event.taskId = input.taskId; event.approvalId = input.approvalId;
       if (this.#group.busy.has(input.projectId)) throw dockError("ACCESS_DENIED"); this.#group.busy.add(input.projectId); locked = true;
-      const context = await this.#context(input);
+      const context = tool === 'session_cancel' ? {project:{root:this.#sessions.get(input.sessionId)?.root}} : await this.#context(input);
       assertCaller();
       const result = tool === "file_edit" ? await this.#write(context, input, event, assertCaller) : tool === "command" ? await this.#command(context, input, event, assertCaller) : await this.#session(context, tool, input, event, assertCaller);
       assertCaller();
