@@ -35,7 +35,7 @@ function extendRestrictedServer(source) {
   const agentToolSet = 'const TONG_ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);';
   const agentDockReadToolSet = agentToolSet.replace('"tong_agent_result"]);', '"tong_agent_result", "tong_agentdock_list_dir", "tong_agentdock_read_file", "tong_agentdock_search_text"]);');
   const agentDockToolSet = agentDockReadToolSet.replace('"tong_agentdock_search_text"]);', '"tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]);');
-  if (!source.includes(agentDockToolSet)) {
+  if (!source.includes(agentDockToolSet) && !source.includes('"tong_run_command"]);')) {
     const prior = source.includes(agentDockReadToolSet) ? agentDockReadToolSet : source.includes(agentToolSet) ? agentToolSet : source.includes(metadataToolSet) ? metadataToolSet : baseToolSet;
     source = replaceOnce(source, prior, agentDockToolSet, "AgentDock fixed tool registration guard");
   }
@@ -54,6 +54,9 @@ function extendRestrictedServer(source) {
     source = replaceOnce(source, '.describe("Absolute path, or a leading-tilde home path such as ~/project, to a project directory inside an allowed root.")', '.optional()\n                .describe("Authorized project directory. Omit to use the default workspace.")', 'default workspace schema');
     source = replaceOnce(source, '        await assertTongWorkspaceRoot(path, mode);', '        path = await assertTongWorkspaceRoot(path, mode);\n        if (process.env.TONG_RESTRICTED_MCP === "1" && !config.allowedRoots.includes(path)) config.allowedRoots.push(path);', 'authorized workspace registry root');
     source = replaceOnce(source, 'Use open_workspace for the authorized checkout, then read, write, and edit files in that workspace.', 'Use open_workspace with an authorized project path, or omit path for the default. Reuse workspaceId for read/write/edit, tong_list_directory, tong_move_file, tong_delete_file and tong_run_command. Commands require a separate local agent.execute grant.', 'workspace instructions');
+  }
+  if (!source.includes('"tong_agent_sessions"')) {
+    source = replaceOnce(source, '"tong_agent_result"', '"tong_agent_result", "tong_agent_sessions"', 'native Codex session registration guard');
   }
   return source;
 }
@@ -96,7 +99,8 @@ const files = [
     previousHash4: "3457bd2cc9158e3e93fb22028e81446528c92b94a522913fb081a82f0c0d6df5",
     previousHash5: "e397438fd44a400f85d052cfd89396ac5a1a565962a285789017a608eb807a0d",
     previousHash6: "b71a8e616ffb337c38cba6109f922e163d82bcfa34f1bdf94a830130bcc5979c",
-    patchedHash: "c4a4a03e31cbebcba197fd890bf318199c2a902a077dcd49987cb7cdc517758a",
+    previousHash7: "c4a4a03e31cbebcba197fd890bf318199c2a902a077dcd49987cb7cdc517758a",
+    patchedHash: "8cc2decf858ba0616fb674cd93432cce45bc5636ef7ccb7c1017e74645d46b20",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -151,7 +155,7 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}: ${sha256(patched)}`);
   await writeFile(target, patched, "utf8");

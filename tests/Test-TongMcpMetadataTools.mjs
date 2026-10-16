@@ -35,7 +35,7 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name),
-    ["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status",
+    ["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
       "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
   const drives = await client.callTool({ name: "tong_list_drives", arguments: {} });
   assert.equal(drives.isError, undefined);
@@ -60,6 +60,9 @@ try {
   assert.equal(disabledStart.isError, true);
   assert.ok(disabledStart.content[0].text.includes("Worker execution is disabled"));
   assert.deepEqual((await client.callTool({ name: "tong_agent_list", arguments: {} })).structuredContent.tasks, []);
+  const nativeDenied = await client.callTool({ name: "tong_agent_sessions", arguments: { projectId: "registered" } });
+  assert.equal(nativeDenied.isError, true);
+  assert.match(nativeDenied.content[0].text, /disabled locally/);
   assert.equal(await readFile(join(scanRoot, "sample.txt"), "utf8"), "SYNTHETIC_FILE_BODY");
   console.log("PASS: MCP tool handlers expose bounded metadata and effective project permissions only.");
   passed = true;

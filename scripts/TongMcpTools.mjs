@@ -52,6 +52,13 @@ const AGENT_ERRORS = new Set([
   "Invalid allowed work scope",
   "Invalid idempotency key",
   "Invalid task timeout",
+  "Invalid native session selection",
+  "Invalid native session query",
+  "Native session discovery requires trusted Windows execution",
+  "Project is not authorized for native session metadata",
+  "Native Codex session project mismatch or unavailable",
+  "Native Codex session is busy or unavailable",
+  "Native session search limit reached; specify a session ID",
   "Project is not authorized for agent.execute",
   "Project is missing, disabled, or unavailable",
   "Authorized project root is invalid",
@@ -76,7 +83,8 @@ function safeAgent(handler) {
     try { return success(await handler(input)); }
     catch (error) {
       const message = error instanceof Error && (AGENT_ERRORS.has(error.message)
-        || /^Idempotency key was already used for a different task$/.test(error.message))
+        || /^Idempotency key was already used for a different task$/.test(error.message)
+        || /^Codex App Server thread\/(?:list|read) failed \(/.test(error.message))
         ? error.message : "Agent task request failed";
       return { content: [{ type: "text", text: message }], isError: true };
     }
@@ -129,7 +137,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_start", {
     title: "Start a Codex project task",
-    description: "Queue one Codex task for a locally authorized project. Trusted Windows execution also requires a separate local project grant and per-task local approval. Requires an idempotency key, scope, and bounded timeout.",
+    description: "Queue a Codex task with a project grant and local task approval. Trusted Windows defaults to the project's latest suitable native session; use new or existing to choose explicitly. Requires an idempotency key, scope, and bounded timeout.",
     inputSchema: {
       projectId: z.string().min(2).max(40).describe("Registered local project ID with an independent agent.execute grant."),
       agent: z.enum(["codex"]).describe("Agent to use. This phase supports Codex only."),
@@ -137,10 +145,25 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
       scope: z.string().min(1).max(2_000).describe("Allowed project work scope for this task."),
       idempotencyKey: z.string().min(16).max(128).describe("Client-generated retry key; reusing it cannot start a duplicate task."),
       timeoutSeconds: z.number().int().min(1).max(3_600).optional().describe("Maximum task runtime in seconds; defaults to the local configured limit."),
+      sessionMode: z.enum(["latest", "new", "existing"]).optional().describe("Trusted Windows session selection. Defaults to latest suitable project session, or creates one if none exists."),
+      codexSessionId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/).optional().describe("Required only for existing; obtained from native discovery or a previous task."),
+      sessionSearch: z.string().min(1).max(200).optional().describe("Optional case-sensitive title filter for latest session selection."),
     },
     _meta: {},
     annotations: { readOnlyHint: false, destructiveHint: false },
   }, safeAgent((input) => tasks.start(input)));
+
+  registerTool(server, "tong_agent_sessions", {
+    title: "List native Codex project sessions",
+    description: "Read bounded native session metadata for one locally granted project. Includes app-server and desktop/CLI sessions, without messages or rollout paths. Requires project.read, agent.execute and trusted project grant.",
+    inputSchema: {
+      projectId: z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
+      limit: z.number().int().min(1).max(100).optional(),
+      cursor: z.string().max(4096).optional(),
+      searchTerm: z.string().min(1).max(200).optional(),
+    },
+    _meta: {}, annotations: { readOnlyHint: true },
+  }, safeAgent((input) => tasks.sessions(input)));
 
   registerTool(server, "tong_agent_status", {
     title: "Get Codex task status",
@@ -183,7 +206,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_resume", {
     title: "Resume a Codex session",
-    description: "Continue an interrupted task only when its saved Codex session can be resumed; does not create a replacement session.",
+    description: "Send a follow-up to a completed or interrupted task in its saved native Codex session. Requires a fresh local task approval in trusted Windows mode; does not create a replacement session.",
     inputSchema: {
       taskId: z.string().uuid(),
       message: z.string().min(1).max(2_000).optional(),

@@ -58,7 +58,10 @@ function publicTask(task, now = Date.now()) {
     finishedAt: task.finishedAt,
     runtimeMs,
     codexSessionId: task.codexSessionId,
-    resumeAvailable: Boolean(task.codexSessionId && task.status === "waiting_user_action" && !task.pendingApproval),
+    codexTurnId: task.codexTurnId ?? null,
+    pendingApproval: Boolean(task.pendingApproval),
+    sessionMode: task.sessionMode ?? "new",
+    resumeAvailable: Boolean(task.codexSessionId && ["waiting_user_action", "success"].includes(task.status) && !task.pendingApproval),
     error: task.error,
   };
 }
@@ -115,7 +118,8 @@ async function collectGitResult(cwd, baselineFiles = []) {
 }
 
 function normalizeRequest(input) {
-  const allowedKeys = new Set(["projectId", "agent", "task", "scope", "idempotencyKey", "timeoutSeconds"]);
+  const allowedKeys = new Set(["projectId", "agent", "task", "scope", "idempotencyKey", "timeoutSeconds",
+    "sessionMode", "codexSessionId", "sessionSearch"]);
   if (!input || typeof input !== "object" || Array.isArray(input)
       || Object.keys(input).some((key) => !allowedKeys.has(key))) {
     throw new Error("Invalid task request: unsupported fields");
@@ -134,7 +138,17 @@ function normalizeRequest(input) {
   if (timeoutSeconds !== undefined && (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 3_600)) {
     throw new Error("Invalid task timeout");
   }
-  return { projectId, agent, task: task.trim(), scope: scope.trim(), idempotencyKey, timeoutSeconds };
+  const { sessionMode, codexSessionId, sessionSearch } = input;
+  if ((sessionMode !== undefined && !["latest", "new", "existing"].includes(sessionMode))
+      || ((sessionMode === "existing") !== (codexSessionId !== undefined))
+      || (codexSessionId !== undefined && (typeof codexSessionId !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/.test(codexSessionId)))
+      || (sessionSearch !== undefined && ((sessionMode ?? "latest") !== "latest"
+        || typeof sessionSearch !== "string" || !sessionSearch.trim() || sessionSearch.length > 200 || /\0/.test(sessionSearch)))) {
+    throw new Error("Invalid native session selection");
+  }
+  return { projectId, agent, task: task.trim(), scope: scope.trim(), idempotencyKey, timeoutSeconds,
+    ...(sessionMode !== undefined ? { sessionMode } : {}), ...(codexSessionId !== undefined ? { codexSessionId } : {}),
+    ...(sessionSearch !== undefined ? { sessionSearch: sessionSearch.trim() } : {}) };
 }
 
 function validDocument(document) {
@@ -152,7 +166,7 @@ export class TongAgentTaskManager {
       throw new TypeError("TongAgentTaskManager requires project access");
     }
     if (!workerBroker) {
-      const policy = new TongTrustedPolicy({ taskStatePath: statePath, ...(trustedPolicyPath ? { policyPath: trustedPolicyPath } : {}) });
+      const policy = new TongTrustedPolicy({ taskStatePath: statePath, policyPath: trustedPolicyPath ?? resolve(dirname(statePath), "trusted-codex.json") });
       workerBroker = new TongExecutorRouter({ policy, isolated: new TongWorkerBroker({ access }),
         trusted: new TongTrustedCodexBroker({ access, policy }) });
     }
@@ -339,12 +353,28 @@ export class TongAgentTaskManager {
     const preflight = await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root });
     const idempotencyHash = digest(request.idempotencyKey);
     const requestHash = digest(JSON.stringify({ ...request, idempotencyKey: undefined }));
-    return this.withLock(async () => {
+    const existingRequest = () => {
       const existing = this.document.tasks.find((task) => task.idempotencyHash === idempotencyHash);
       if (existing) {
         if (existing.requestHash !== requestHash) throw new Error("Idempotency key was already used for a different task");
         return publicTask(existing, this.now());
       }
+      return null;
+    };
+    const existing = await this.withLock(existingRequest);
+    if (existing) return existing;
+    const sessionMode = request.sessionMode ?? "latest";
+    if (preflight?.mode !== "trusted-windows" && (sessionMode === "existing" || request.sessionSearch)) {
+      throw new Error("Native session discovery requires trusted Windows execution");
+    }
+    // Native I/O must not hold the global state lock used by status, logs and cancellation.
+    const codexSessionId = preflight?.mode === "trusted-windows" && sessionMode !== "new"
+      ? await this.workerBroker.selectSession({ projectId: project.id, projectRoot: project.root,
+        sessionMode, codexSessionId: request.codexSessionId, searchTerm: request.sessionSearch }) : null;
+    return this.withLock(async () => {
+      const duplicate = existingRequest();
+      if (duplicate) return duplicate;
+      if (this.closed) throw new Error("Task manager is closed");
       const createdAt = new Date(this.now()).toISOString();
       const timeoutMs = Math.min((request.timeoutSeconds ?? this.defaultTimeoutMs / 1_000) * 1_000, this.maxTaskRuntimeMs);
       const task = {
@@ -352,7 +382,7 @@ export class TongAgentTaskManager {
         projectId: request.projectId, projectRoot: project.root, agent: request.agent,
         executorMode: preflight?.mode ?? "isolated", task: request.task, scope: request.scope,
         timeoutMs, status: "queued", createdAt, startedAt: null, updatedAt: createdAt, finishedAt: null,
-        codexSessionId: null, pendingApproval: false, resumeCount: 0, summary: null, result: null, error: null,
+        codexSessionId, sessionMode, codexTurnId: null, pendingApproval: false, resumeCount: 0, summary: null, result: null, error: null,
         baselineFiles: [], logs: [], logBytes: 0, logsTruncated: false,
       };
       this.document.tasks.push(task);
@@ -493,6 +523,7 @@ export class TongAgentTaskManager {
       await this.addLog(taskId, "status", `Codex turn finished with status ${result?.turnStatus ?? "unknown"}.`);
       await this.updateTask(taskId, (record) => {
         record.summary = typeof result?.summary === "string" ? cleanText(result.summary).slice(0, 16_000) : null;
+        record.codexTurnId = result?.turnId ?? null;
         record.result = { ...(gitResult ?? {}), tests: Array.isArray(result?.tests) ? result.tests.slice(0, 100) : [] };
         record.turnStatus = result?.turnStatus ?? null;
         record.finishedAt = finishedAt;
@@ -511,7 +542,7 @@ export class TongAgentTaskManager {
             suggestion: "Use tong_agent_resume to continue the saved Codex session after reviewing its logs." };
         } else {
           record.status = "failed";
-          record.error = { message: "Codex task did not complete successfully.",
+          record.error = { message: result?.error?.message ? cleanText(result.error.message).slice(0, 500) : "Codex task did not complete successfully.",
             suggestion: "Review task logs before choosing whether to resume." };
         }
         record.pendingApproval = false;
@@ -524,6 +555,7 @@ export class TongAgentTaskManager {
       await this.addLog(taskId, "error", error instanceof Error ? error.message : "Codex adapter failed");
       await this.updateTask(taskId, (record) => {
         record.finishedAt = finishedAt;
+        record.pendingApproval = false;
         record.continuationMessage = null;
         if (execution?.timedOut) {
           record.status = "failed";
@@ -551,6 +583,17 @@ export class TongAgentTaskManager {
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) throw new Error("Task not found");
     return publicTask(task, this.now());
+  }
+
+  async sessions({ projectId, limit = 50, cursor, searchTerm } = {}) {
+    await this.ensureOpen();
+    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_TASK_PAGE_SIZE
+        || (cursor !== undefined && (typeof cursor !== "string" || cursor.length > 4096))
+        || (searchTerm !== undefined && (typeof searchTerm !== "string" || !searchTerm.trim()
+          || searchTerm.length > 200 || /\0/.test(searchTerm)))) throw new Error("Invalid native session query");
+    const project = await this.projectForExecution(projectId);
+    if (typeof this.workerBroker.listSessions !== "function") throw new Error("Native session discovery requires trusted Windows execution");
+    return { projectId, ...(await this.workerBroker.listSessions({ projectId, projectRoot: project.root, limit, cursor, searchTerm })) };
   }
 
   async list({ limit = 50, cursor } = {}) {
@@ -581,20 +624,23 @@ export class TongAgentTaskManager {
 
   async cancel(taskId) {
     await this.ensureOpen();
-    const task = this.document.tasks.find((entry) => entry.taskId === taskId);
-    if (!task) throw new Error("Task not found");
-    if (TERMINAL_STATES.has(task.status)) return publicTask(task, this.now());
-    if (task.status === "queued") {
-      await this.updateTask(taskId, (record) => {
-        record.status = "cancelled";
-        record.finishedAt = new Date(this.now()).toISOString();
-      });
-      this.schedulePump();
-      return this.status(taskId);
-    }
-    const active = this.active.get(taskId);
-    if (active && !active.controller.signal.aborted) active.controller.abort(new Error("Cancelled by user"));
-    return this.status(taskId);
+    const result = await this.withLock(async () => {
+      const task = this.document.tasks.find((entry) => entry.taskId === taskId);
+      if (!task) throw new Error("Task not found");
+      if (TERMINAL_STATES.has(task.status)) return publicTask(task, this.now());
+      const active = this.active.get(taskId);
+      if (active) {
+        if (!active.controller.signal.aborted) active.controller.abort(new Error("Cancelled by user"));
+      } else {
+        task.status = "cancelled";
+        task.pendingApproval = false;
+        task.finishedAt = task.updatedAt = new Date(this.now()).toISOString();
+        await this.persist();
+      }
+      return publicTask(task, this.now());
+    });
+    this.schedulePump();
+    return result;
   }
 
   async resume(taskId, { message = "Continue the same task in this saved Codex session. Review the existing work before making further changes." } = {}) {
@@ -604,16 +650,24 @@ export class TongAgentTaskManager {
     }
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) throw new Error("Task not found");
-    if (task.status !== "waiting_user_action" || !task.codexSessionId || task.pendingApproval) {
+    if (!["waiting_user_action", "success"].includes(task.status) || !task.codexSessionId || task.pendingApproval || this.active.has(taskId)) {
       throw new Error("Task has no resumable Codex session");
     }
     const project = await this.projectForExecution(task.projectId);
     await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
       executorMode: task.executorMode ?? "isolated" });
     await this.updateTask(taskId, (record) => {
+      if (!["waiting_user_action", "success"].includes(record.status) || record.pendingApproval || this.active.has(taskId)) {
+        throw new Error("Task has no resumable Codex session");
+      }
       record.status = "queued";
       record.updatedAt = new Date(this.now()).toISOString();
       record.finishedAt = null;
+      record.startedAt = null;
+      record.summary = null;
+      record.result = null;
+      record.codexTurnId = null;
+      record.turnStatus = null;
       record.resumeCount += 1;
       record.error = null;
       record.continuationMessage = message.trim();

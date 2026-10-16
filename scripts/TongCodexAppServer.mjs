@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { isAbsolute } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -10,6 +10,20 @@ const SAFETY_INSTRUCTIONS = [
   "Approval requests that would expand the configured sandbox are denied.",
 ].join("\n");
 const MAX_AGENT_MESSAGE_CHARS = 16_000;
+const SESSION_SOURCES = ["cli", "vscode", "appServer"];
+const samePath = (a, b) => typeof a === "string" && typeof b === "string"
+  && (process.platform === "win32" ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b));
+
+function projectSession(thread, cwd) {
+  return thread && typeof thread.id === "string" && samePath(thread.cwd, cwd)
+    && !thread.ephemeral && !thread.parentThreadId
+    && SESSION_SOURCES.includes(thread.source)
+    && !String(thread.path ?? "").split(/[\\/]/).includes("archived_sessions");
+}
+
+function usableSession(thread) {
+  return ["idle", "notLoaded"].includes(thread?.status?.type) && thread.canAcceptDirectInput !== false;
+}
 
 function safeSummary(value) {
   return String(value ?? "").replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
@@ -141,8 +155,79 @@ export class CodexAppServerAdapter {
     this.shutdownTimeoutMs = shutdownTimeoutMs;
   }
 
+  async withMetadataPeer(cwd, callback) {
+    const child = this.spawnProcess(this.executable, ["app-server", "--listen", "stdio://"], {
+      cwd, env: this.env, shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
+    });
+    let didExit = false;
+    const exited = new Promise((done) => child.once("close", () => { didExit = true; done(); }));
+    const peer = new JsonRpcPeer(child, { onLog: () => {}, onNotification: () => {},
+      onServerRequest: (message) => peer.write({ id: message.id,
+        error: { code: -32601, message: "Metadata client does not execute server requests" } }),
+      requestTimeoutMs: this.requestTimeoutMs });
+    try {
+      await peer.request("initialize", { clientInfo: CLIENT_INFO, capabilities: { experimentalApi: true } });
+      peer.notify("initialized");
+      return await callback(peer);
+    } finally {
+      peer.close();
+      if (!didExit) {
+        child.stdin.end();
+        await Promise.race([exited, delay(this.shutdownTimeoutMs)]);
+        if (!didExit) child.kill();
+      }
+    }
+  }
+
+  async listSessions({ cwd, limit = 50, cursor, searchTerm } = {}) {
+    return this.withMetadataPeer(cwd, (peer) => this.sessionPage(peer, { cwd, limit, cursor, searchTerm }));
+  }
+
+  async sessionPage(peer, { cwd, limit, cursor, searchTerm }) {
+    const result = await peer.request("thread/list", { cwd, limit, cursor, searchTerm,
+      sourceKinds: SESSION_SOURCES, modelProviders: [], archived: false,
+      sortKey: "updated_at", sortDirection: "desc", useStateDbOnly: true });
+    if (!Array.isArray(result.data)) throw new Error("Codex App Server returned invalid session metadata");
+    return { sessions: result.data.filter((thread) => projectSession(thread, cwd)).map((thread) => ({
+      id: thread.id, name: thread.name ? safeSummary(thread.name).slice(0, 300) : null,
+      createdAt: thread.createdAt, updatedAt: thread.updatedAt,
+      status: { type: thread.status?.type ?? "unknown" }, source: thread.source,
+      usable: usableSession(thread),
+    })), nextCursor: result.nextCursor ?? null };
+  }
+
+  async selectSession({ cwd, sessionMode = "latest", codexSessionId, searchTerm } = {}) {
+    if (sessionMode === "new") return null;
+    if (sessionMode === "existing") return this.withMetadataPeer(cwd, async (peer) => {
+      await this.checkedSession(peer, cwd, codexSessionId);
+      return codexSessionId;
+    });
+    return this.withMetadataPeer(cwd, async (peer) => {
+      let cursor;
+      // Bound discovery work; never create a new thread just because the search was truncated.
+      for (let page = 0; page < 20; page += 1) {
+        const result = await this.sessionPage(peer, { cwd, cursor, limit: 100, searchTerm });
+        const found = result.sessions.find((thread) => thread.usable);
+        if (found) return found.id;
+        if (!result.nextCursor) return null;
+        cursor = result.nextCursor;
+      }
+      throw new Error("Native session search limit reached; specify a session ID");
+    });
+  }
+
+  async checkedSession(peer, cwd, threadId) {
+    const result = await peer.request("thread/read", { threadId, includeTurns: false });
+    if (!projectSession(result.thread, cwd) || result.thread.id !== threadId) {
+      throw new Error("Native Codex session project mismatch or unavailable");
+    }
+    if (!usableSession(result.thread)) throw new Error("Native Codex session is busy or unavailable");
+    return result.thread;
+  }
+
   async runTask(spec, { signal, onSessionId = () => {}, onLog = () => {}, onState = () => {} } = {}) {
     if (!spec || typeof spec.cwd !== "string" || typeof spec.prompt !== "string") throw new Error("Invalid Codex task specification");
+    signal?.throwIfAborted();
     const child = this.spawnProcess(this.executable, ["app-server", "--listen", "stdio://"], {
       cwd: spec.cwd,
       env: this.env,
@@ -162,6 +247,7 @@ export class CodexAppServerAdapter {
     // Handshake failures can close the child before completion is awaited.
     void completion.catch(() => {});
     const deltas = [];
+    const agentMessages = new Map();
     const testRuns = new Map();
     let completed = false;
     const captureCommand = (item) => {
@@ -177,6 +263,7 @@ export class CodexAppServerAdapter {
     };
     const notify = async (message) => {
       const params = message.params ?? {};
+      if ((params.threadId && params.threadId !== threadId) || (turnId && params.turnId && params.turnId !== turnId)) return;
       if (message.method === "item/agentMessage/delta" && typeof params.delta === "string") {
         deltas.push(params.delta);
         onLog(params.delta, "agent");
@@ -188,10 +275,19 @@ export class CodexAppServerAdapter {
         if (!turnId && typeof turn.id === "string") turnId = turn.id;
         for (const item of turn.items ?? []) captureCommand(item);
         completed = true;
-        completionResolve({ turnStatus: turn.status, summary: turnSummary(turn, deltas), tests: [...testRuns.values()].slice(0, 100) });
+        const storedMessages = (turn.items ?? []).filter((item) => ["agentMessage", "assistantMessage"].includes(item.type));
+        const messages = storedMessages.length ? storedMessages : [...agentMessages.values()];
+        const finalMessages = messages.filter((item) => item.phase === "final_answer");
+        const items = finalMessages.length ? finalMessages : messages;
+        completionResolve({ turnStatus: turn.status, summary: turnSummary({ items }, deltas),
+          error: turn.error ? { message: safeSummary(turn.error.message).slice(0, 500) } : null,
+          tests: [...testRuns.values()].slice(0, 100) });
       } else if (message.method === "item/started" || message.method === "item/completed") {
         const item = params.item;
         captureCommand(item);
+        if (message.method === "item/completed" && item?.type === "agentMessage") agentMessages.set(item.id, item);
+      } else if (message.method === "error") {
+        onLog(safeSummary(params.error?.message ?? "Codex reported an error"), "error");
       } else if (/item\/(?:commandExecution|fileChange)\//.test(message.method)) {
         const safe = { method: message.method,
           ...(typeof params.exitCode === "number" ? { exitCode: params.exitCode } : {}),
@@ -245,6 +341,7 @@ export class CodexAppServerAdapter {
         capabilities: { experimentalApi: true, requestAttestation: false } });
       onLog(`Codex App Server initialized (${initialized.serverInfo?.version ?? initialized.userAgent ?? "version unavailable"}).`, "status");
       peer.notify("initialized");
+      signal?.throwIfAborted();
       const threadParams = {
         cwd: spec.cwd,
         sandbox: "workspace-write",
@@ -252,14 +349,18 @@ export class CodexAppServerAdapter {
         runtimeWorkspaceRoots: [spec.cwd],
         developerInstructions: SAFETY_INSTRUCTIONS,
       };
+      if (spec.threadId) await this.checkedSession(peer, spec.cwd, spec.threadId);
+      signal?.throwIfAborted();
       const thread = spec.threadId
-        ? await peer.request("thread/resume", { ...threadParams, threadId: spec.threadId })
+        ? await peer.request("thread/resume", { ...threadParams, threadId: spec.threadId, excludeTurns: true })
         : await peer.request("thread/start", threadParams);
-      threadId = thread?.thread?.id ?? spec.threadId ?? null;
+      threadId = thread?.thread?.id ?? null;
       if (typeof threadId !== "string" || threadId.length < 1 || threadId.length > 200) {
         throw new Error("Codex App Server did not return a valid thread ID");
       }
+      if (spec.threadId && threadId !== spec.threadId) throw new Error("Codex App Server returned a different native session");
       await onSessionId(threadId);
+      signal?.throwIfAborted();
       const prompt = spec.continuationMessage
         ? `${spec.prompt}\n\nContinuation request: ${spec.continuationMessage}`
         : spec.prompt;
@@ -276,13 +377,13 @@ export class CodexAppServerAdapter {
         const turn = await Promise.race([completion, exited.then(({ code, signal: exitSignal }) => {
           throw new Error(`Codex App Server exited before returning a turn ID (${code ?? exitSignal ?? "unknown"})`);
         })]);
-        return { ...turn, threadId };
+        return { ...turn, threadId, turnId };
       }
       const turn = await Promise.race([completion, exited.then(({ code, signal: exitSignal }) => {
         if (!completed) throw new Error(`Codex App Server exited before turn/completed (${code ?? exitSignal ?? "unknown"})`);
         return null;
       }).then((value) => value ?? completion)]);
-      return { ...turn, threadId };
+      return { ...turn, threadId, turnId };
     } catch (error) {
       killOwnProcess();
       throw error;

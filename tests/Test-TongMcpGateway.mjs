@@ -30,6 +30,7 @@ const toolsList = {
       { name: "tong_agent_cancel" },
       { name: "tong_agent_resume" },
       { name: "tong_agent_result" },
+      { name: "tong_agent_sessions" },
       { name: "bash" },
       { name: "exec_command" },
       { name: "write_stdin" },
@@ -43,7 +44,7 @@ const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
   ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects",
-    "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"],
+    "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -73,6 +74,14 @@ assert.deepEqual(await validateAllowedToolCall(blocked), {
 const validTask = { projectId: "project-1", agent: "codex", task: "Make a small change", scope: "project files and tests",
   idempotencyKey: "gateway-client-request-001" };
 assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start", arguments: validTask } }), null);
+assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start",
+  arguments: { ...validTask, sessionMode: "existing", codexSessionId: "019a1234-1234-7123-8123-123456789abc" } } }), null);
+assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_sessions",
+  arguments: { projectId: "project-one", limit: 10, searchTerm: "Acceptance" } } }), null);
+for (const args of [{...validTask,sessionMode:"existing"},{...validTask,codexSessionId:"../../outside"},
+  {...validTask,sessionMode:"new",sessionSearch:"private"}]) {
+  assert.ok(await validateAllowedToolCall({method:"tools/call",params:{name:"tong_agent_start",arguments:args}}));
+}
 for (const injected of [
   { ...validTask, executable: "powershell.exe" },
   { ...validTask, command: "whoami" },
@@ -131,7 +140,7 @@ try {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
 
-console.log("PASS: gateway exposes the four file tools, three metadata tools, and seven constrained agent task tools in JSON and SSE lists.");
+console.log("PASS: gateway exposes the four file tools, three metadata tools, and eight constrained agent/session tools in JSON and SSE lists.");
 console.log("PASS: gateway detects direct and batched calls to disallowed tools.");
 console.log("PASS: gateway rejects agent executable injection and malformed task identifiers while retaining the Shell deny list.");
 console.log("PASS: gateway blocks traversal; authenticated DevSpace owns workspace grants and junction checks.");

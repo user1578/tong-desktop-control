@@ -205,6 +205,38 @@ export class TongTrustedCodexBroker {
     return { config, project };
   }
 
+  async sessionAccess(input) {
+    const result = await this.preflight(input);
+    if (!(await this.access.authorize("project.read", input.projectId))) throw new Error("Project is not authorized for native session metadata");
+    return result;
+  }
+
+  async listSessions(input) {
+    const { config } = await this.sessionAccess(input);
+    const { limit, searchTerm } = input;
+    let cursor;
+    if (input.cursor !== undefined) {
+      try {
+        const value = JSON.parse(Buffer.from(input.cursor, "base64url").toString("utf8"));
+        if (value.projectId !== input.projectId || value.searchTerm !== (searchTerm ?? null)
+            || typeof value.cursor !== "string" || value.cursor.length > 2000) throw new Error();
+        cursor = value.cursor;
+      } catch { throw new Error("Invalid native session query"); }
+    }
+    const result = await this.adapterFactory(config.executable).listSessions({ cwd: input.projectRoot, limit, cursor, searchTerm });
+    await this.sessionAccess(input);
+    return { ...result, nextCursor: result.nextCursor ? Buffer.from(JSON.stringify({ projectId: input.projectId,
+      searchTerm: searchTerm ?? null, cursor: result.nextCursor })).toString("base64url") : null };
+  }
+
+  async selectSession(input) {
+    const { config } = await this.sessionAccess(input);
+    const result = await this.adapterFactory(config.executable).selectSession({ cwd: input.projectRoot,
+      sessionMode: input.sessionMode, codexSessionId: input.codexSessionId, searchTerm: input.searchTerm });
+    await this.sessionAccess(input);
+    return result;
+  }
+
   async runTask(task, { signal, onSessionId = () => {}, onLog = () => {}, onState = () => {} } = {}) {
     if (!task || typeof task !== "object" || Array.isArray(task)
         || Object.keys(task).some((key) => !TASK_FIELDS.has(key))) throw new Error("Trusted task has unsupported fields");
@@ -309,6 +341,9 @@ export class TongExecutorRouter {
     if (executorMode === "isolated") return this.isolated.runTask(spec, callbacks);
     throw new Error("Unsupported executor mode");
   }
+
+  async listSessions(input) { return this.trusted.listSessions(input); }
+  async selectSession(input) { return this.trusted.selectSession(input); }
 
   async close() { await Promise.allSettled([this.isolated.close(), this.trusted.close()]); }
 }

@@ -18,7 +18,7 @@ const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
 const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects"]);
 const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs",
-  "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
+  "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions",
 ]);
 const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...WORKSPACE_TOOLS, ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
 const MCP_METHODS = new Set([
@@ -361,7 +361,7 @@ function validateAgentToolArguments(name, args) {
     && required.every((key) => Object.hasOwn(args, key));
   const invalid = { code: -32602, message: "Invalid agent task arguments" };
   if (name === "tong_agent_start") {
-    if (!exact(["projectId", "agent", "task", "scope", "idempotencyKey", "timeoutSeconds"],
+    if (!exact(["projectId", "agent", "task", "scope", "idempotencyKey", "timeoutSeconds", "sessionMode", "codexSessionId", "sessionSearch"],
       ["projectId", "agent", "task", "scope", "idempotencyKey"])
         || typeof args.projectId !== "string" || !projectId.test(args.projectId)
         || args.agent !== "codex"
@@ -371,7 +371,22 @@ function validateAgentToolArguments(name, args) {
         || /[\x00-\x20]/.test(args.idempotencyKey)
         || (args.timeoutSeconds !== undefined && (!Number.isInteger(args.timeoutSeconds)
           || args.timeoutSeconds < 1 || args.timeoutSeconds > 3_600))) return invalid;
+    if ((args.sessionMode !== undefined && !["latest", "new", "existing"].includes(args.sessionMode))
+        || ((args.sessionMode === "existing") !== (args.codexSessionId !== undefined))
+        || (args.codexSessionId !== undefined && (typeof args.codexSessionId !== "string"
+          || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/.test(args.codexSessionId)))
+        || (args.sessionSearch !== undefined && ((args.sessionMode ?? "latest") !== "latest"
+          || typeof args.sessionSearch !== "string" || !args.sessionSearch.trim()
+          || args.sessionSearch.length > 200 || /\0/.test(args.sessionSearch)))) return invalid;
     return null;
+  }
+  if (name === "tong_agent_sessions") {
+    return exact(["projectId", "limit", "cursor", "searchTerm"], ["projectId"])
+      && typeof args.projectId === "string" && projectId.test(args.projectId)
+      && (args.limit === undefined || (Number.isInteger(args.limit) && args.limit >= 1 && args.limit <= 100))
+      && (args.cursor === undefined || (typeof args.cursor === "string" && args.cursor.length <= 4096))
+      && (args.searchTerm === undefined || (typeof args.searchTerm === "string" && args.searchTerm.trim().length > 0
+        && args.searchTerm.length <= 200 && !/\0/.test(args.searchTerm))) ? null : invalid;
   }
   if (name === "tong_agent_list") {
     return exact(["limit", "cursor"])

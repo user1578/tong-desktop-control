@@ -37,6 +37,8 @@ class SimulatedAppServerProcess extends EventEmitter {
     if (message.method === "initialize") {
       this.experimentalApi = message.params?.capabilities?.experimentalApi === true;
       response({ userAgent: "codex-cli 0.155.0-alpha.16.3" });
+    } else if (message.method === "thread/read") {
+      response({ thread: { id: message.params.threadId, cwd: projectRoot, source: "appServer", status: { type: "notLoaded" } } });
     } else if (message.method === "thread/start" || message.method === "thread/resume") {
       if (message.params?.runtimeWorkspaceRoots && !this.experimentalApi) {
         this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
@@ -152,6 +154,8 @@ assert.equal(resumed.threadId, "thread-existing");
 assert.ok(resumedProcess.requests.some((request) => request.method === "thread/resume"
   && request.params.threadId === "thread-existing"));
 assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/start"));
+assert.ok(resumedProcess.requests.some((request) => request.method === "thread/read"
+  && request.params.includeTurns === false), "resume must validate stored project metadata before changing cwd");
 
 const rejectedProcess = new SimulatedAppServerProcess({ rejectThreadStart: true });
 const rejectedAdapter = new CodexAppServerAdapter({ executable: codexExecutable, env: workerEnvironment,

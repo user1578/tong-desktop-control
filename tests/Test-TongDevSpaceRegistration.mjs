@@ -7,6 +7,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createMcpServer, createServer } from "../node_modules/@waishnav/devspace/dist/server.js";
 import { WorkspaceRegistry } from "../node_modules/@waishnav/devspace/dist/workspaces.js";
 import { assertTongWorkspaceRoot } from "../scripts/TongSafeFilePath.mjs";
+import { closeTongMcpTools } from "../scripts/TongMcpTools.mjs";
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), "tong-tool-registration-"));
 const workspaceRoot = join(temporaryRoot, "workspace");
@@ -17,6 +18,7 @@ await writeFile(join(workspaceRoot, "AGENTS.md"), "synthetic workspace instructi
 await writeFile(join(outsideAgentDir, "AGENTS.md"), "synthetic outside instructions", "utf8");
 process.env.TONG_RESTRICTED_MCP = "1";
 process.env.TONG_RESTRICTED_ROOT = workspaceRoot;
+process.env.TONG_LOCAL_STATE_DIR = join(temporaryRoot, "state");
 
 const config = {
   toolMode: "minimal",
@@ -41,7 +43,7 @@ try {
   const names = (await client.listTools()).tools.map(({ name }) => name);
   assert.deepEqual(names, ["open_workspace", "read", "write", "edit",
     "tong_list_directory", "tong_delete_file", "tong_move_file", "tong_run_command",
-    "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_status",
+    "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
     "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
   const secondServer = createMcpServer(config, workspaces, null, null, () => [], []);
   const secondClient = new Client({ name: "second-synthetic-client", version: "1" }, { capabilities: {} });
@@ -110,7 +112,9 @@ try {
 } finally {
   await client.close();
   await server.close();
+  await closeTongMcpTools();
   delete process.env.TONG_RESTRICTED_MCP;
   delete process.env.TONG_RESTRICTED_ROOT;
+  delete process.env.TONG_LOCAL_STATE_DIR;
   await rm(temporaryRoot, { recursive: true, force: true });
 }
