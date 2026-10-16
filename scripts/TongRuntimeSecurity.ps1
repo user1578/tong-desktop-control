@@ -1,4 +1,4 @@
-param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate')][string]$Mode)
+param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job')][string]$Mode)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
@@ -54,7 +54,26 @@ try {
             if ($null -eq $p) { return $null }
             [pscustomobject]@{pid=[int]$p.ProcessId;parentPid=[int]$p.ParentProcessId;exe=[string]$p.ExecutablePath;startTicks=$p.CreationDate.ToUniversalTime().Ticks.ToString()}
         }
-        if ($Mode -eq 'descendants') {
+        if ($Mode -eq 'runtime-job') {
+            if([string]$inputData.runId -cnotmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid runtime Job identity'}
+            Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class TongRuntimeJobProbe {
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr OpenJobObject(uint access,bool inherit,string name);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job,int type,IntPtr info,uint size,IntPtr returned);
+ [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+ public static int Active(string name) {
+  var job=OpenJobObject(4,false,name);
+  if(job==IntPtr.Zero){if(Marshal.GetLastWin32Error()==2)return -1;throw new Exception("JOB_PROBE_FAILED");}
+  try{var ptr=Marshal.AllocHGlobal(48);try{if(!QueryInformationJobObject(job,1,ptr,48,IntPtr.Zero))throw new Exception("JOB_QUERY_FAILED");return Marshal.ReadInt32(ptr,40);}finally{Marshal.FreeHGlobal(ptr);}}
+  finally{CloseHandle(job);}
+ }
+}
+'@
+            $active=[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId))
+            [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
+        } elseif ($Mode -eq 'descendants') {
             $all = @(Get-CimInstance Win32_Process)
             $byId = @{}; foreach ($p in $all) { $byId[[int]$p.ProcessId]=$p }
             $ids = [Collections.Generic.HashSet[int]]::new(); $null = $ids.Add([int]$inputData.pid)

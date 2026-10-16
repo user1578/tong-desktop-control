@@ -22,7 +22,7 @@ const root=process.argv.includes('--root')?process.argv[process.argv.indexOf('--
 const path=join(root,'fixture.json'),s=JSON.parse(readFileSync(path,'utf8')),action=process.argv[2];
 appendFileSync(join(root,'calls.jsonl'),JSON.stringify({action,recovery})+'\n');
 if(s.refuse===action){console.error('APPROVAL_DENIED');process.exit(1);}
-if(action==='start'){s.phase='ready';s.supervisorAlive=true;s.runId='new-run';}
+if(action==='start'){s.phase='ready';s.supervisorAlive=true;s.starts=(s.starts??0)+1;s.runId='new-run-'+s.starts;}
 if(action==='stop'||action==='stop-run'){
   if(s.replaceAtStop)s.runId='replacement-run';
   if(action==='stop-run'&&process.argv[process.argv.indexOf('--run-id')+1]!==s.runId){console.error('IDENTITY_MISMATCH');process.exit(1);}
@@ -30,15 +30,24 @@ if(action==='stop'||action==='stop-run'){
 }
 if(action==='reconcile-stale'){s.phase='abnormal_exit';}
 if(action==='status'){s.statusCalls=(s.statusCalls??0)+1;if(s.replaceOnStatusCall===s.statusCalls)s.runId='replacement-run';}
+if(action==='status'&&s.loseOnStatusCalls?.includes(s.statusCalls)){s.phase='stale_record';s.supervisorAlive=false;s.guardianAlive=false;}
+if(action==='status'&&s.stopOnStatusCall===s.statusCalls){s.phase='stopped';s.supervisorAlive=false;}
+if(action==='status'&&s.stoppingOnStatusCall===s.statusCalls){s.phase='stopping';s.stopRequested=true;}
 if(action==='status'&&s.phase==='starting'&&s.becomeReady&&s.statusCalls>1){s.phase='ready';}
 const healthy=action==='doctor'&&s.health?.length?s.health.shift():s.healthy!==false;
 writeFileSync(path,JSON.stringify(s));
 console.log(JSON.stringify(action==='doctor'?{healthy}:action==='start'?{phase:s.phase,runId:s.runId}:s));`;
 // Do not inherit a PS7-only module search path when invoking Windows PS5.1.
 const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>key.toUpperCase()!=='PSMODULEPATH'));
+// Only this invocation's new root is protected. The production ACL check in
+// the installer remains real, including under an ordinary writable state root.
+const acl=spawnSync(shell,['-NoProfile','-NonInteractive','-Command',`$ErrorActionPreference='Stop';$target=${quote(root)};$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User;$acl=[Security.AccessControl.DirectorySecurity]::new();$acl.SetAccessRuleProtection($true,$false);$acl.SetOwner($sid);foreach($allow in @($sid.Value,'S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($allow),'FullControl','ContainerInherit,ObjectInherit','None','Allow'))};Set-Acl -LiteralPath $target -AclObject $acl`],{env,encoding:'utf8',windowsHide:true,timeout:10000});
+assert.equal(acl.status,0,acl.stderr);
 const run=(path,args=[])=>spawnSync(shell,['-NoLogo','-NoProfile','-NonInteractive','-File',path,...args],{env,encoding:'utf8',windowsHide:true,timeout:20000});
 async function runner(name,state,mode){
   const dir=join(root,name);await mkdir(join(dir,'logs'),{recursive:true});
+  await mkdir(join(dir,'run'),{recursive:true});
+  if(state.budget)await writeFile(join(dir,'run','login-recovery-budget.json'),JSON.stringify(state.budget));
   await mkdir(join(dir,'releases','manager','scripts'),{recursive:true});
   await writeFile(join(dir,'releases','manager','scripts','TongAgentDockRuntime.mjs'),manager);
   await writeFile(join(dir,'fixture.json'),JSON.stringify(state));
@@ -51,7 +60,7 @@ function Start-Process { throw 'TEST: direct process startup forbidden' }
 function Stop-Process { throw 'TEST: direct process stop forbidden' }
 function Get-CimInstance { throw 'TEST: tunnel identity access forbidden' }
 function Invoke-RestMethod { throw 'TEST: tunnel API access forbidden' }
-function Start-Sleep { }
+function Start-Sleep { param($Seconds,$Milliseconds) if($Seconds){[IO.File]::AppendAllText(${quote(join(dir,'sleeps.jsonl'))},([string]$Seconds+"\n"))} }
 & ${quote(join(dir,'runner.ps1'))} -Mode $Mode
 exit $LASTEXITCODE
 `;
@@ -87,8 +96,24 @@ t=await runner('health-stop-refused',{...ready,healthy:false,refuse:'stop-run'},
 assert.notEqual(t.result.status,0);assert.equal(t.calls.at(-1),'stop-run');assert.ok(!t.calls.includes('start'));
 t=await runner('stop-race',{...ready,healthy:false,replaceAtStop:true},'start');
 assert.notEqual(t.result.status,0);assert.equal(t.calls.at(-1),'stop-run');assert.equal(JSON.parse(await readFile(join(t.dir,'fixture.json'),'utf8')).phase,'ready');
-t=await runner('monitor',{...ready,health:[true,false,false,false,false]},'run');
-assert.notEqual(t.result.status,0);assert.equal(t.calls.at(-1),'stop-run');
+t=await runner('monitor',{...ready,health:[true,false,false,false,true],stopOnStatusCall:9},'run');
+assert.equal(t.result.status,0,t.result.stderr);assert.equal(t.calls.filter(x=>x==='stop-run').length,1);assert.equal(t.calls.filter(x=>x==='start').length,1);
+assert.match(await readFile(join(t.dir,'logs','login-management.jsonl'),'utf8'),/recovery_succeeded/);
+t=await runner('repeat-lost',{...ready,loseOnStatusCalls:[2,4,6,8]},'run');
+assert.notEqual(t.result.status,0);assert.match(t.result.stderr,/budget exhausted/);
+assert.equal(t.calls.filter(x=>x==='start').length,3);assert.equal(t.calls.filter(x=>x==='reconcile-stale').length,3);
+assert.equal(JSON.parse(await readFile(join(t.dir,'run','login-recovery-budget.json'),'utf8')).attempts.length,3);
+assert.ok((await readFile(join(t.dir,'sleeps.jsonl'),'utf8')).trim().split('\n').map(Number).some(seconds=>seconds>=55&&seconds<=60),'rapid failures request a bounded one-minute backoff');
+// Task Scheduler relaunches the same runner: the persisted budget still refuses
+// any fourth start, without relying on Scheduler actually running in a test.
+let retry=run(join(t.dir,'harness.ps1'),['-Mode','run']);
+assert.notEqual(retry.status,0);assert.match(retry.stderr,/budget exhausted/);
+const afterRetry=(await readFile(join(t.dir,'calls.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);
+assert.equal(afterRetry.filter(x=>x.action==='start').length,3);
+t=await runner('damaged-budget',{...ready,supervisorAlive:false,phase:'stale_record',budget:{schemaVersion:0}},'run');
+assert.notEqual(t.result.status,0);assert.ok(!t.calls.includes('reconcile-stale')&&!t.calls.includes('start'));
+t=await runner('requested-stop-in-progress',{...ready,stoppingOnStatusCall:2},'run');
+assert.equal(t.result.status,0,t.result.stderr);assert.ok(!t.calls.includes('start')&&!t.calls.includes('stop-run'));
 t=await runner('in-flight',{phase:'starting',supervisorAlive:true,runId:'old-run',becomeReady:true},'start');
 assert.equal(t.result.status,0,t.result.stderr);assert.deepEqual(t.calls,['status','status','doctor']);
 t=await runner('stopping',{phase:'stopping',supervisorAlive:true,runId:'old-run'},'start');
@@ -129,7 +154,7 @@ function TaskCall($action,$name) { if($name -cne 'TongLoginRuntime'){throw 'TEST
 function New-ScheduledTaskAction { param($Execute,$Argument,$WorkingDirectory) [pscustomobject]@{Execute=$Execute;Argument=$Argument;WorkingDirectory=$WorkingDirectory} }
 function New-ScheduledTaskTrigger { param([switch]$AtLogOn,$User) [pscustomobject]@{User=$User;Delay=''} }
 function New-ScheduledTaskPrincipal { param($UserId,$LogonType,$RunLevel) [pscustomobject]@{UserId=$UserId;LogonType=$LogonType;RunLevel=$RunLevel} }
-function New-ScheduledTaskSettingsSet { param($MultipleInstances,$ExecutionTimeLimit,$RestartCount,$RestartInterval,[switch]$StartWhenAvailable,[switch]$AllowStartIfOnBatteries,[switch]$DontStopIfGoingOnBatteries) [pscustomobject]@{MultipleInstances=$MultipleInstances;ExecutionTimeLimit=$ExecutionTimeLimit;RestartCount=$RestartCount} }
+function New-ScheduledTaskSettingsSet { param($MultipleInstances,$ExecutionTimeLimit,$RestartCount,$RestartInterval,[switch]$StartWhenAvailable,[switch]$AllowStartIfOnBatteries,[switch]$DontStopIfGoingOnBatteries) [pscustomobject]@{MultipleInstances=$MultipleInstances;ExecutionTimeLimit=$ExecutionTimeLimit;RestartCount=$RestartCount;RestartIntervalSeconds=$RestartInterval.TotalSeconds;StartWhenAvailable=$StartWhenAvailable.IsPresent} }
 function New-ScheduledTask { param($Action,$Trigger,$Principal,$Settings,$Description) [pscustomobject]@{Action=$Action;Trigger=$Trigger;Principal=$Principal;Settings=$Settings;Description=$Description} }
 function Export-ScheduledTask { param([Parameter(ValueFromPipeline)]$InputObject,$TaskName) process { if($TaskName){throw 'TEST: legacy export forbidden'}; $InputObject|ConvertTo-Json -Depth 8 -Compress } }
 function Get-ScheduledTask { param($TaskName,$ErrorAction) TaskCall 'get' $TaskName; if(Test-Path -LiteralPath ${quote(taskFile)}){[pscustomobject]@{TaskName=$TaskName;State='Ready'}} }
@@ -147,6 +172,7 @@ let result=run(join(dir,'harness.ps1'),['-Mode','prepare']);assert.equal(result.
 assert.deepEqual((await readdir(preparation)).sort(),['TongLoginRuntime.ps1','TongLoginRuntime.review.xml','preparation.json']);
 const task=JSON.parse(await readFile(join(preparation,'TongLoginRuntime.review.xml'),'utf16le').then(x=>x.replace(/^\uFEFF/,'')));
 assert.equal(task.Principal.RunLevel,'Limited');assert.equal(task.Settings.MultipleInstances,'IgnoreNew');assert.equal(task.Settings.RestartCount,3);assert.equal(task.Settings.ExecutionTimeLimit.Ticks,0);
+assert.equal(task.Trigger.Delay,'PT20S');assert.equal(task.Settings.RestartIntervalSeconds,60);assert.equal(task.Settings.StartWhenAvailable,true);
 const managerPath=join(runtime,'releases','manager','scripts','TongAgentDockRuntime.mjs');
 await writeFile(managerPath,manager.replace(',loginRecoverySupported:true',''));
 result=run(join(dir,'harness.ps1'),['-Mode','install']);assert.notEqual(result.status,0);assert.match(result.stderr,/Pinned manager update required/);
@@ -170,4 +196,4 @@ result=run(join(dir,'harness.ps1'),['-Mode','install']);assert.equal(result.stat
 assert.deepEqual(await readdir(join(runtime,'login-management')),['TongLoginRuntime.ps1']);
 result=run(join(dir,'harness.ps1'),['-Mode','rollback']);assert.equal(result.status,0,result.stderr);
 const actions=(await readFile(taskCalls,'utf8')).trim().split('\n');assert.deepEqual(actions,['get','get','register','get','get','register','start','get','disable','stop']);
-console.log(JSON.stringify({passed:true,shell,root,runnerCases:17,prepareInstallRollback:true,partialInstallRetry:true,reviewTamperRejected:true,noProductionMutation:true}));
+console.log(JSON.stringify({passed:true,shell,root,monitorRecovery:true,persistentRetryBudget:true,requestedStopPreserved:true,prepareInstallRollback:true,partialInstallRetry:true,reviewTamperRejected:true,noProductionMutation:true}));

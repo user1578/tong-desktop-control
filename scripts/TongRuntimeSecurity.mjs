@@ -75,7 +75,12 @@ export async function readSecret(root, purpose) {
     child.once('close', code => { if (code !== 0 || !socket) finish(true); });
   });
 }
-export async function processIdentity(pid, marker = '') { return run('identity', { pid, marker }); }
+export async function processIdentity(pid, marker = '') {
+  const value=await run('identity', { pid, marker });
+  // Windows PowerShell emits no JSON for a missing CIM process; run() uses [].
+  return value===null||Array.isArray(value)&&value.length===0?null:value;
+}
+export async function runtimeJobState(runId) { return run('runtime-job', { runId }); }
 export function sameProcess(actual, expected) { return !!actual && actual.pid === expected?.pid && actual.exe?.toLowerCase() === expected.exe?.toLowerCase() && actual.startTicks === expected.startTicks; }
 export async function processDescendants(pid) { const result = await run('descendants', { pid }); return Array.isArray(result) ? result : result ? [result] : []; }
 export async function terminateOwnedProcess(identity) { return run('terminate', identity); }

@@ -1,7 +1,7 @@
 import { spawn, fork } from 'node:child_process';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { open, readFile, writeFile, mkdir, rename, unlink, readdir } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, appendFileSync } from 'node:fs';
 import { join, resolve, isAbsolute, dirname, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createConnection } from 'node:net';
@@ -9,7 +9,7 @@ import { once } from 'node:events';
 import { Transform } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import { TongAgentDockClient } from './TongAgentDockClient.mjs';
-import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic } from './TongRuntimeSecurity.mjs';
+import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic, runtimeJobState } from './TongRuntimeSecurity.mjs';
 import {PRODUCTION_ROOT,validateProductionProfile,loadApprovedProfile,verifyRuntimeApproval,initializeProductionRoot,recordApprovedEnabledState,readApprovedEnabledState} from './TongProductionProfile.mjs';
 import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.mjs';
 import {withLoginRecovery,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
@@ -93,22 +93,54 @@ export async function initializeRuntime({root,tongRoot,withTong=false,gatewayPor
   const profile={schemaVersion:1,root,tongRoot:resolve(tongRoot),withTong:withTong===true,host:'127.0.0.1',agentdockPort:18765,gatewayPort,upstreamPort};await save(join(root,'profile.json'),profile);return {root,initialized:true};
 }
 const reconciliationName='stale-reconciliation.json';
+const validRunId=value=>typeof value==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(value);
+const reconciliationPath=(root,runId)=>join(root,'run',`stale-reconciliation.${runId}.json`);
 function previousIdentities(record,guardian){return [guardian,record.supervisor,...(record.children??[]),...(record.descendants??[])].filter(identity=>identity&&Number.isInteger(identity.pid)&&identity.pid>0);}
+function validReconciliation(proof){
+  return proof&&[1,2].includes(proof.schemaVersion)&&proof.kind==='guardian-lost'&&validRunId(proof.runId)
+    &&['runtimeSha256','guardianSha256'].every(key=>/^[a-f0-9]{64}$/.test(proof[key]??''))
+    &&Number.isFinite(Date.parse(proof.observedAt))&&Date.parse(proof.observedAt)<=Date.now()+5000
+    &&Number.isInteger(proof.identityCount)&&proof.identityCount>=2
+    &&(proof.schemaVersion===1||['runtime','guardian'].every(key=>typeof proof[key+'Record']==='string'
+      &&createHash('sha256').update(proof[key+'Record']).digest('hex')===proof[key+'Sha256']));
+}
+async function reconciliationProof(root,runId){
+  let selected;
+  for(const path of [join(root,'run',reconciliationName),reconciliationPath(root,runId)]){
+    const proof=await json(path);if(!proof)continue;
+    await assertProtectedPaths([path]);
+    if(!validReconciliation(proof))throw fail('RECONCILIATION_DENIED');
+    if(path===reconciliationPath(root,runId)&&proof.runId!==runId)throw fail('RECONCILIATION_DENIED');
+    if(proof.runId!==runId)continue; // Retain the valid legacy history in place.
+    if(selected&&['runtimeSha256','guardianSha256','observedAt','identityCount'].some(key=>selected[key]!==proof[key]))throw fail('RECONCILIATION_DENIED');
+    selected=proof;
+  }
+  return selected;
+}
+async function oldRuntimeGone(root,record,guardian){
+  // A present PID with different identity is ambiguous, never permission to
+  // terminate it or to treat the previous Job as clean.
+  for(const identity of previousIdentities(record,guardian))if(await processIdentity(identity.pid))throw fail('RECONCILIATION_DENIED');
+  if(guardian.jobName!==undefined){
+    if(guardian.jobName!==`Local\\TongRuntime-${record.runId}`||guardian.killOnJobClose!==true)throw fail('RECONCILIATION_DENIED');
+    if((await runtimeJobState(record.runId)).activeProcesses!==0)throw fail('CLEANUP_REQUIRED');
+  }
+  // Legacy unnamed Jobs are accepted only with the original jobAssigned record,
+  // every recorded identity gone and every related endpoint unused.
+  const profile=await layout(root);
+  for(const port of [profile.agentdockPort,profile.gatewayPort,profile.upstreamPort])await unused(port);
+}
 async function reconciliationComplete(root,record){
-  if(!record?.runId||!record.supervisor)return false;
+  if(!validRunId(record?.runId)||!record.supervisor)return false;
   const guardian=await json(join(root,'run','guardian.json'));
   if(!guardian||guardian.runId!==record.runId||guardian.nodePid!==record.supervisor?.pid||guardian.finishedAt||guardian.jobActiveAfterCleanup!==undefined)return false;
-  const path=join(root,'run',reconciliationName),proof=await json(path);
+  const proof=await reconciliationProof(root,record.runId);
   if(!proof)return false;
-  await assertProtectedPaths([path]);
-  if(proof.schemaVersion!==1||proof.kind!=='guardian-lost' || proof.runId!==record.runId
-    || proof.runtimeSha256!==await hash(join(root,'run','runtime.json'))
+  if(guardian.jobAssigned!==true||proof.runtimeSha256!==await hash(join(root,'run','runtime.json'))
     || proof.guardianSha256!==await hash(join(root,'run','guardian.json'))
     || !Number.isFinite(Date.parse(proof.observedAt))||Date.parse(proof.observedAt)>Date.now()+5000
     || proof.identityCount!==previousIdentities(record,guardian).length)return false;
-  for(const identity of previousIdentities(record,guardian))if(sameProcess(await processIdentity(identity.pid,record.runId),identity))return false;
-  const profile=await layout(root);
-  for(const port of [profile.agentdockPort,profile.gatewayPort,profile.upstreamPort]){try{await unused(port);}catch{return false;}}
+  try{await oldRuntimeGone(root,record,guardian);}catch{return false;}
   return true;
 }
 export async function reconcileStaleRuntime(root){
@@ -120,23 +152,26 @@ export async function reconcileStaleRuntime(root){
   }
   const held=await freeze(root);
   try{
+    await assertProtectedPaths([join(root,'run','runtime.json'),join(root,'run','guardian.json')]);
     const record=await json(join(root,'run','runtime.json')),guardian=await json(join(root,'run','guardian.json'));
-    if(!record||!guardian||!['starting','ready','stopping'].includes(record.phase)||!record.runId
+    if(!record||!guardian||!['starting','ready','stopping'].includes(record.phase)||!validRunId(record.runId)
       || guardian.runId!==record.runId||guardian.nodePid!==record.supervisor?.pid||guardian.jobAssigned!==true
       || guardian.finishedAt||guardian.jobActiveAfterCleanup!==undefined
-      || ![guardian,record.supervisor,...(record.children??[]),...(record.descendants??[])].every(identity=>Number.isInteger(identity?.pid)&&identity.pid>0&&typeof identity.exe==='string'&&/^\d+$/.test(identity.startTicks)))throw fail('RECONCILIATION_DENIED');
-    if((await runtimeStatus(root)).phase!=='stale_record')throw fail('RECONCILIATION_DENIED');
-    for(const identity of previousIdentities(record,guardian))if(sameProcess(await processIdentity(identity.pid,record.runId),identity))throw fail('RECONCILIATION_DENIED');
-    for(const port of [profile.agentdockPort,profile.gatewayPort,profile.upstreamPort])await unused(port);
-    const proof={schemaVersion:1,kind:'guardian-lost',runId:record.runId,runtimeSha256:await hash(join(root,'run','runtime.json')),
-      guardianSha256:await hash(join(root,'run','guardian.json')),observedAt:new Date().toISOString(),identityCount:previousIdentities(record,guardian).length};
-    const path=join(root,'run',reconciliationName);
-    await writeFile(path,JSON.stringify(proof,null,2)+'\n',{flag:'wx'});await assertProtectedPaths([path]);
-    if((await runtimeStatus(root)).phase!=='abnormal_exit'||!await guardianComplete(root,record.runId))throw fail('RECONCILIATION_DENIED');
-    return {runId:record.runId,reconciled:true,observedAt:proof.observedAt,originalRecordsPreserved:true};
+      || ![guardian,record.supervisor,...(record.children??[]),...(record.descendants??[])].every(identity=>Number.isInteger(identity?.pid)&&identity.pid>0&&typeof identity.exe==='string'&&isAbsolute(identity.exe)&&/^\d+$/.test(identity.startTicks)))throw fail('RECONCILIATION_DENIED');
+    const previous=await reconciliationProof(root,record.runId);
+    if(previous&&!await reconciliationComplete(root,record))throw fail('RECONCILIATION_DENIED');
+    await oldRuntimeGone(root,record,guardian);
+    const runtimeRecord=await readFile(join(root,'run','runtime.json'),'utf8'),guardianRecord=await readFile(join(root,'run','guardian.json'),'utf8');
+    if(JSON.stringify(JSON.parse(runtimeRecord))!==JSON.stringify(record)||JSON.stringify(JSON.parse(guardianRecord))!==JSON.stringify(guardian))throw fail('RECONCILIATION_DENIED');
+    const proof=previous??{schemaVersion:2,kind:'guardian-lost',runId:record.runId,runtimeSha256:await hash(join(root,'run','runtime.json')),
+      guardianSha256:await hash(join(root,'run','guardian.json')),observedAt:new Date().toISOString(),identityCount:previousIdentities(record,guardian).length,runtimeRecord,guardianRecord};
+    if(!previous){const path=reconciliationPath(root,record.runId);await writeFile(path,JSON.stringify(proof,null,2)+'\n',{flag:'wx'});await assertProtectedPaths([path]);}
+    if(!await reconciliationComplete(root,record))throw fail('RECONCILIATION_DENIED');
+    await writeFile(join(root,'logs','reconciliation.jsonl'),JSON.stringify({at:new Date().toISOString(),runId:record.runId,event:previous?'proof_reused':'proof_created',runtimeSha256:proof.runtimeSha256,guardianSha256:proof.guardianSha256})+'\n',{flag:'a'});
+    return {runId:record.runId,reconciled:true,alreadyReconciled:!!previous,observedAt:proof.observedAt,originalRecordsPreserved:true};
   }finally{await releaseFreeze(root,held);}
 }
-export async function runtimeStatus(root){await layout(root);const record=await json(join(root,'run','runtime.json'));if(!record)return {phase:'not_started',supervisorAlive:false};const actual=await processIdentity(record.supervisor?.pid??0,record.runId);const alive=sameProcess(actual,record.supervisor)&&actual.markerMatches;const stale=['starting','ready','stopping'].includes(record.phase)&&!alive;const reconciled=stale&&await reconciliationComplete(root,record);return {...record,phase:stale?(reconciled?'abnormal_exit':'stale_record'):record.phase,supervisorAlive:alive,...(reconciled?{reconciled:true}:{})};}
+export async function runtimeStatus(root){await layout(root);const record=await json(join(root,'run','runtime.json'));if(!record)return {phase:'not_started',supervisorAlive:false};const actual=await processIdentity(record.supervisor?.pid??0,record.runId);const alive=sameProcess(actual,record.supervisor)&&actual.markerMatches;const guardian=await json(join(root,'run','guardian.json'));const guardianAlive=guardian?.runId===record.runId&&sameProcess(await processIdentity(guardian.pid,record.runId),guardian);const stop=await json(join(root,'run','stop.json'));const stale=['starting','ready','stopping'].includes(record.phase)&&!alive;const reconciled=stale&&await reconciliationComplete(root,record);return {...record,phase:stale?(reconciled?'abnormal_exit':'stale_record'):record.phase,supervisorAlive:alive,guardianAlive,stopRequested:stop?.runId===record.runId,...(reconciled?{reconciled:true}:{})};}
 async function dockHealth(root){const profile=await layout(root);const token=await readSecret(root,'agentdock');const response=await fetch(`http://127.0.0.1:${profile.agentdockPort}/mcp`,{method:'POST',headers:{'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(2000)});await response.body?.cancel();if(response.status!==401)throw fail('AUTH_BOUNDARY_FAILED');const client=new TongAgentDockClient({url:`http://127.0.0.1:${profile.agentdockPort}/mcp`,tokenProvider:()=>token,controlledExecution:true,timeoutMs:2000});try{await client.connect();return {authenticatedMcp:true,toolCount:(await client.listTools()).length};}finally{await client.close();}}
 async function tongHealth(profile){const response=await fetch(`http://127.0.0.1:${profile.gatewayPort}/.well-known/oauth-authorization-server`,{signal:AbortSignal.timeout(2000)});if(!response.ok)throw fail('TONG_HEALTH_FAILED');const metadata=await response.json();if(metadata.issuer!==`${(profile.publicOrigin??`http://127.0.0.1:${profile.gatewayPort}`).replace(/\/$/,'')}/`)throw fail('TONG_HEALTH_FAILED');const rejected=await fetch(`http://127.0.0.1:${profile.gatewayPort}/mcp`,{method:'POST',headers:{'content-type':'application/json',accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'runtime-health',version:'1'}}}),signal:AbortSignal.timeout(2000)});await rejected.body?.cancel();if(rejected.status!==401)throw fail('TONG_AUTH_BOUNDARY_FAILED');return {discovery:true,unauthenticatedRejected:true};}
 export async function runtimeDoctor(root){const profile=await layout(root),status=await runtimeStatus(root);const binaryHash=await hash(AGENTDOCK_EXE);let health=null;try{if(status.phase==='ready'&&status.supervisorAlive)health={...(dockEnabled(profile)?{agentdock:await dockHealth(root)}:{}),...(hasTong(profile)?{tong:await tongHealth(profile)}:{})};}catch{health=null;}return {root,phase:status.phase,healthy:binaryHash===AGENTDOCK_SHA256&&!!health,binaryHash,security:await inspectSecurity([root,...(preserved(profile)?preservedDirs:dirs).map(dir=>join(root,dir))]),health};}
@@ -144,9 +179,10 @@ async function guardianComplete(root,runId) {
   const guardian=await json(join(root,'run','guardian.json'));
   if(guardian?.runId!==runId)return false;
   if(!guardian.finishedAt)return (await reconciliationComplete(root,await json(join(root,'run','runtime.json'))))===true;
-  return guardian.jobActiveAfterCleanup===0
-    && !sameProcess(await processIdentity(guardian.pid),guardian)
-    && !(await processIdentity(guardian.nodePid,runId))?.markerMatches;
+  if(guardian.jobActiveAfterCleanup!==0||guardian.jobAssigned!==true)return false;
+  const record=await json(join(root,'run','runtime.json'));
+  if(record?.runId!==runId||guardian.nodePid!==record.supervisor?.pid)return false;
+  try{await oldRuntimeGone(root,record,guardian);return true;}catch{return false;}
 }
 export async function startRuntime(root,{startupTimeoutMs}={}) {
   if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
@@ -156,7 +192,7 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
   startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
   const held=await freeze(root);
-  let runId,child,launchedIdentity,release=true;
+  let runId,child,launchedIdentity,release=true,launchConfirmedAbsent=false;
   try {
     const status=await runtimeStatus(root);
     if(status.supervisorAlive)throw fail('ALREADY_RUNNING');
@@ -176,7 +212,10 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
     let launchTimer;
     try{await Promise.race([once(child,'close'),new Promise((_,reject)=>{launchTimer=setTimeout(()=>{child.kill();reject(fail('SUPERVISOR_START_FAILED'));},15000);})]);}
     finally{clearTimeout(launchTimer);}
-    if(spawnError||child.exitCode!==0)throw fail('SUPERVISOR_START_FAILED');
+    if(spawnError||child.exitCode!==0){
+      try{const refused=JSON.parse(launchOutput);launchConfirmedAbsent=refused.runId===runId&&refused.guardianCreated===false;}catch{}
+      throw fail('SUPERVISOR_START_FAILED');
+    }
     const launched=JSON.parse(launchOutput);launchedIdentity=await processIdentity(launched.pid,runId);
     if(!launchedIdentity?.markerMatches)throw fail('SUPERVISOR_START_FAILED');
     const deadline=Date.now()+startupTimeoutMs;
@@ -193,7 +232,7 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
     }
     throw fail('START_TIMEOUT');
   } catch(error) {
-    if(child?.pid) {
+    if(child?.pid&&!launchConfirmedAbsent) {
       // Cancel only this run's private Job; hold backup/start lock until completion.
       await save(join(root,'run','abort.json'),{runId,requestedAt:new Date().toISOString(),reason:'START_ABORT'});
       let complete=false;
@@ -263,7 +302,15 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
       const expectedRunId=option('--run-id');if(!expectedRunId)throw fail('INVALID_RUN');
       return stopRuntime(root,{expectedRunId});
     }
-    if(command==='supervise'){await supervise(root,option('--run-id'));return;}
+    if(command==='supervise'){
+      const diagnosticRoot=absoluteRoot(root);await assertProtectedPaths([diagnosticRoot,join(diagnosticRoot,'logs')]);
+      // Synchronous, bounded metadata survives Node fatal exits. Do not log error
+      // messages or environment values that may contain credentials or inputs.
+      const fatal=(event,error)=>{try{appendFileSync(join(diagnosticRoot,'logs','supervisor.jsonl'),JSON.stringify({at:new Date().toISOString(),runId:option('--run-id'),pid:process.pid,event,name:/^[A-Za-z]+Error$/.test(error?.name??'')?error.name:'Error',code:/^[A-Z_]{1,64}$/.test(error?.code??'')?error.code:null,reason:/^[A-Z_]{1,64}$/.test(error?.message??'')?error.message:null,frames:String(error?.stack??'').split('\n').filter(line=>/^\s+at /.test(line)).slice(0,12).map(line=>line.replace(/\?.*?(?=:[0-9]+:[0-9]+\)?$)/,''))})+'\n');}catch{}};
+      process.on('uncaughtExceptionMonitor',(error,origin)=>fatal(origin==='unhandledRejection'?'unhandled_rejection':'uncaught_exception',error));
+      process.on('exit',code=>{try{appendFileSync(join(diagnosticRoot,'logs','supervisor.jsonl'),JSON.stringify({at:new Date().toISOString(),runId:option('--run-id'),pid:process.pid,event:'supervisor_exit',exitCode:code})+'\n');}catch{}});
+      try{await supervise(root,option('--run-id'));}catch(error){fatal('supervisor_start_failed',error);throw error;}return;
+    }
     const result=command==='init'?await initializeRuntime({root,tongRoot:option('--tong-root'),withTong:args.includes('--with-tong')}):command==='start'?await startRuntime(root):command==='stop'?await stopRuntime(root):command==='status'?await runtimeStatus(root):command==='doctor'?await runtimeDoctor(root):null;
     if(!result)throw fail('INVALID_COMMAND');return result;
   }
@@ -273,7 +320,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
       :await dispatch();
     if(result!==undefined)console.log(JSON.stringify(result));
   }catch(error){
-    console.error(['ACL_DENIED','PORT_OCCUPIED','ALREADY_RUNNING','STALE_RECORD','IDENTITY_MISMATCH','INIT_EXISTS','SECRET_UNAVAILABLE','RUNTIME_BUSY','CLEANUP_REQUIRED','STOP_TIMEOUT','START_TIMEOUT','START_FAILED','BINARY_CHANGED','INVALID_COMMAND','INVALID_ROOT','INVALID_RUN','APPROVAL_DENIED','CANDIDATE_DENIED','RECONCILIATION_DENIED'].includes(error.message)?error.message:'RUNTIME_OPERATION_REFUSED');
+    const code=['ACL_DENIED','PORT_OCCUPIED','ALREADY_RUNNING','STALE_RECORD','IDENTITY_MISMATCH','INIT_EXISTS','SECRET_UNAVAILABLE','RUNTIME_BUSY','CLEANUP_REQUIRED','STOP_TIMEOUT','START_TIMEOUT','START_FAILED','SUPERVISOR_START_FAILED','BINARY_CHANGED','INVALID_COMMAND','INVALID_ROOT','INVALID_RUN','APPROVAL_DENIED','CANDIDATE_DENIED','RECONCILIATION_DENIED','INVALID_STATE'].includes(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
+    if(args.includes('--error-json'))console.log(JSON.stringify({error:code}));else console.error(code);
     process.exitCode=1;
   }
 }
