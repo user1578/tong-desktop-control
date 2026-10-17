@@ -12,7 +12,7 @@ $release=Join-Path $base 'release'
 $manager=Join-Path $root 'releases\manager\scripts\TongAgentDockRuntime.mjs'
 $signer=Join-Path $root 'releases\manager\scripts\TongProductionApproval.ps1'
 $taskName='TongLoginRuntime'
-$originalRun='f308bff5-2cb7-4480-b82c-4271a233dbf9'
+$originalRun=$null
 $expectedOldApp='3442cbb938dea887a55bf13a72a5213ae4c5dbe5'
 $expectedOldManager='1eac7502a9cf89be7daf63d59843ad9f49b61877'
 $expectedNew='bb234ec794c1d8180586781c92601f2eae95e750'
@@ -29,7 +29,48 @@ function Native([string]$Name,[string[]]$Arguments){
 function CurrentStatus(){
   return (Native 'manager status' @($manager,'status','--root',$root))
 }
+function Assert-Activation-Bindings(){
+  # Parse and syntax-check the *actual embedded activation code* before stopping Tong.
+  # The source is not executed here, so the old production process remains untouched.
+  $source=Get-Content -LiteralPath $PSCommandPath -Raw
+  $pattern='(?s)function Activate-Pins\(\)\{\s*\$program=@''\r?\n(?<body>.*?)\r?\n''@'
+  $match=[regex]::Match($source,$pattern)
+  if(-not $match.Success){throw 'Unable to inspect exact activation source'}
+  $activation=$match.Groups['body'].Value
+  foreach($binding in @(
+    "const {createProductionProfile}=await import(resolve('TongProductionProfile.mjs'));",
+    "const {pinRuntimeRelease,verifyRuntimeCandidate}=await import(resolve('TongRuntimeCandidate.mjs'));",
+    "const {updateRuntimeProfile}=await import(resolve('TongAgentDockRuntime.mjs'));"
+  )){
+    if(-not $activation.Contains($binding)){throw 'Activation import binding changed'}
+  }
+  $null=($activation | & $node --check --input-type=module)
+  if($LASTEXITCODE -ne 0){throw 'Activation JavaScript syntax rejected'}
+  $probe=@'
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+const locations=[
+  'D:\\Tong\\runtime\\releases\\manager\\scripts',
+  'D:\\Tong\\state\\p27-autonomy-candidate-20261017\\staged-manager\\scripts'
+];
+const required={
+  'TongProductionProfile.mjs':['createProductionProfile'],
+  'TongRuntimeCandidate.mjs':['pinRuntimeRelease','verifyRuntimeCandidate'],
+  'TongAgentDockRuntime.mjs':['updateRuntimeProfile']
+};
+for(const root of locations)for(const [file,exports] of Object.entries(required)){
+  const mod=await import(pathToFileURL(join(root,file)).href);
+  for(const name of exports)if(typeof mod[name]!=='function')throw Error('ACTIVATION_EXPORT_MISSING:'+file+':'+name);
+}
+console.log(JSON.stringify({activationBindings:true,locations:locations.length,exportsChecked:4}));
+'@
+  $raw=& $node --input-type=module -e $probe
+  if($LASTEXITCODE -ne 0){throw 'Candidate or production runtime activation exports are incompatible'}
+  $result=($raw -join [Environment]::NewLine)|ConvertFrom-Json
+  if(-not $result.activationBindings -or $result.locations -ne 2 -or $result.exportsChecked -ne 4){throw 'Invalid activation export result'}
+}
 function Assert-Release(){
+  Assert-Activation-Bindings
   if(-not (Test-Path -LiteralPath $helper -PathType Leaf) -or (Get-FileHash -LiteralPath $helper -Algorithm SHA256).Hash.ToLowerInvariant() -cne $helperSha256){throw 'Maintenance helper changed since review'}
   $result=Native 'verified production preflight' @($helper,'preflight')
   if(-not $result.ok -or $result.oldApp -cne $expectedOldApp -or $result.oldManager -cne $expectedOldManager -or $result.newCommit -cne $expectedNew){throw 'Unexpected release hashes or production baseline'}
@@ -164,8 +205,8 @@ const hash=crypto.createHash('sha256').update(contents).digest('hex');
 const input={sourceDigest:data.files.find(x=>x.path==='code/source.tar').sha256,releaseDigest:hash};
 const resolve=name=>pathToFileURL(join(root,'releases','manager','scripts',name)).href;
 const {createProductionProfile}=await import(resolve('TongProductionProfile.mjs'));
-const {pinRuntimeRelease}=await import(resolve('TongRuntimeCandidate.mjs'));
-const {updateRuntimeProfile,verifyRuntimeCandidate}=await import(resolve('TongAgentDockRuntime.mjs'));
+const {pinRuntimeRelease,verifyRuntimeCandidate}=await import(resolve('TongRuntimeCandidate.mjs'));
+const {updateRuntimeProfile}=await import(resolve('TongAgentDockRuntime.mjs'));
 const app=createProductionProfile({...input,agentdockEnabled:true});
 const manager=createProductionProfile({...input,agentdockEnabled:false});
 await pinRuntimeRelease(manager,release,{manager:true,replace:true});
@@ -207,7 +248,8 @@ if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Envi
 if($PSVersionTable.PSVersion.Major -lt 7){throw 'Use PowerShell 7'}
 try{
   $old=Assert-Release
-  if($old.runId -cne $originalRun){throw 'Unexpected production run identity, rerun preflight with reviewed context'}
+  $originalRun=[string]$old.runId
+  if(-not $originalRun -or $old.phase -cne 'ready'){throw 'Invalid production run identity'}
   $plan=Get-NewProfiles
   Write-Host ('Reviewed upgrade '+$expectedOldApp+' / '+$expectedOldManager+' -> '+$expectedNew) -ForegroundColor Cyan
   Write-Host 'Type the separate hash-bound approval challenges below. Nothing will be stopped until all are approved.'
@@ -218,6 +260,8 @@ try{
   $snapshot=[string]$record.snapshot
   [IO.File]::WriteAllText((Join-Path $snapshot 'original-task.xml'),[string](Export-ScheduledTask -TaskName $taskName),[Text.UTF8Encoding]::new($false))
   Write-Host ('Production snapshot saved: '+$snapshot) -ForegroundColor Cyan
+  $check=CurrentStatus
+  if($check.runId -cne $originalRun -or -not $check.supervisorAlive -or -not $check.guardianAlive){throw 'Production run identity changed after snapshot'}
   Stop-Login
   $null=Stop-ExactRun $true
   $wasStopped=$true
