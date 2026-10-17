@@ -65,6 +65,19 @@ console.log(JSON.stringify({app:encode(profile(true)),manager:encode(profile(fal
   return $data
 }
 function Sign([string]$Action,[string]$Encoded){
+  # A previous *interactive*, signed receipt is already scoped to the action,
+  # current user, complete profile digest and 30-minute expiry. Reuse it only
+  # after the installed production verifier accepts it; never mint via automation.
+  $validator=Join-Path $root 'releases\manager\scripts\TongProductionProfile.mjs'
+  $verified=& $node $validator --verify-approval-profile $Encoded $Action 2>$null
+  if($LASTEXITCODE -eq 0){
+    try{
+      $binding=($verified -join [Environment]::NewLine)|ConvertFrom-Json
+      if($binding.action -cne $Action -or $binding.mode -cne 'production'){throw 'Receipt binding mismatch'}
+      Write-Host ('Existing valid hash-bound approval reused: '+$Action) -ForegroundColor Green
+      return
+    }catch{throw ('Verified approval descriptor invalid: '+$Action)}
+  }
   Write-Host ('Production approval: '+$Action) -ForegroundColor Cyan
   & $signer -Mode approve -Action $Action -ProfileJson $Encoded
   if(-not $?) {throw ('Human approval rejected: '+$Action)}
@@ -101,18 +114,32 @@ function Enable-Login(){
   Start-ScheduledTask -TaskName $taskName
 }
 function Stop-Login(){
-  Disable-ScheduledTask -TaskName $taskName | Out-Null
-  $script:taskDisabled=$true
-  Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
   $scheduler=New-Object -ComObject Schedule.Service
   $scheduler.Connect()
-  $definition=$scheduler.GetFolder('\\').GetTask($taskName)
+  $definition=$scheduler.GetFolder('\').GetTask($taskName)
+  $instances=@($definition.GetInstances(0))
+  if($instances.Count -ne 1){throw 'Expected exactly one live login monitor instance'}
+  $engineProcessId=[int]$instances[0].EnginePID
+  $hostProcess=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
+  $expectedHost=Join-Path $root 'login-management\TongLoginHost.exe'
+  if($null -eq $hostProcess -or $hostProcess.Name -ine 'TongLoginHost.exe' -or $hostProcess.ExecutablePath -ine $expectedHost){throw 'Login host identity mismatch'}
+  $expectedRunner='"C:\Windows\system32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -File "D:\Tong\runtime\login-management\TongLoginRuntime.ps1" -Mode run'
+  $runners=@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$engineProcessId) | Where-Object { $_.Name -ieq 'powershell.exe' -and $_.CommandLine -ieq $expectedRunner })
+  if($runners.Count -ne 1){throw 'Unable to identify the single original monitor runner'}
+  $runner=$runners[0]
+  Disable-ScheduledTask -TaskName $taskName | Out-Null
+  $script:taskDisabled=$true
+  $current=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
+  if($null -eq $current -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.CommandLine -ine $expectedRunner){throw 'Monitor runner identity changed'}
+  # Terminate only the exact login runner. The GUI host waits for it and exits;
+  # Supervisor and Guardian are independent and must remain untouched.
+  Stop-Process -Id $runner.ProcessId -Force -ErrorAction Stop
   $limit=(Get-Date).AddSeconds(30)
   while((Get-Date) -lt $limit){
-    if(@($definition.GetInstances(0)).Count -eq 0){return}
+    if(@($definition.GetInstances(0)).Count -eq 0 -and -not (Get-Process -Id $runner.ProcessId -ErrorAction SilentlyContinue)){return}
     Start-Sleep -Seconds 1
   }
-  throw 'TongLoginRuntime still has a live task instance'
+  throw 'Login monitor did not fully exit; do not continue to runtime stop'
 }
 function Stop-ExactRun([bool]$TryRecovery){
   $s=CurrentStatus
