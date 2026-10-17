@@ -22,11 +22,18 @@ let enteredSelection;
 const selectionEntered = new Promise((done) => { enteredSelection = done; });
 const selectionGate = new Promise((done) => { releaseSelection = done; });
 const trusted = new TongTrustedCodexBroker({ access, policy, pollMs: 5, adapterFactory: () => ({
-  async runTask(spec, { onSessionId, onLog }) {
+  async runTask(spec, { onSessionId, onLog, signal }) {
     calls.push(spec);
     const threadId = spec.threadId ?? `thread-${calls.length}`;
     await onSessionId(threadId);
     onLog("synthetic run");
+    if (spec.task === "trusted-timeout") {
+      return new Promise(resolve => {
+        const finish = () => resolve({ threadId, turnStatus: "interrupted", summary: "Execution timed out after local approval" });
+        if (signal.aborted) finish();
+        else signal.addEventListener("abort", finish, { once: true });
+      });
+    }
     return { threadId, turnId: `turn-${calls.length}`, turnStatus: spec.task === "resume" && !spec.threadId ? "interrupted" : "completed",
       summary: "synthetic result", tests: [{ command: "node --test", status: "passed" }] };
   },
@@ -126,15 +133,23 @@ try {
   assert.equal((await waitFor(interrupted.taskId, "success")).codexSessionId, "thread-5");
   assert.equal(calls.at(-1).threadId, "thread-5");
 
-  const timed = await manager.start({ ...request, idempotencyKey: "trusted-request-timeout", timeoutSeconds: 1 });
-  assert.match((await waitFor(timed.taskId, "failed")).error.message, /timed out/i);
-  assert.equal(calls.length, 6, "approval timeout must not launch Codex");
+  const timed = await manager.start({ ...request, task: "trusted-timeout",
+    idempotencyKey: "trusted-request-timeout", timeoutSeconds: 1 });
+  await waitFor(timed.taskId, "waiting_user_action");
+  await new Promise(resolve => setTimeout(resolve, 1150));
+  assert.equal((await manager.status(timed.taskId)).status, "waiting_user_action",
+    "waiting for a human must not consume the one-second execution timeout");
+  assert.equal(calls.length, 6, "pending approval must not launch Codex");
+  await policy.approveTask(timed.taskId);
+  assert.match((await waitFor(timed.taskId, "failed")).error.message, /timed out/i,
+    "actual trusted execution must still time out after its own execution window");
+  assert.equal(calls.length, 7);
 
   const cancelled = await manager.start({ ...request, idempotencyKey: "trusted-request-0003" });
   await waitFor(cancelled.taskId, "waiting_user_action");
   await manager.cancel(cancelled.taskId);
   await waitFor(cancelled.taskId, "cancelled");
-  assert.equal(calls.length, 6);
+  assert.equal(calls.length, 7);
   console.log("PASS: trusted task create, idempotency, local approval, logs, result, resume, and cancel.");
 } finally {
   releaseSelection();

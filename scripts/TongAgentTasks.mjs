@@ -471,13 +471,21 @@ export class TongAgentTaskManager {
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) return;
     const timeoutMs = Math.min(task.timeoutMs, this.maxTaskRuntimeMs);
-    const timeout = setTimeout(() => {
-      const current = this.active.get(taskId);
-      if (!current || current.controller.signal.aborted) return;
-      current.timedOut = true;
-      current.controller.abort(new Error("Task timed out"));
-    }, timeoutMs);
-    timeout.unref?.();
+    let timeout;
+    const armExecutionTimeout = () => {
+      if (timeout) return;
+      timeout = setTimeout(() => {
+        const current = this.active.get(taskId);
+        if (!current || current.controller.signal.aborted) return;
+        current.timedOut = true;
+        current.controller.abort(new Error("Task timed out"));
+      }, timeoutMs);
+      timeout.unref?.();
+    };
+    // In trusted Windows mode a local approval can take minutes. Only count
+    // actual execution after the broker reports "running", not human review.
+    // Isolated workers do not have a separate local approval phase.
+    if (task.executorMode !== "trusted-windows") armExecutionTimeout();
     const pendingLogs = [];
     try {
       const project = await this.projectForExecution(task.projectId);
@@ -486,7 +494,7 @@ export class TongAgentTaskManager {
       await this.updateTask(taskId, (record) => {
         record.authorization=livePreflight?.authorization ?? null;
         record.status = "running";
-        record.startedAt ??= new Date(this.now()).toISOString();
+        if (task.executorMode !== "trusted-windows") record.startedAt ??= new Date(this.now()).toISOString();
         record.finishedAt = null;
         record.error = null;
       });
@@ -523,9 +531,11 @@ export class TongAgentTaskManager {
         },
         onState: (state) => {
           if (state === "waiting_user_action" || state === "running") {
+            if (state === "running") armExecutionTimeout();
             return this.updateTask(taskId, (record) => {
               record.status = state;
               record.pendingApproval = state === "waiting_user_action" && task.executorMode === "trusted-windows";
+              if (state === "running") record.startedAt ??= new Date(this.now()).toISOString();
             });
           }
         },
@@ -595,7 +605,7 @@ export class TongAgentTaskManager {
         }
       });
     } finally {
-      clearTimeout(timeout);
+      if (timeout) clearTimeout(timeout);
       this.active.delete(taskId);
       this.activeProjects.delete(task?.projectId);
       this.schedulePump();

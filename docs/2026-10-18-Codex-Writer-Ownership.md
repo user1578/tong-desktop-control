@@ -23,9 +23,17 @@
 ## 尚不能声称已完成
 
 - 未取得官方稳定API用于第二客户端连接到当前Windows Desktop已启动的私有App Server，更没有证明共享同一个writer实例。
-- 未对真实Codex Desktop会话发起新turn或进行writer交接；仅开展源码模拟回归和本机进程/Socket元数据只读核验。
+- 已由Tong创建真实Codex原生会话，且用户通过Codex Desktop截图确认模型回复；尚未完成该原生会话后续turn的真实继续、取消、恢复及Desktop与Tong的writer交接验证。
 - 旧 `thread/list` 只返回候选会话元数据，并非真实跨进程writer租约证据；不可根据 `notLoaded`、无TCP端口、闲置UI或单一锁文件自行删除、接管会话。
 - 正式生产仍保留此前验收版本；此次开发修复尚未发布。
+
+## 111 real desktop acceptance
+
+- The user confirmed two screenshots: Tong-created Codex thread 01a14a7e-ba05-7660-a446-3f6cbb5f2bf8 appeared in Codex Desktop and replied with TONG_NATIVE_111_TEST_20261018 and the correct project path.
+- Task 882dfb34-2f2d-4f84-aa9a-af42dc5ee469 was incorrectly marked timed out because the original timer counted minutes spent waiting for local human approval. The execution window started before approval; the desktop reply crossed that deadline.
+- In the development branch, trusted execution timeout now begins when the broker reports running, not while waiting for human approval. Tests verify that the approval wait may outlast the execution budget while real execution still times out when needed.
+- The desktop recent-conversation sidebar briefly flickered. Cause not yet established; the thread persists in Codex session discovery. Continuing or cancelling this real native thread has not yet been tested.
+- Production remains unchanged and historical task results are not rewritten.
 
 ## 下阶段验收门
 
