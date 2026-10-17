@@ -10,7 +10,7 @@ if(settings.recoveryGrantId){
 }else await serve(settings);
 async function serve(settings){
 const preserved=settings.profile!==undefined;
-const stage=name=>process.send({event:'stage',stage:name});
+const stage=(name,details={})=>process.send({event:'stage',stage:name,...details});
 stage('settings_received');
 if(preserved){
   const {validateProductionProfile,verifyRuntimeApproval,readApprovedEnabledState}=await import('./TongProductionProfile.mjs');
@@ -55,8 +55,10 @@ if (settings.role === 'devspace') {
     TONG_AGENTDOCK_POLICY_PATH: join(settings.root, 'tong-policy', 'agentdock-access.json'), TONG_AGENTDOCK_AUDIT_PATH: join(settings.root, 'logs', 'agentdock-audit.jsonl'), DEVSPACE_CONFIG_DIR: join(settings.root, 'tong-state', 'config') });
   }
   stage('server_import_begin');
+  const importBegan=performance.now(),importCpu=process.cpuUsage();
   const { createServer } = await import(pathToFileURL(join(settings.tongRoot, 'node_modules', '@waishnav', 'devspace', 'dist', 'server.js')).href);
-  stage('server_import_complete');
+  const cpu=process.cpuUsage(importCpu);
+  stage('server_import_complete',{importDurationMs:Math.round(performance.now()-importBegan),importCpuUserMs:Math.round(cpu.user/1000),importCpuSystemMs:Math.round(cpu.system/1000),rssBytes:process.memoryUsage().rss});
   if(settings.preflightOnly===true&&settings.profile?.mode==='production-simulation'){stage('preflight_complete');process.disconnect();process.exit(0);}
   server = createServer(config??{ host:'127.0.0.1', port:settings.upstreamPort, publicBaseUrl:`http://127.0.0.1:${settings.gatewayPort}`,
     oauth:{ownerToken:settings.ownerToken,accessTokenTtlSeconds:3600,refreshTokenTtlSeconds:7200,scopes:['devspace'],allowedRedirectHosts:['127.0.0.1']},

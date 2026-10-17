@@ -24,6 +24,48 @@ const hasTong=profile=>preserved(profile)||profile.withTong;
 const guardedRoot=root=>root===PRODUCTION_ROOT||/^b23-[a-zA-Z0-9_-]+$/.test(relative(resolve('D:\\Tong\\state'),resolve(root)));
 const dirs=['backend-state','workspace','workspace/demo','tong-state','tong-state/config','tong-policy','tong-policy/agentdock-operations','secrets','run','logs','temp','home'];
 const fail=code=>new Error(code), delay=ms=>new Promise(ok=>setTimeout(ok,ms));
+export function readinessPolicy(role,production){
+  // Observed cold starts: DevSpace 23.6/38.3/44.3s, import up to 18.9s,
+  // Gateway up to 24.6s. Progress buys a stage budget, never a new total.
+  return {totalMs:production?(role==='devspace'?75000:35000):20000,slowMs:production?45000:20000,
+    stages:role==='devspace'?['spawned','settings_received','approval_verified','candidate_verified','config_loaded','log_protection_ready','server_import_begin','server_import_complete']:['spawned','settings_received','approval_verified','candidate_verified'],
+    stageMs:{spawned:30000,settings_received:15000,approval_verified:20000,candidate_verified:role==='devspace'?10000:15000,config_loaded:10000,log_protection_ready:10000,server_import_begin:30000,server_import_complete:10000}};
+}
+export function waitForChildReadiness(child,{role,preserved:production,began=Date.now(),startupDeadline=Infinity,onEvent=()=>{},signal,clock={now:Date.now,setTimeout,clearTimeout}}){
+  const policy=readinessPolicy(role,production);let stage='spawned',stageAt=began,index=0,timer,done=false,slow=false;
+  return new Promise((resolve,reject)=>{
+    const details=()=>({role,stage,durationMs:clock.now()-began,stageDurationMs:clock.now()-stageAt});
+    function finish(error){if(done)return;done=true;clock.clearTimeout(timer);child.off('message',message);child.off('exit',exited);child.off('error',spawnFailed);signal?.removeEventListener('abort',aborted);error?reject(error):resolve();}
+    function refused(code,extra={}){const error=fail(code);error.readiness={...details(),...extra};finish(error);}
+    function emit(value){try{Promise.resolve(onEvent(value)).catch(finish);}catch(error){finish(error);}}
+    function check(){
+      if(done)return true;
+      const now=clock.now();
+      if(now>=startupDeadline){refused('START_TIMEOUT',{timeoutKind:'startup_total'});return true;}
+      if(now>=began+policy.totalMs){refused('CHILD_READINESS_TIMEOUT',{timeoutKind:'child_total'});return true;}
+      if(now>=stageAt+policy.stageMs[stage]){refused('CHILD_STAGE_TIMEOUT',{timeoutKind:'stage'});return true;}
+      if(!slow&&now>=began+policy.slowMs){slow=true;emit({event:'readiness_slow',...details()});}
+      return done;
+    }
+    function arm(){clock.clearTimeout(timer);if(check())return;timer=clock.setTimeout(arm,Math.max(1,Math.min(startupDeadline,began+policy.totalMs,stageAt+policy.stageMs[stage],slow?Infinity:began+policy.slowMs)-clock.now()));}
+    function message(value){
+      if(check()||!value||typeof value!=='object')return;
+      if(value.event==='stage'){
+        const next=policy.stages.indexOf(value.stage);if(next<=index)return;
+        const previousStage=stage,stageDurationMs=clock.now()-stageAt;
+        stage=value.stage;stageAt=clock.now();index=next;
+        const diagnostic={};for(const key of ['importDurationMs','importCpuUserMs','importCpuSystemMs','rssBytes'])if(Number.isSafeInteger(value[key])&&value[key]>=0)diagnostic[key]=value[key];
+        emit({event:'child_stage',...details(),previousStage,stageDurationMs,...diagnostic});arm();
+      }else if(value.event==='ready')finish();
+      else if(value.event!=='logging_secret')refused('CHILD_READINESS_FAILED');
+    }
+    function exited(exitCode,signal){refused('CHILD_EXIT',{exitCode,signal});}
+    function spawnFailed(){refused('CHILD_SPAWN_FAILED');}
+    function aborted(){refused('START_ABORTED');}
+    child.on('message',message);child.once('exit',exited);child.once('error',spawnFailed);signal?.addEventListener('abort',aborted,{once:true});
+    if(signal?.aborted)aborted();else if(child.exitCode!==null||child.signalCode!==null)exited(child.exitCode,child.signalCode);else arm();
+  });
+}
 const hash=async path=>createHash('sha256').update(await readFile(path)).digest('hex');
 async function json(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw fail('INVALID_STATE');}}
 async function save(path,value){const tmp=path+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value,null,2)+'\n',{flag:'wx'});for(let n=0;n<10;n++){try{await rename(tmp,path);return;}catch(error){if(!['EPERM','EACCES','EBUSY'].includes(error.code)||n===9)throw fail('STATE_UNAVAILABLE');await delay(25);}}}
@@ -192,7 +234,7 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
   startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
   const held=await freeze(root);
-  let runId,child,launchedIdentity,release=true,launchConfirmedAbsent=false;
+  let runId,child,launchedIdentity,deadline,release=true,launchConfirmedAbsent=false;
   try {
     const status=await runtimeStatus(root);
     if(status.supervisorAlive)throw fail('ALREADY_RUNNING');
@@ -203,7 +245,8 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
     if(await hash(AGENTDOCK_EXE)!==AGENTDOCK_SHA256)throw fail('BINARY_CHANGED');
     for(const port of [...(dockEnabled(profile)?[profile.agentdockPort]:[]),...(hasTong(profile)?[profile.gatewayPort,profile.upstreamPort]:[])])await unused(port);
     if(dockEnabled(profile))await readSecret(root,'agentdock');if(preserved(profile)?profile.mode==='production-simulation':profile.withTong)await readSecret(root,'oauth-owner');
-    runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),...(recoveryGrantId?{recoveryGrantId}:{})});
+    deadline=Date.now()+startupTimeoutMs;
+    runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),startupDeadline:deadline,...(recoveryGrantId?{recoveryGrantId}:{})});
     child=spawn(join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),
       ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',preserved(profile)?join(profile.managerRoot,'scripts','TongRuntimeLaunch.ps1'):guardianScript,'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',preserved(profile)?join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs'):self,...(recoveryGrantId?['-RecoveryGrantId',recoveryGrantId]:[])],
       {cwd:root,env:{...safeEnvironment(root),USERPROFILE:process.env.USERPROFILE,APPDATA:process.env.APPDATA,LOCALAPPDATA:process.env.LOCALAPPDATA},windowsHide:true,detached:false,stdio:['ignore','pipe','pipe']});
@@ -218,7 +261,6 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
     }
     const launched=JSON.parse(launchOutput);launchedIdentity=await processIdentity(launched.pid,runId);
     if(!launchedIdentity?.markerMatches)throw fail('SUPERVISOR_START_FAILED');
-    const deadline=Date.now()+startupTimeoutMs;
     while(Date.now()<deadline) {
       if(spawnError)throw fail('SUPERVISOR_START_FAILED');
       const guardian=await json(join(root,'run','guardian.json')),failure=await json(join(root,'run','guardian-failure.json'));
@@ -232,6 +274,13 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
     }
     throw fail('START_TIMEOUT');
   } catch(error) {
+    try{
+    if(error.message==='START_TIMEOUT'&&runId){
+      const current=await json(join(root,'run','runtime.json')),progress=current?.runId===runId?current.startupProgress:null;
+      const durationMs=Date.now()-deadline+startupTimeoutMs;
+      await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),runId,event:'startup_failure',code:'START_TIMEOUT',timeoutKind:'startup_total',role:progress?.role??'supervisor',stage:progress?.stage??'initializing',durationMs,budgetMs:startupTimeoutMs,stageDurationMs:progress?Date.now()-progress.stageStartedAt:durationMs})+'\n',{flag:'a'});
+    }
+    }finally{
     if(child?.pid&&!launchConfirmedAbsent) {
       // Cancel only this run's private Job; hold backup/start lock until completion.
       await save(join(root,'run','abort.json'),{runId,requestedAt:new Date().toISOString(),reason:'START_ABORT'});
@@ -245,6 +294,7 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
       }
       if(!complete){release=false;throw fail('CLEANUP_REQUIRED');}
     }
+    }
     throw error;
   } finally {if(release)await releaseFreeze(root,held);else await held.close();}
 }
@@ -256,21 +306,23 @@ async function supervise(root,runId){root=absoluteRoot(root);const request=await
   async function managed(role,settings){
     const began=Date.now();await event({event:'readiness_begin',role});
     const child=fork(childScript,[],{cwd:codeRoot(profile),env:safeEnvironment(root),windowsHide:true,execArgv:['--trace-uncaught','--trace-warnings'],stdio:['ignore','pipe','pipe','ipc']});
-    await attach(role,child);
-    const ready=new Promise((ok,reject)=>{
-      const time=setTimeout(()=>reject(fail('CHILD_READINESS_TIMEOUT')),preserved(profile)?45000:20000);
-      child.on('message',message=>{if(message.event==='stage'&&/^[a-z_]{1,40}$/.test(message.stage??''))void event({event:'child_stage',role,stage:message.stage,durationMs:Date.now()-began});});
-      child.on('message',message=>{if(message.event==='stage')return;if(message.event==='logging_secret'&&role==='devspace'&&preserved(profile)){if(typeof message.ownerToken!=='string'||message.ownerToken.length<16||message.ownerToken.length>4096||/[\x00-\x20\x7f]/.test(message.ownerToken)){clearTimeout(time);reject(fail('CHILD_READINESS_FAILED'));return;}if(!secrets.includes(message.ownerToken))secrets.push(message.ownerToken);child.send({event:'logging_ready'});return;}clearTimeout(time);message.event==='ready'?ok():reject(fail('CHILD_READINESS_FAILED'));});
-      child.once('exit',()=>{clearTimeout(time);reject(fail('CHILD_EXIT'));});
-    });
-    child.send({schemaVersion:1,role,root,...settings,tongRoot:codeRoot(profile),...(preserved(profile)?{profile}:{}),...(loginRecoveryGrantId()?{recoveryGrantId:loginRecoveryGrantId()}:{}),gatewayPort:profile.gatewayPort,upstreamPort:profile.upstreamPort});
-    await ready;await event({event:'readiness_complete',role,durationMs:Date.now()-began});
+    const cancelled=new AbortController();
+    const diagnostic=value=>{if(value.event==='child_stage')record.startupProgress={role,stage:value.stage,stageStartedAt:Date.now()};return Promise.all([event(value),persist()]);};
+    const ready=waitForChildReadiness(child,{role,preserved:preserved(profile),began,startupDeadline:request.startupDeadline??Date.parse(record.startedAt)+(preserved(profile)?120000:30000),onEvent:diagnostic,signal:cancelled.signal});
+    void ready.catch(()=>{}); // Attach can fail while readiness is already pending.
+    const logging=message=>{if(message?.event!=='logging_secret'||role!=='devspace'||!preserved(profile))return;if(typeof message.ownerToken!=='string'||message.ownerToken.length<16||message.ownerToken.length>4096||/[\x00-\x20\x7f]/.test(message.ownerToken)){child.emit('message',{event:'readiness_failed'});return;}if(!secrets.includes(message.ownerToken))secrets.push(message.ownerToken);child.send({event:'logging_ready'});};
+    child.on('message',logging);
+    try{
+      await attach(role,child);
+      child.send({schemaVersion:1,role,root,...settings,tongRoot:codeRoot(profile),...(preserved(profile)?{profile}:{}),...(loginRecoveryGrantId()?{recoveryGrantId:loginRecoveryGrantId()}:{}),gatewayPort:profile.gatewayPort,upstreamPort:profile.upstreamPort});
+      await ready;await event({event:'readiness_complete',role,durationMs:Date.now()-began});
+    }finally{cancelled.abort();child.off('message',logging);}
   }
   async function shutdown(phase='stopped',reason='REQUESTED'){return shutdownPromise??=(async()=>{closing=true;clearInterval(timer);record.phase='stopping';await persist();await event({event:'shutdown',reason});await capture().catch(()=>{});for(const role of ['gateway','devspace']){const child=children.get(role);if(child?.connected){child.send({event:'stop'});await Promise.race([once(child,'exit'),delay(role==='devspace'?11000:2000)]);}}await capture().catch(()=>{});// Descendant snapshots are diagnostic only. The guardian owns the private Job.
 for(const identity of [...record.children].reverse()){if(sameProcess(await processIdentity(identity.pid),identity))await terminateOwnedProcess(identity);}const alive=[];for(const identity of record.children)if(sameProcess(await processIdentity(identity.pid),identity))alive.push(identity.pid);record.phase=alive.length?'cleanup_required':phase;record.remainingPids=alive;record.finishedAt=new Date().toISOString();await persist();await event({event:'shutdown_complete',phase:record.phase,remainingPids:alive});await Promise.race([Promise.all(streams.map(stream=>stream.closed?Promise.resolve():new Promise(ok=>stream.once('close',ok)))),delay(2000)]);for(const child of children.values()){child.stdout?.destroy();child.stderr?.destroy();if(child.connected)child.disconnect();child.unref();}for(const stream of streams)if(!stream.closed)stream.destroy();process.exitCode=record.phase==='stopped'?0:1;})();}
   await persist();await event({event:'start',supervisorPid:process.pid});
   try{if(await hash(AGENTDOCK_EXE)!==AGENTDOCK_SHA256)throw fail('BINARY_CHANGED');if(dockEnabled(profile)){await unused(profile.agentdockPort);const dock=spawn(AGENTDOCK_EXE,['--host','127.0.0.1','--port',String(profile.agentdockPort),'--mcp-apps-mode','off'],{cwd:root,windowsHide:true,env:{...safeEnvironment(root),AGENTDOCK_HOME:join(root,'backend-state'),AGENTDOCK_DEFAULT_DIR:join(root,'workspace'),AGENTDOCK_AUTH_TOKEN:token,AGENTDOCK_BROWSER_ENABLED:'false',AGENTDOCK_ACP_ENABLED:'false',AGENTDOCK_MCP_APPS_MODE:'off'},stdio:['ignore','pipe','pipe']});await attach('agentdock',dock);for(let n=0;n<60;n++){if(dock.exitCode!==null)throw fail('BACKEND_EXIT');try{await dockHealth(root);break;}catch{if(n===59)throw fail('BACKEND_HEALTH_FAILED');await delay(100);}}}if(hasTong(profile)){await managed('devspace',{agentdockToken:token,ownerToken:owner});await managed('gateway',{});await tongHealth(profile);}await capture();if(closing)return;record.phase='ready';await persist();await event({event:'ready'});timer=setInterval(()=>{void (async()=>{const stop=await json(join(root,'run','stop.json'));if(stop?.runId===runId)await shutdown();else await capture();})().catch(()=>shutdown('abnormal_exit','MONITOR_FAILED'));},1000);process.on('SIGTERM',()=>{void shutdown();});}
-  catch(error){await event({event:'startup_failure',code:['CHILD_READINESS_TIMEOUT','CHILD_READINESS_FAILED','CHILD_EXIT','BACKEND_EXIT','BACKEND_HEALTH_FAILED','TONG_HEALTH_FAILED','TONG_AUTH_BOUNDARY_FAILED','BINARY_CHANGED','PORT_OCCUPIED'].includes(error.message)?error.message:'START_FAILED'});await shutdown('abnormal_exit','START_FAILED');}
+  catch(error){record.startupFailure={code:['START_TIMEOUT','CHILD_STAGE_TIMEOUT','CHILD_READINESS_TIMEOUT','CHILD_READINESS_FAILED','CHILD_SPAWN_FAILED','CHILD_EXIT','BACKEND_EXIT','BACKEND_HEALTH_FAILED','TONG_HEALTH_FAILED','TONG_AUTH_BOUNDARY_FAILED','BINARY_CHANGED','PORT_OCCUPIED'].includes(error.message)?error.message:'START_FAILED',...error.readiness};await event({event:'startup_failure',...record.startupFailure});await shutdown('abnormal_exit',record.startupFailure.code);}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const [command,...args]=process.argv.slice(2);

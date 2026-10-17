@@ -21,7 +21,9 @@ if(!recovery&&process.argv[2]!=='status'){console.error('RECOVERY_CONTEXT_MISSIN
 const root=process.argv.includes('--root')?process.argv[process.argv.indexOf('--root')+1]:dirname(process.argv[1]);
 const path=join(root,'fixture.json'),s=JSON.parse(readFileSync(path,'utf8')),action=process.argv[2];
 appendFileSync(join(root,'calls.jsonl'),JSON.stringify({action,recovery})+'\n');
-if(s.refuse===action){console.error('APPROVAL_DENIED');process.exit(1);}
+if(s.refuse===action){if(process.argv.includes('--error-json'))console.log(JSON.stringify({error:'APPROVAL_DENIED'}));else console.error('APPROVAL_DENIED');process.exit(1);}
+if(action==='doctor'&&s.nativeDoctorFailure){process.exit(37);}
+if(action==='start'&&s.startFailures>0){s.startFailures--;s.phase='abnormal_exit';s.supervisorAlive=false;if(s.requestStopAfterFailure)s.stopRequested=true;if(s.unresolvedCleanup)s.phase='cleanup_required';writeFileSync(path,JSON.stringify(s));console.log(JSON.stringify({error:s.unresolvedCleanup?'CLEANUP_REQUIRED':'START_TIMEOUT'}));process.exit(1);}
 if(action==='start'){s.phase='ready';s.supervisorAlive=true;s.starts=(s.starts??0)+1;s.runId='new-run-'+s.starts;}
 if(action==='stop'||action==='stop-run'){
   if(s.replaceAtStop)s.runId='replacement-run';
@@ -112,6 +114,27 @@ const afterRetry=(await readFile(join(t.dir,'calls.jsonl'),'utf8')).trim().split
 assert.equal(afterRetry.filter(x=>x.action==='start').length,3);
 t=await runner('damaged-budget',{...ready,supervisorAlive:false,phase:'stale_record',budget:{schemaVersion:0}},'run');
 assert.notEqual(t.result.status,0);assert.ok(!t.calls.includes('reconcile-stale')&&!t.calls.includes('start'));
+t=await runner('slow-start-retry',{...ready,supervisorAlive:false,phase:'abnormal_exit',startFailures:1,stopOnStatusCall:4},'run');
+assert.equal(t.result.status,0,t.result.stderr);assert.equal(t.calls.filter(x=>x==='start').length,2);
+assert.equal(JSON.parse(await readFile(join(t.dir,'run','login-recovery-budget.json'),'utf8')).attempts.length,2);
+assert.match(await readFile(join(t.dir,'logs','login-management.jsonl'),'utf8'),/startup_retry/);
+assert.ok((await readFile(join(t.dir,'sleeps.jsonl'),'utf8')).trim().split('\n').some(line=>Number(line)>=59));
+t=await runner('start-permanently-stuck',{...ready,supervisorAlive:false,phase:'abnormal_exit',startFailures:5},'run');
+assert.notEqual(t.result.status,0);assert.equal(t.calls.filter(x=>x==='start').length,3);
+retry=run(join(t.dir,'harness.ps1'),['-Mode','run']);assert.notEqual(retry.status,0);assert.match(retry.stderr,/budget exhausted/);
+assert.equal((await readFile(join(t.dir,'calls.jsonl'),'utf8')).trim().split('\n').map(JSON.parse).filter(x=>x.action==='start').length,3);
+t=await runner('expired-budget',{...ready,supervisorAlive:false,phase:'abnormal_exit',stopOnStatusCall:3,budget:{schemaVersion:1,attempts:Array.from({length:3},()=>({at:new Date(Date.now()-1801000).toISOString()}))}},'run');
+assert.equal(t.result.status,0,t.result.stderr);assert.equal(t.calls.filter(x=>x==='start').length,1);
+t=await runner('start-permission-denied',{...ready,supervisorAlive:false,phase:'abnormal_exit',refuse:'start'},'run');
+assert.notEqual(t.result.status,0);assert.equal(t.calls.filter(x=>x==='start').length,1);assert.match(t.result.stderr,/APPROVAL_DENIED/);
+t=await runner('start-cleanup-unresolved',{...ready,supervisorAlive:false,phase:'abnormal_exit',startFailures:1,unresolvedCleanup:true},'run');
+assert.notEqual(t.result.status,0);assert.equal(t.calls.filter(x=>x==='start').length,1);assert.match(t.result.stderr,/CLEANUP_REQUIRED/);
+t=await runner('requested-stop-after-start-failed',{...ready,supervisorAlive:false,phase:'abnormal_exit',startFailures:1,requestStopAfterFailure:true},'run');
+assert.notEqual(t.result.status,0);assert.equal(t.calls.filter(x=>x==='start').length,1);
+t=await runner('native-doctor-exit',{...ready,nativeDoctorFailure:true},'run');
+assert.notEqual(t.result.status,0);assert.match(t.result.stderr,/doctor: REFUSED/);
+const nativeFailure=(await readFile(join(t.dir,'logs','login-management.jsonl'),'utf8')).trim().split('\n').map(JSON.parse).find(e=>e.event==='manager_command_failed');
+assert.equal(nativeFailure.managerAction,'doctor');assert.equal(nativeFailure.nativeExitCode,37);assert.equal(nativeFailure.outputKind,'empty');
 t=await runner('requested-stop-in-progress',{...ready,stoppingOnStatusCall:2},'run');
 assert.equal(t.result.status,0,t.result.stderr);assert.ok(!t.calls.includes('start')&&!t.calls.includes('stop-run'));
 t=await runner('in-flight',{phase:'starting',supervisorAlive:true,runId:'old-run',becomeReady:true},'start');

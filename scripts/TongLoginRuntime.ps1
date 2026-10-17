@@ -5,9 +5,10 @@ $runtime='D:\Tong\runtime'
 $node='D:\node\node.exe'
 $manager=Join-Path $runtime 'releases\manager\scripts\TongAgentDockRuntime.mjs'
 $recoveryLimit=3;$recoveryWindowSeconds=1800;$recoveryIntervalSeconds=60
-function Write-RuntimeEvent([string]$Event,$Status,[string]$Reason) {
+function Write-RuntimeEvent([string]$Event,$Status,[string]$Reason,$Details) {
     $entry=[ordered]@{at=[DateTime]::UtcNow.ToString('o');event=$Event;mode=$Mode;runnerPid=$PID;reason=$Reason}
     if($Status){foreach($key in @('runId','phase','supervisorAlive','guardianAlive')){if($Status.PSObject.Properties[$key]){$entry[$key]=$Status.$key}}}
+    if($Details){foreach($key in $Details.Keys){$entry[$key]=$Details[$key]}}
     [IO.File]::AppendAllText((Join-Path $runtime 'logs\login-management.jsonl'),(($entry|ConvertTo-Json -Compress)+"`n"),[Text.UTF8Encoding]::new($false))
 }
 function Runtime([string]$Action,[string]$ExpectedRunId) {
@@ -15,7 +16,17 @@ function Runtime([string]$Action,[string]$ExpectedRunId) {
     # Lifecycle queries still require the recovery grant before any side effect.
     if($Action -ceq 'status' -and $Mode -eq 'status'){$raw=& $node $manager $Action --root $runtime --error-json}
     elseif($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId --login-recovery --error-json}else{$raw=& $node $manager $Action --root $runtime --login-recovery --error-json}
-    if($LASTEXITCODE -ne 0){$reason='REFUSED';try{$failure=$raw|ConvertFrom-Json;if($failure.error -cmatch '^[A-Z_]{1,64}$'){$reason=$failure.error}}catch{};throw ('Tong manager refused '+$Action+': '+$reason)}
+    $nativeExitCode=$LASTEXITCODE
+    if($nativeExitCode -ne 0){
+        $reason='REFUSED';$outputKind=if([string]::IsNullOrWhiteSpace(($raw -join "`n"))){'empty'}else{'unstructured'}
+        try{$failure=$raw|ConvertFrom-Json;if($failure.error -cmatch '^[A-Z_]{1,64}$'){$reason=$failure.error;$outputKind='error_json'}}catch{}
+        # REFUSED alone cannot distinguish authorization denial from a native
+        # Node exit. Retain bounded metadata, never arbitrary stdout/stderr.
+        Write-RuntimeEvent 'manager_command_failed' $null $reason @{managerAction=$Action;nativeExitCode=$nativeExitCode;exitHex=('0x{0:X8}' -f ([long]$nativeExitCode -band 0xffffffffL));outputKind=$outputKind}
+        $failureException=[InvalidOperationException]::new(('Tong manager refused '+$Action+': '+$reason))
+        $failureException.Data['managerAction']=$Action;$failureException.Data['managerCode']=$reason
+        throw $failureException
+    }
     return ($raw|ConvertFrom-Json)
 }
 function Enter-RuntimeLock($Mutex) {
@@ -63,7 +74,7 @@ function Reserve-Recovery($Status,[string]$Reason) {
     if(Test-Path -LiteralPath $path){[IO.File]::Replace($temporary,$path,[NullString]::Value)}else{[IO.File]::Move($temporary,$path)}
     Write-RuntimeEvent 'recovery_attempt' $Status $Reason
 }
-function Start-ManagedRuntime($Status) {
+function Start-ManagedRuntimeOnce($Status) {
     # Give the existing Guardian a bounded opportunity to finish its private Job.
     $deadline=[DateTime]::UtcNow.AddSeconds(30)
     while(-not $Status.supervisorAlive -and $Status.PSObject.Properties['guardianAlive'] -and $Status.guardianAlive -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Seconds 1;$Status=Runtime 'status'}
@@ -79,6 +90,20 @@ function Start-ManagedRuntime($Status) {
         if($doctor.healthy){return $Status}
         if($attempt -eq 2){Stop-UnhealthyRuntime $Status.runId;throw 'Tong failed consecutive health checks; evidence retained'}
         Start-Sleep -Seconds 2
+    }
+}
+function Start-ManagedRuntime($Status) {
+    for($attempt=0;$attempt -lt $recoveryLimit;$attempt++){
+        try{return (Start-ManagedRuntimeOnce $Status)}catch{
+            # A failed manager start has already waited for its exact Guardian
+            # cleanup. Recheck state; the manager still enforces Job/identity,
+            # ports, pins and authorization on every bounded retry.
+            if($Mode -cne 'run' -or $attempt -ge ($recoveryLimit-1) -or $_.Exception.Data['managerAction'] -cne 'start' -or $_.Exception.Data['managerCode'] -notin @('START_FAILED','START_TIMEOUT')){throw}
+            $Status=Runtime 'status'
+            if($Status.PSObject.Properties['stopRequested'] -and $Status.stopRequested){throw 'Startup retry refused: stop requested; evidence retained'}
+            if($Status.supervisorAlive -or $Status.phase -notin @('not_started','stopped','abnormal_exit')){throw 'Startup retry refused: cleanup or identity unresolved; evidence retained'}
+            Reserve-Recovery $Status 'startup_retry'
+        }
     }
 }
 try {
