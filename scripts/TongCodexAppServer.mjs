@@ -22,6 +22,14 @@ export class CodexSessionBusyError extends Error {
   }
 }
 
+export class CodexSessionNotReadyError extends Error {
+  constructor() {
+    super("Native Codex session is busy or not accepting input. No turn was started. Wait until it is idle, then resume the same native session.");
+    this.name = "CodexSessionNotReadyError";
+    this.code = "CODEX_SESSION_NOT_READY";
+  }
+}
+
 function isActiveWriterConflict(method, code, message) {
   return ["thread/read", "thread/resume"].includes(method) && code === -32600
     && /(?:already has an active writer|thread-store conflict[^\r\n]*active writer)/i.test(String(message ?? ""));
@@ -210,6 +218,7 @@ export class CodexAppServerAdapter {
       createdAt: thread.createdAt, updatedAt: thread.updatedAt,
       status: { type: thread.status?.type ?? "unknown" }, source: thread.source,
       usable: usableSession(thread),
+      writerOwnershipVerified: false, // Another app-server may hold the native writer despite an idle/notLoaded status.
     })), nextCursor: result.nextCursor ?? null };
   }
 
@@ -224,8 +233,10 @@ export class CodexAppServerAdapter {
       // Bound discovery work; never create a new thread just because the search was truncated.
       for (let page = 0; page < 20; page += 1) {
         const result = await this.sessionPage(peer, { cwd, cursor, limit: 100, searchTerm });
-        const found = result.sessions.find((thread) => thread.usable);
-        if (found) return found.id;
+        // "latest" means the newest matching conversation, NOT the newest idle
+        // fallback. An active conversation must not be silently replaced by an
+        // older thread simply because another client holds its writer.
+        if (result.sessions.length) return result.sessions[0].id;
         if (!result.nextCursor) return null;
         cursor = result.nextCursor;
       }
@@ -238,7 +249,7 @@ export class CodexAppServerAdapter {
     if (!projectSession(result.thread, cwd) || result.thread.id !== threadId) {
       throw new Error("Native Codex session project mismatch or unavailable");
     }
-    if (!usableSession(result.thread)) throw new Error("Native Codex session is busy or unavailable");
+    if (!usableSession(result.thread)) throw new CodexSessionNotReadyError();
     return result.thread;
   }
 

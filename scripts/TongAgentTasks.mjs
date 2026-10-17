@@ -578,13 +578,15 @@ export class TongAgentTaskManager {
         } else if (controller.signal.aborted) {
           record.status = "cancelled";
           record.error = null;
-        } else if (error?.code === "CODEX_SESSION_ACTIVE_WRITER" && record.codexSessionId) {
-          // The original native thread is intact but another Codex client owns its writer.
-          // Preserve its ID, keep resume available, and never create a substitute thread.
+        } else if (["CODEX_SESSION_ACTIVE_WRITER", "CODEX_SESSION_NOT_READY"].includes(error?.code) && record.codexSessionId) {
+          // Preserve the exact native thread while another client owns its
+          // writer or it has an active turn. No substitute thread is created.
           record.status = "waiting_user_action";
           record.error = {
-            message: "Codex session has an active writer in another Codex client; no turn was started.",
-            suggestion: "Finish or release the session in Codex Desktop (fully quit it if needed), then use tong_agent_resume on this task to retry the same native session. Do not delete Codex locks or change the session ID.",
+            message: error.code === "CODEX_SESSION_ACTIVE_WRITER"
+              ? "Codex session has an active writer in another Codex client; no turn was started."
+              : "Codex session is busy or not accepting input; no turn was started.",
+            suggestion: "Wait for the other client to finish or release this session, then use tong_agent_resume to retry the same native session. Do not delete Codex locks, forcibly stop the owner or change the session ID.",
           };
         } else {
           record.status = "failed";

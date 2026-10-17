@@ -59,15 +59,23 @@ assert.equal(listRequest.params.sortKey,'updated_at');
 assert.ok(listRequest.params.sourceKinds.includes('appServer'));
 assert.equal(listRequest.params.useStateDbOnly,true);
 
-// Catches choosing an active thread, failing to page, or silently creating instead of resuming.
+// "latest" preserves the newest matching native thread even if another
+// surface holds it; never silently switch the user's task to an older thread.
 const latest=adapter({pages:[{data:[thread('busy',{status:{type:'active'}})],nextCursor:'second'},
   {data:[thread('older')],nextCursor:null}]});
-assert.equal(await latest.client.selectSession({cwd,sessionMode:'latest'}),'older');
+assert.equal(await latest.client.selectSession({cwd,sessionMode:'latest'}),'busy');
+assert.equal(latest.process.requests.filter(m=>m.method==='thread/list').length,1);
+assert.equal(page.sessions[0].writerOwnershipVerified,false);
 const mismatch=adapter({stored:thread('saved',{cwd:'D:\\other'})});
 await assert.rejects(mismatch.client.runTask({cwd,prompt:'Continue',threadId:'saved'}),/project|mismatch/i);
 assert.ok(!mismatch.process.requests.some(m=>m.method==='thread/resume'||m.method==='turn/start'));
 const busy=adapter({stored:thread('saved',{status:{type:'active'}})});
-await assert.rejects(busy.client.runTask({cwd,prompt:'Continue',threadId:'saved'}),/busy|active/i);
+await assert.rejects(busy.client.runTask({cwd,prompt:'Continue',threadId:'saved'}),error=>{
+  assert.equal(error.code,'CODEX_SESSION_NOT_READY');
+  assert.match(error.message,/busy/i);
+  return true;
+});
+assert.ok(!busy.process.requests.some(m=>['thread/resume','thread/start','turn/start'].includes(m.method)));
 const cancelledController=new AbortController();
 const cancelled=adapter({onRead:()=>cancelledController.abort(new Error('cancelled during metadata read'))});
 await assert.rejects(cancelled.client.runTask({cwd,prompt:'Must not append',threadId:'saved'},
@@ -103,4 +111,4 @@ try {
   assert.deepEqual(await snapshotProject(temporary.path),before);
   passed=true;
 } finally { await temporary.finish(passed); }
-console.log('PASS: project-scoped native discovery, recent suitable selection, safe resume and final/error evidence.');
+console.log('PASS: project-scoped native discovery, newest exact-session selection, safe resume and final/error evidence.');

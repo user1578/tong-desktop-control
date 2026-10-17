@@ -15,12 +15,15 @@ const policy=new TongTrustedPolicy({policyPath:join(state,'trusted.json'),taskSt
 const executable=join(root,'codex.exe');await writeFile(executable,'synthetic executable');await policy.enable(executable);await policy.grant('development',access);await policy.authorizeDevelopment('development',access);
 const calls=[];
 let desktopOwnsWriter=true;
+let desktopThreadNotReady=true;
 const trusted=new TongTrustedCodexBroker({access,policy,pollMs:5,adapterFactory:()=>({
   async selectSession({codexSessionId}){return codexSessionId??null;},
   async runTask(spec,{onSessionId}){
     calls.push(spec);
     if(spec.threadId==='desktop-owned-thread' && desktopOwnsWriter)
       throw Object.assign(new Error('Codex session is owned by another active writer'),{code:'CODEX_SESSION_ACTIVE_WRITER'});
+    if(spec.threadId==='desktop-active-thread' && desktopThreadNotReady)
+      throw Object.assign(new Error('Codex native session is still running'),{code:'CODEX_SESSION_NOT_READY'});
     await onSessionId(spec.threadId??'native-session');
     return {threadId:spec.threadId??'native-session',turnStatus:'completed'};
   },
@@ -52,6 +55,16 @@ try{
   assert.equal(retried.codexSessionId,'desktop-owned-thread');
   assert.equal(calls.at(-1).threadId,'desktop-owned-thread');
   assert.ok(calls.at(-1).continuationMessage.includes('retry the same native session'));
+  const active=await manager.start({...request,sessionMode:'existing',codexSessionId:'desktop-active-thread',
+    idempotencyKey:'development-session-not-ready-0001'});
+  const waiting=await waitFor(active.taskId,'waiting_user_action');
+  assert.equal(waiting.codexSessionId,'desktop-active-thread');
+  assert.equal(waiting.resumeAvailable,true);
+  assert.match(waiting.error.message,/not accepting input/i);
+  desktopThreadNotReady=false;
+  await manager.resume(active.taskId,{message:'resume this exact recent conversation'});
+  assert.equal((await waitFor(active.taskId,'success')).codexSessionId,'desktop-active-thread');
+  assert.equal(calls.at(-1).threadId,'desktop-active-thread');
   await policy.authorizeDevelopment('development',access,{gitPush:true});
   const withGit=await manager.start({...request,idempotencyKey:'development-previous-git-1'});await waitFor(withGit.taskId,'success');
   await policy.authorizeDevelopment('development',access,{gitPush:false});
