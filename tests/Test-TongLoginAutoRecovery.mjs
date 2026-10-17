@@ -4,7 +4,8 @@ import {readFile,writeFile,mkdir,readdir} from 'node:fs/promises';
 import {join,basename} from 'node:path';
 import {randomBytes} from 'node:crypto';
 import {loginFixture} from './fixtures/TongLoginRecoveryFixture.mjs';
-import {issueSimulationLoginRecovery,revokeSimulationLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
+import {issueSimulationLoginRecovery,revokeSimulationLoginRecovery,withLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
+import {startRuntime} from '../scripts/TongAgentDockRuntime.mjs';
 import {protectSecret,readSecret,processIdentity,sameProcess,terminateOwnedProcess,safeEnvironment} from '../scripts/TongRuntimeSecurity.mjs';
 
 // One real three-component runtime, one 601 MB dependency tree; no production
@@ -50,6 +51,10 @@ async function waitReady(previousRunId){
 let monitor,monitorError='',current;const crashed=[];
 try{
   assert.notEqual((await command('start',[],false)).code,0,'ordinary start has no maintenance receipt');
+  await assert.rejects(withLoginRecovery(root,'start',()=>startRuntime(root,{startupTimeoutMs:1})),/START_TIMEOUT/);
+  const aborted=await read('guardian.json');assert.equal(aborted.jobActiveAfterCleanup,0);assert.ok(aborted.finishedAt);
+  const abortEvent=(await readFile(join(root,'logs','lifecycle.jsonl'),'utf8')).trim().split('\n').map(JSON.parse).find(e=>e.runId===aborted.runId&&e.event==='startup_failure');
+  assert.equal(abortEvent.code,'START_TIMEOUT');assert.equal(abortEvent.budgetMs,1);assert.ok(abortEvent.durationMs>=1);assert.ok(Number.isFinite(abortEvent.stageDurationMs));
   let result=await command('start');assert.equal(result.code,0,result.stderr);current=result.result;
   assert.deepEqual(current.children.map(c=>c.role),['agentdock','devspace','gateway']);
   assert.equal((await command('doctor')).result.healthy,true);
