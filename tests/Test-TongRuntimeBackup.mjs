@@ -14,7 +14,8 @@ const codeRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const codeCommit = 'b96795840cf5a320090861389b63796a1be164bd';
 const gitExecutable = 'C:\\Users\\Rune\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\git\\cmd\\git.exe';
 const pythonExecutable = 'C:\\Program Files\\Python311\\python.exe';
-const root = await mkdtemp('D:\\agentdock-poc-20261010\\isolated\\state\\b22-backup-');
+// Backup and restore deliberately only accept isolated roots under D:\Tong\state.
+const root = await mkdtemp('D:\\Tong\\state\\b22-backup-');
 const sourceRoot = join(root, 'source'), backupRoot = join(root, 'snapshot'), restoreRoot = join(root, 'restored');
 await mkdir(sourceRoot);
 for (const name of ['backend-state','workspace/project','workspace/demo','tong-state','tong-policy','secrets','run','logs','temp','home']) await mkdir(join(sourceRoot,name), {recursive:true});
