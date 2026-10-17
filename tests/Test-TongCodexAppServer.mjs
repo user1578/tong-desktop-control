@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { PassThrough, Writable } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
-import { CodexAppServerAdapter } from "../scripts/TongCodexAppServer.mjs";
+import { CodexAppServerAdapter, CodexSessionBusyError } from "../scripts/TongCodexAppServer.mjs";
 
 assert.throws(() => new CodexAppServerAdapter({ executable: "codex.exe" }), /absolute/i,
   "the App Server executable must not be resolved through an inherited PATH");
@@ -14,11 +14,12 @@ class SimulatedAppServerProcess extends EventEmitter {
   stdout = new PassThrough();
   stderr = new PassThrough();
 
-  constructor({ interruptOnly = false, threadId = "thread-simulated", rejectThreadStart = false } = {}) {
+  constructor({ interruptOnly = false, threadId = "thread-simulated", rejectThreadStart = false, rejectResumeActiveWriter = false } = {}) {
     super();
     this.threadId = threadId;
     this.interruptOnly = interruptOnly;
     this.rejectThreadStart = rejectThreadStart;
+    this.rejectResumeActiveWriter = rejectResumeActiveWriter;
     this.stdin = new Writable({
       write: (chunk, _encoding, callback) => {
         for (const line of chunk.toString("utf8").split(/\r?\n/).filter(Boolean)) this.receive(JSON.parse(line));
@@ -43,6 +44,9 @@ class SimulatedAppServerProcess extends EventEmitter {
       if (message.params?.runtimeWorkspaceRoots && !this.experimentalApi) {
         this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
           message: `${message.method}.runtimeWorkspaceRoots requires experimentalApi capability` } });
+      } else if (message.method === "thread/resume" && this.rejectResumeActiveWriter) {
+        this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
+          message: "thread " + this.threadId + " already has an active writer" } });
       } else if (this.rejectThreadStart) {
         this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
           message: "Invalid request token=synthetic-secret C:\\Users\\Private\\config.toml" } });
@@ -156,6 +160,28 @@ assert.ok(resumedProcess.requests.some((request) => request.method === "thread/r
 assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/start"));
 assert.ok(resumedProcess.requests.some((request) => request.method === "thread/read"
   && request.params.includeTurns === false), "resume must validate stored project metadata before changing cwd");
+
+const writerOwnedProcess = new SimulatedAppServerProcess({
+  threadId: "thread-owned-by-desktop", rejectResumeActiveWriter: true,
+});
+const writerOwnedAdapter = new CodexAppServerAdapter({
+  executable: codexExecutable, env: workerEnvironment, requestTimeoutMs: 500,
+  shutdownTimeoutMs: 20, spawnProcess: () => writerOwnedProcess,
+});
+await assert.rejects(writerOwnedAdapter.runTask({
+  cwd: projectRoot, prompt: "Continue the original session",
+  threadId: "thread-owned-by-desktop",
+}), (error) => {
+  assert.ok(error instanceof CodexSessionBusyError);
+  assert.equal(error.code, "CODEX_SESSION_ACTIVE_WRITER");
+  assert.match(error.message, /another active writer/i);
+  return true;
+});
+assert.ok(writerOwnedProcess.requests.some(r => r.method === "thread/resume"));
+assert.ok(!writerOwnedProcess.requests.some(r => r.method === "turn/start"),
+  "writer conflict must never start a turn, force ownership or create another thread");
+assert.ok(!writerOwnedProcess.requests.some(r => r.method === "thread/start"),
+  "explicit native session identity must be preserved");
 
 const rejectedProcess = new SimulatedAppServerProcess({ rejectThreadStart: true });
 const rejectedAdapter = new CodexAppServerAdapter({ executable: codexExecutable, env: workerEnvironment,

@@ -11,6 +11,21 @@ const SAFETY_INSTRUCTIONS = [
 ].join("\n");
 const MAX_AGENT_MESSAGE_CHARS = 16_000;
 const SESSION_SOURCES = ["cli", "vscode", "appServer"];
+
+// Codex enforces a single native writer per thread across App Server processes.
+// This is a recoverable ownership conflict, not evidence that the rollout is corrupt.
+export class CodexSessionBusyError extends Error {
+  constructor() {
+    super("Codex session is owned by another active writer. No turn was started. Release the session in the other Codex client before retrying the same native session.");
+    this.name = "CodexSessionBusyError";
+    this.code = "CODEX_SESSION_ACTIVE_WRITER";
+  }
+}
+
+function isActiveWriterConflict(method, code, message) {
+  return ["thread/read", "thread/resume"].includes(method) && code === -32600
+    && /(?:already has an active writer|thread-store conflict[^\r\n]*active writer)/i.test(String(message ?? ""));
+}
 const samePath = (a, b) => typeof a === "string" && typeof b === "string"
   && (process.platform === "win32" ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b));
 
@@ -86,7 +101,9 @@ class JsonRpcPeer {
       if (message.error) {
         const code = Number.isInteger(message.error.code) ? message.error.code : "unknown";
         const detail = safeProtocolMessage(message.error.message);
-        waiter.reject(new Error(`Codex App Server ${waiter.method} failed (${code})${detail ? `: ${detail}` : ""}`));
+        waiter.reject(isActiveWriterConflict(waiter.method, code, message.error.message)
+          ? new CodexSessionBusyError()
+          : new Error(`Codex App Server ${waiter.method} failed (${code})${detail ? `: ${detail}` : ""}`));
       }
       else waiter.resolve(message.result ?? {});
       return;

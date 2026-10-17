@@ -14,7 +14,17 @@ await access.addProject({id:'development',name:'Development',root:projectRoot,pe
 const policy=new TongTrustedPolicy({policyPath:join(state,'trusted.json'),taskStatePath:join(state,'tasks.json')});
 const executable=join(root,'codex.exe');await writeFile(executable,'synthetic executable');await policy.enable(executable);await policy.grant('development',access);await policy.authorizeDevelopment('development',access);
 const calls=[];
-const trusted=new TongTrustedCodexBroker({access,policy,pollMs:5,adapterFactory:()=>({async selectSession(){return null;},async runTask(spec,{onSessionId}){calls.push(spec);await onSessionId(spec.threadId??'native-session');return {threadId:spec.threadId??'native-session',turnStatus:'completed'};}})});
+let desktopOwnsWriter=true;
+const trusted=new TongTrustedCodexBroker({access,policy,pollMs:5,adapterFactory:()=>({
+  async selectSession({codexSessionId}){return codexSessionId??null;},
+  async runTask(spec,{onSessionId}){
+    calls.push(spec);
+    if(spec.threadId==='desktop-owned-thread' && desktopOwnsWriter)
+      throw Object.assign(new Error('Codex session is owned by another active writer'),{code:'CODEX_SESSION_ACTIVE_WRITER'});
+    await onSessionId(spec.threadId??'native-session');
+    return {threadId:spec.threadId??'native-session',turnStatus:'completed'};
+  },
+})});
 const isolated={async preflight(){throw new Error('disabled');},async runTask(){throw new Error('disabled');},async close(){}};
 const manager=new TongAgentTaskManager({access,statePath:policy.taskStatePath,workerBroker:new TongExecutorRouter({policy,isolated,trusted}),collectResult:async()=>({changedFiles:[]}),defaultTimeoutMs:3000,maxTaskRuntimeMs:5000});
 const request={projectId:'development',agent:'codex',task:'build and test',scope:'this project only',sessionMode:'new',idempotencyKey:'development-start-0001',timeoutSeconds:3};
@@ -28,6 +38,20 @@ try{
   await waitFor(task.taskId,'success');
   await manager.resume(task.taskId,{message:'continue normal development'});await waitFor(task.taskId,'success');
   assert.equal(calls.length,2);assert.equal(calls[1].threadId,'native-session');
+  const writerTask=await manager.start({...request,sessionMode:'existing',codexSessionId:'desktop-owned-thread',
+    idempotencyKey:'development-active-writer-0001'});
+  const blocked=await waitFor(writerTask.taskId,'waiting_user_action');
+  assert.equal(blocked.codexSessionId,'desktop-owned-thread');
+  assert.equal(blocked.resumeAvailable,true);
+  assert.equal(blocked.pendingApproval,false);
+  assert.match(blocked.error.message,/active writer/i);
+  assert.equal(calls.at(-1).threadId,'desktop-owned-thread');
+  desktopOwnsWriter=false;
+  await manager.resume(writerTask.taskId,{message:'retry the same native session after release'});
+  const retried=await waitFor(writerTask.taskId,'success');
+  assert.equal(retried.codexSessionId,'desktop-owned-thread');
+  assert.equal(calls.at(-1).threadId,'desktop-owned-thread');
+  assert.ok(calls.at(-1).continuationMessage.includes('retry the same native session'));
   await policy.authorizeDevelopment('development',access,{gitPush:true});
   const withGit=await manager.start({...request,idempotencyKey:'development-previous-git-1'});await waitFor(withGit.taskId,'success');
   await policy.authorizeDevelopment('development',access,{gitPush:false});

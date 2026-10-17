@@ -578,6 +578,14 @@ export class TongAgentTaskManager {
         } else if (controller.signal.aborted) {
           record.status = "cancelled";
           record.error = null;
+        } else if (error?.code === "CODEX_SESSION_ACTIVE_WRITER" && record.codexSessionId) {
+          // The original native thread is intact but another Codex client owns its writer.
+          // Preserve its ID, keep resume available, and never create a substitute thread.
+          record.status = "waiting_user_action";
+          record.error = {
+            message: "Codex session has an active writer in another Codex client; no turn was started.",
+            suggestion: "Finish or release the session in Codex Desktop (fully quit it if needed), then use tong_agent_resume on this task to retry the same native session. Do not delete Codex locks or change the session ID.",
+          };
         } else {
           record.status = "failed";
           record.error = { message: cleanText(error instanceof Error ? error.message : "Codex adapter failed").slice(0, 500),
