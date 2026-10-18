@@ -1,0 +1,30 @@
+name: P3 local provider acceptance
+
+on:
+  push:
+    branches:
+      - 'codex/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  local-acceptance-contract:
+    name: Manual acceptance contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check syntax
+        run: |
+          node --check scripts/TongP3LocalAcceptance.mjs
+          node --check scripts/Run-TongP3LocalAcceptance.mjs
+          node --check tests/Test-TongP3LocalAcceptance.mjs
+      - name: Run synthetic acceptance tests (no CLI installation, no models)
+        run: node --test tests/Test-TongP3LocalAcceptance.mjs

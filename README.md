@@ -2,6 +2,10 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P3 · Local provider session acceptance kit (development only)
+
+A separate, opt-in local Windows console runner now prepares an independently confirmed Claude CLI text-only session test, with fixed version and executable validation, fresh temp workdir, bounded output and exact native-session receipt checking. **It refuses non-interactive launch through Tong MCP and requires the user to type `Y` locally.** DSH Desktop's bundled CLI is inspected only; DSH live execution remains disabled until its tool profile is explicitly restricted. See [docs/P3-Local-Provider-Acceptance-StageE.md](docs/P3-Local-Provider-Acceptance-StageE.md). This is not yet the production Job-backed multi-Agent runner.
+
 ## P3 · Existing DeepSeek Harness Desktop runtime (development only)
 
 Tong can now locate and validate the **CLI bundled with an existing DeepSeek Harness Desktop installation**, without installing a duplicate DSH or changing PATH. This is a read-only discovery layer; a bundled Headless/SDK CLI session is **not yet verified to appear or resume in the Desktop UI**. Claude Code remains a separate CLI-only Agent. See [docs/P3-DSH-Desktop-StageD.md](docs/P3-DSH-Desktop-StageD.md) and `node --test tests/Test-TongDshDesktopRuntime.mjs`.
