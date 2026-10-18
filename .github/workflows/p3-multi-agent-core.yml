@@ -1,0 +1,30 @@
+name: P3 multi-agent core
+
+on:
+  push:
+    branches:
+      - 'codex/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  provider-contract:
+    name: Provider contracts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check JavaScript syntax
+        run: |
+          node --check scripts/TongAgentProviders.mjs
+          node --check scripts/TongMultiAgentOrchestrator.mjs
+          node --check tests/Test-TongMultiAgentOrchestrator.mjs
+      - name: Provider orchestration and Codex/Claude regression
+        run: node --test tests/Test-TongMultiAgentOrchestrator.mjs tests/Test-TongClaudeCodeAdapter.mjs tests/Test-TongCodexAppServer.mjs tests/Test-TongNativeSessions.mjs

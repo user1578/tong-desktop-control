@@ -2,6 +2,10 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P3 · Multi-agent orchestration core (development only)
+
+P3 Stage B introduces a provider registry and a serial Codex→Claude workflow coordinator with per-stage authorization checks, scoped native session handling, bounded result handoff, cancellation, status events and in-memory same-project exclusion. **This is a synthetic-tested core, not yet wired to production MCP or persistent task storage.** Claude requires its own approved runner and authorization; Codex still uses its reviewed broker. Details: [docs/P3-MultiAgent-Core-StageB.md](docs/P3-MultiAgent-Core-StageB.md). Run `node --test tests/Test-TongMultiAgentOrchestrator.mjs` for the contract suite.
+
 ## P3 · Claude Code adapter (development only)
 
 An isolated Claude Code adapter now prepares fixed noninteractive text-only CLI requests, supports new or explicitly resumed native session IDs, and validates bounded JSON results. It does **not** launch Claude itself: a separately approved Windows runner is required, and the production task manager continues to accept only Codex. Details, limitations and next integration stages are in [docs/P3-Claude-Adapter-Stage-A.md](docs/P3-Claude-Adapter-Stage-A.md). Run its synthetic contract test with `node --test tests/Test-TongClaudeCodeAdapter.mjs`.
