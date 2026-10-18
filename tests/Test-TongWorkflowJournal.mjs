@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -7,7 +7,10 @@ import { TongWorkflowJournal } from '../scripts/TongWorkflowJournal.mjs';
 import { TongAgentProviderRegistry } from '../scripts/TongAgentProviders.mjs';
 import { TongMultiAgentOrchestrator } from '../scripts/TongMultiAgentOrchestrator.mjs';
 
-const tmp = await mkdtemp(join(tmpdir(), 'tong-p3-journal-'));
+// GitHub Windows runner temp paths may traverse managed junctions; use the
+// canonical parent so the journal's strict root-path guard stays unchanged.
+const temporary = await mkdtemp(join(tmpdir(), 'tong-p3-journal-'));
+const tmp = await realpath(temporary);
 const root = join(tmp,'private-state');
 const project = join(tmp,'project');
 const registry=new TongAgentProviderRegistry().register({
@@ -79,5 +82,5 @@ try {
   await assert.rejects(manual.record({type:'step-failed',index:0,agent:'fake'}),/already finished/);
   const entries=await readdir(root);
   assert.ok(entries.length>=4);
-} finally { await rm(tmp,{recursive:true,force:true}); }
+} finally { await rm(temporary,{recursive:true,force:true}); }
 console.log('PASS: durable journal, stage IDs, failure/cancel records, cross-instance lock and no automatic recovery.');
