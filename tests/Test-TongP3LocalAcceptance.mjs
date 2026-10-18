@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import {
   prepareLocalProviderAcceptance, findLocalAcceptanceBinary,
   verifyLocalAcceptanceVersion, summarizeAcceptanceResult,
+  checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
 } from '../scripts/TongP3LocalAcceptance.mjs';
 
 const localAppData='C:\\Users\\Example\\AppData\\Local';
@@ -99,4 +100,42 @@ assert.deepEqual(summarizeAcceptanceResult(dsh,jsonl),{
   markerConfirmed:false,desktopVisibility:'unverified',events:2,
 });
 assert.throws(()=>summarizeAcceptanceResult(dsh,{exitCode:0,stdout:'some log without JSON'}),/JSONL/);
-console.log('PASS: local CLI acceptance is opt-in only, binary-verified, version-pinned, and never claims DSH Desktop session affinity.');
+assert.equal(checkClaudeLocalAuth({
+  exitCode:1,stdout:JSON.stringify({
+    loggedIn:false,authMethod:'none',email:'private@example.test',
+  }),
+}), 'not-authenticated');
+assert.equal(checkClaudeLocalAuth({
+  exitCode:0,stdout:JSON.stringify({
+    loggedIn:true,authMethod:'claude.ai',accountUuid:'private-id',
+  }),
+}), 'authenticated');
+assert.equal(checkClaudeLocalAuth({
+  exitCode:1,stdout:'unparseable private error',
+}), 'unavailable');
+assert.equal(checkClaudeLocalAuth({
+  exitCode:0,stdout:'x'.repeat(9000),
+}), 'unavailable');
+const cases=[
+  [{timedOut:true,exitCode:null},'timeout'],
+  [{overflow:true,exitCode:null},'output-limit'],
+  [{exitCode:1,stderrPreview:'Error: Please log in to Claude Code'},'authentication'],
+  [{exitCode:1,stderrPreview:'HTTP 429 rate limit exceeded'},'rate-limit'],
+  [{exitCode:1,stderrPreview:'ECONNREFUSED network error'},'network'],
+  [{exitCode:1,stderrPreview:'Unknown option --no-such-flag'},'cli-arguments'],
+  [{exitCode:1,stderrPreview:'session already exists'},'session'],
+  [{exitCode:1,stderrPreview:'secret user info: TOKEN-PRIVATE'},'cli-exit-nonzero'],
+  [{exitCode:0,stdout:''},'empty-output'],
+  [{exitCode:0,stdout:'{"type":"result","is_error":true,"error":"hidden"}'},'provider-reported-error'],
+  [{exitCode:0,stdout:'invalid json from provider'},'unexpected-output'],
+];
+for (const [receipt,category] of cases) {
+  assert.equal(classifyLocalAcceptanceFailure(receipt),category);
+}
+for (const receipt of [{exitCode:1,stderrPreview:'Authorization: Bearer very-secret-token'},
+                       {exitCode:1,stdout:'{"error":"SECRET","type":"result","is_error":true}'}]) {
+  const category=classifyLocalAcceptanceFailure(receipt);
+  assert.ok(!category.includes('secret'));
+  assert.ok(!category.includes('token'));
+}
+console.log('PASS: opt-in local CLI acceptance, preflight login, bounded categorical diagnostics, no secret disclosure.');

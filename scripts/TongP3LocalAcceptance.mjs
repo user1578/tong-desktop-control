@@ -94,6 +94,47 @@ export function verifyLocalAcceptanceVersion(plan, response) {
   return parsed;
 }
 
+// This check is local and read-only. Claude prints extra account metadata in
+// auth status; return only a status enum, never an account, token or provider ID.
+export function checkClaudeLocalAuth(receipt) {
+  if (!receipt || typeof receipt !== 'object' || receipt.timedOut ||
+      typeof receipt.stdout !== 'string' ||
+      Buffer.byteLength(receipt.stdout, 'utf8') > 8192) {
+    return 'unavailable';
+  }
+  try {
+    const data = JSON.parse(receipt.stdout);
+    if (data?.loggedIn === false) return 'not-authenticated';
+    if (data?.loggedIn === true && receipt.exitCode === 0) return 'authenticated';
+  } catch {}
+  return 'unavailable';
+}
+
+// Diagnostics are deliberately categorical. Never show raw stderr, stdout,
+// account metadata, command arguments, or bearer tokens to the caller.
+export function classifyLocalAcceptanceFailure(receipt) {
+  if (!receipt || typeof receipt !== 'object') return 'no-process-result';
+  if (receipt.timedOut) return 'timeout';
+  if (receipt.overflow) return 'output-limit';
+  const diagnostic = (typeof receipt.stderrPreview === 'string'
+    ? receipt.stderrPreview.slice(0, 16384) : '') + '\n' +
+    (typeof receipt.stdout === 'string' ? receipt.stdout.slice(0, 8192) : '');
+  if (/authentication|not logged in|login required|please log in|unauthori[sz]ed|invalid api key|invalid.?token|oauth.*expired|401\b/i.test(diagnostic)) return 'authentication';
+  if (/rate.?limit|429\b/i.test(diagnostic)) return 'rate-limit';
+  if (/billing|insufficient.?(?:credit|balance)|quota|payment required|402\b/i.test(diagnostic)) return 'billing-or-quota';
+  if (/ETIMEDOUT|ECONN|ENOTFOUND|network|fetch failed|proxy|connection refused|TLS|certificate/i.test(diagnostic)) return 'network';
+  if (/unknown option|unknown argument|invalid option|Usage:|Missing required|invalid.?flag/i.test(diagnostic)) return 'cli-arguments';
+  if (/session.*(?:not found|invalid|already exists)|duplicate session/i.test(diagnostic)) return 'session';
+  if (receipt.exitCode !== 0) return 'cli-exit-nonzero';
+  if (typeof receipt.stdout !== 'string' || !receipt.stdout.trim()) return 'empty-output';
+  try {
+    const data = JSON.parse(receipt.stdout);
+    if (data?.is_error === true) return 'provider-reported-error';
+    if (data?.type === 'result') return 'unexpected-result';
+  } catch { return 'unexpected-output'; }
+  return 'unexpected-result';
+}
+
 export function summarizeAcceptanceResult(plan, receipt) {
   if (!plan || !['claude','dsh'].includes(plan.provider) ||
       !receipt || typeof receipt !== 'object' || receipt.exitCode !== 0 ||

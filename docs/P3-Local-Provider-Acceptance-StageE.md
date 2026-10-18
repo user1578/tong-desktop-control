@@ -24,7 +24,7 @@ Once the user has inspected the plan, a **user-owned interactive PowerShell wind
 & 'D:\node\node.exe' .\scripts\Run-TongP3LocalAcceptance.mjs --provider claude --run
 ```
 
-The script refuses `--run` from Tong's non-interactive shell or CI. It prints the exact binary and test scope, then asks `Approve ONE text-only Claude test? Type Y:`. Any answer other than the exact capital `Y` cancels. The tested Claude flags are `-p --output-format json --tools '' --strict-mcp-config --disable-slash-commands --permission-mode dontAsk --session-id <UUID>`; the prompt is delivered via stdin. Existing Claude authentication is used (no extra login). It verifies the pinned Claude Code version `2.1.236` and checks the executable hash before launch, executes from a fresh empty temp workspace, caps output/time and writes only a limited report to a fresh temp folder. It does not print full stderr or raw provider stdout.
+The script refuses `--run` from Tong's non-interactive shell or CI. It prints the exact binary and test scope, validates the executable and version, then runs the **read-only** `claude auth status` check in the **same filtered environment and temporary working directory** intended for the model call. If the CLI is not logged in or its status cannot be confirmed, the test stops **before asking for model-call approval**. It does not automatically run login or import API secrets. If authentication succeeds, it asks `Approve ONE text-only Claude test? Type Y:`. Any answer other than the exact capital `Y` cancels. The tested Claude flags are `-p --output-format json --tools '' --strict-mcp-config --disable-slash-commands --permission-mode dontAsk --session-id <UUID>`; the prompt is delivered via stdin. Existing Claude authentication is used (no extra login). It verifies the pinned Claude Code version `2.1.236` and checks the executable hash before launch, executes from a fresh empty temp workspace, caps output/time and writes only a limited report to a fresh temp folder. It does not print full stderr or raw provider stdout. On CLI failure, it now prints only the categorical reason (`authentication`, `network`, `rate-limit`, `cli-arguments`, `timeout`, etc.), exit code and elapsed milliseconds, keeping bounded raw error details in memory only. Failed test temporary workspaces are cleaned up. Successful reports remain limited to the session ID, result, version, timing and binary hash.
 
 After a successful new-session receipt, the user can request continuation by passing the **verified** returned session ID:
 
@@ -33,6 +33,18 @@ After a successful new-session receipt, the user can request continuation by pas
 ```
 
 Again an independent interactive `Y` is required. The session's origin is Claude CLI and its native continuation must be confirmed by the actual provider. This is *not* a Claude Desktop session.
+
+## First failure and follow-up (2026-10-19)
+
+An interactive Claude text-only acceptance returned only `Provider acceptance: provider run unsuccessful`. The previous script discarded stderr and the exit code, so the **original root cause cannot be proven retrospectively**. A subsequent **read-only** `claude auth status` check via Tong, both with the filtered run environment and with its inherited environment, returned `loggedIn:false, authMethod:none`, exit code 1. This is strong evidence that the Tong-side process has no authenticated Claude session, but it does not establish the state of the user's interactive PowerShell session.
+
+User should check locally:
+
+```powershell
+& 'C:\Users\Rune\.local\bin\claude.exe' auth status
+```
+
+If `loggedIn` is false, the user—not Tong—can run `& 'C:\Users\Rune\.local\bin\claude.exe' auth login` and complete authentication. Do not paste account IDs or credentials into chat. After authentication, rerun the opt-in acceptance command in that same local PowerShell. No automatic retry or production authorization change is permitted.
 
 ## DeepSeek Harness desktop distinction
 
