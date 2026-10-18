@@ -27,6 +27,13 @@ const trusted = new TongTrustedCodexBroker({ access, policy, pollMs: 5, adapterF
     const threadId = spec.threadId ?? `thread-${calls.length}`;
     await onSessionId(threadId);
     onLog("synthetic run");
+    if (spec.task === "hold-for-cancel" && !spec.threadId) {
+      return new Promise(resolve => {
+        const finish = () => resolve({threadId, turnStatus:"interrupted",summary:"Turn interrupted by user"});
+        if(signal.aborted) finish();
+        else signal.addEventListener("abort",finish,{once:true});
+      });
+    }
     if (spec.task === "trusted-timeout") {
       return new Promise(resolve => {
         const finish = () => resolve({ threadId, turnStatus: "interrupted", summary: "Execution timed out after local approval" });
@@ -148,9 +155,31 @@ try {
   const cancelled = await manager.start({ ...request, idempotencyKey: "trusted-request-0003" });
   await waitFor(cancelled.taskId, "waiting_user_action");
   await manager.cancel(cancelled.taskId);
-  await waitFor(cancelled.taskId, "cancelled");
+  assert.equal((await waitFor(cancelled.taskId, "cancelled")).resumeAvailable, false,
+    "a cancelled task without any native thread cannot resume");
   assert.equal(calls.length, 7);
-  console.log("PASS: trusted task create, idempotency, local approval, logs, result, resume, and cancel.");
+
+  const held = await manager.start({ ...request, task:"hold-for-cancel",
+    idempotencyKey:"trusted-cancel-resume-native-1" });
+  await waitFor(held.taskId, "waiting_user_action");
+  await policy.approveTask(held.taskId);
+  for(let i=0;i<300 && !(await manager.status(held.taskId)).codexSessionId;i++){
+    await new Promise(resolve=>setTimeout(resolve,5));
+  }
+  const originalThread=(await manager.status(held.taskId)).codexSessionId;
+  assert.ok(originalThread,"native ID must be persisted before an active turn is cancelled");
+  await manager.cancel(held.taskId);
+  const cancelledNative=await waitFor(held.taskId, "cancelled");
+  assert.equal(cancelledNative.codexSessionId,originalThread);
+  assert.equal(cancelledNative.resumeAvailable,true,"user may explicitly resume a cancelled native Codex turn");
+  await manager.resume(held.taskId,{message:"Resume the exact original thread after cancellation."});
+  await waitFor(held.taskId,"waiting_user_action");
+  await policy.approveTask(held.taskId);
+  const restored=await waitFor(held.taskId,"success");
+  assert.equal(restored.codexSessionId,originalThread);
+  assert.equal(calls.at(-1).threadId,originalThread,"no substitute session may be created");
+  assert.equal(restored.resumeAvailable,true);
+  console.log("PASS: trusted task create, idempotency, local approval, cancel, same-thread resume and timeout.");
 } finally {
   releaseSelection();
   await manager.close();

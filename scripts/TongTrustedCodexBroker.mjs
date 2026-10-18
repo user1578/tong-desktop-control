@@ -210,16 +210,37 @@ export class TongTrustedPolicy {
   }
 }
 
-function safeEnvironment() {
+// The Windows system proxy is not necessarily honored by Codex WebSockets.
+// Allow a deliberately configured loopback HTTP(S) proxy for the Codex child
+// only; never inherit arbitrary proxy credentials or untrusted remote proxies.
+export function trustedCodexEnvironment(source = process.env) {
   const allowed = ["SystemRoot", "WINDIR", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "APPDATA",
     "LOCALAPPDATA", "TEMP", "TMP", "PATH", "PATHEXT", "ComSpec"];
-  return Object.fromEntries(allowed.filter((key) => typeof process.env[key] === "string")
-    .map((key) => [key, process.env[key]]));
+  const env = Object.fromEntries(allowed.filter((key) => typeof source[key] === "string")
+    .map((key) => [key, source[key]]));
+  const raw = source.TONG_CODEX_PROXY_URL;
+  if (raw !== undefined) {
+    if (typeof raw !== "string" || raw.length > 256) throw new Error("Invalid trusted Codex loopback proxy");
+    let proxy;
+    try { proxy = new URL(raw); }
+    catch { throw new Error("Invalid trusted Codex loopback proxy"); }
+    if (!["http:", "https:"].includes(proxy.protocol)
+        || !["localhost", "127.0.0.1", "[::1]"].includes(proxy.hostname.toLowerCase())
+        || !proxy.port || !Number.isInteger(Number(proxy.port)) || Number(proxy.port) < 1
+        || Number(proxy.port) > 65535 || proxy.username || proxy.password
+        || proxy.pathname !== "/" || proxy.search || proxy.hash) {
+      throw new Error("Invalid trusted Codex loopback proxy");
+    }
+    env.HTTP_PROXY = proxy.origin;
+    env.HTTPS_PROXY = proxy.origin;
+    env.NO_PROXY = "localhost,127.0.0.1,::1";
+  }
+  return env;
 }
 
 export class TongTrustedCodexBroker {
   constructor({ access, policy = new TongTrustedPolicy(), adapterFactory = (executable) =>
-    new CodexAppServerAdapter({ executable, env: safeEnvironment() }), pollMs = 500 } = {}) {
+    new CodexAppServerAdapter({ executable, env: trustedCodexEnvironment() }), pollMs = 500 } = {}) {
     if (!access || typeof access.authorize !== "function" || typeof access.listProjects !== "function") {
       throw new TypeError("Trusted broker requires project access");
     }

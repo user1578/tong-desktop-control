@@ -65,7 +65,9 @@ function publicTask(task, now = Date.now()) {
     authorization: task.authorization ?? null,
     workType: task.workType ?? 'development',
     sessionMode: task.sessionMode ?? "new",
-    resumeAvailable: Boolean(task.codexSessionId && ["waiting_user_action", "success"].includes(task.status) && !task.pendingApproval),
+    resumeAvailable: Boolean(task.codexSessionId && !task.pendingApproval
+      && (["waiting_user_action", "success"].includes(task.status)
+        || task.status === "cancelled" && task.executorMode === "trusted-windows")),
     error: task.error,
   };
 }
@@ -685,14 +687,17 @@ export class TongAgentTaskManager {
     }
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) throw new Error("Task not found");
-    if (!["waiting_user_action", "success"].includes(task.status) || !task.codexSessionId || task.pendingApproval || this.active.has(taskId)) {
+    const resumableState = (status, executorMode) => ["waiting_user_action", "success"].includes(status)
+      || status === "cancelled" && executorMode === "trusted-windows";
+    if (!resumableState(task.status, task.executorMode) || !task.codexSessionId
+        || task.pendingApproval || this.active.has(taskId)) {
       throw new Error("Task has no resumable Codex session");
     }
     const project = await this.projectForExecution(task.projectId);
     const livePreflight=await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,
       executorMode: task.executorMode ?? "isolated",workType:task.workType,requiredCapabilities:task.requiredCapabilities });
     await this.updateTask(taskId, (record) => {
-      if (!["waiting_user_action", "success"].includes(record.status) || record.pendingApproval || this.active.has(taskId)) {
+      if (!resumableState(record.status, record.executorMode) || record.pendingApproval || this.active.has(taskId)) {
         throw new Error("Task has no resumable Codex session");
       }
       record.status = "queued";
