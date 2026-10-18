@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { trustedCodexEnvironment } from "../scripts/TongTrustedCodexBroker.mjs";
+import { trustedCodexEnvironment, codexEnvironmentForPolicy, TongTrustedPolicy } from "../scripts/TongTrustedCodexBroker.mjs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const base = {
   USERPROFILE: "C:\\Users\\TestUser",
@@ -30,4 +33,33 @@ for(const url of ["http://remote.invalid:7897", "socks5://127.0.0.1:7897",
   assert.throws(()=>trustedCodexEnvironment({...base,TONG_CODEX_PROXY_URL:url}),
     /Invalid trusted Codex loopback proxy/, "must reject unsafe proxy "+url);
 }
-console.log("PASS: optional Codex-only loopback proxy; remote, authenticated and invalid proxy addresses rejected.");
+const temp=await mkdtemp(join(tmpdir(),"tong-codex-proxy-"));
+try {
+  const policy=new TongTrustedPolicy({policyPath:join(temp,"trusted-codex.json"),
+    taskStatePath:join(temp,"agent-tasks.json")});
+  const initial=await policy.status();
+  assert.equal(initial.codexProxyUrl,null);
+  const accepted=await policy.configureCodexProxy("http://127.0.0.1:7897");
+  assert.equal(accepted,"http://127.0.0.1:7897");
+  const reread=new TongTrustedPolicy({policyPath:join(temp,"trusted-codex.json"),
+    taskStatePath:join(temp,"agent-tasks.json")});
+  assert.equal((await reread.status()).codexProxyUrl,accepted,
+    "proxy setting must survive policy reinitialization");
+  const resolved=codexEnvironmentForPolicy((await reread.read()).codexProxyUrl,base);
+  assert.equal(resolved.HTTP_PROXY,accepted);
+  assert.equal(resolved.HTTPS_PROXY,accepted);
+  assert.equal(resolved.OPENAI_API_KEY,undefined);
+  await assert.rejects(policy.configureCodexProxy("http://outside.invalid:7897"),
+    /Invalid trusted Codex loopback proxy/);
+  assert.equal((await policy.status()).codexProxyUrl,accepted,"invalid updates must preserve earlier settings");
+  await policy.configureCodexProxy(null);
+  assert.equal((await reread.status()).codexProxyUrl,null);
+  const disabled=codexEnvironmentForPolicy(null,{...base,TONG_CODEX_PROXY_URL:accepted});
+  assert.equal(disabled.HTTP_PROXY,undefined,"policy off takes precedence over inherited environment");
+  assert.equal(disabled.HTTPS_PROXY,undefined);
+  const legacy=codexEnvironmentForPolicy(undefined,{...base,TONG_CODEX_PROXY_URL:accepted});
+  assert.equal(legacy.HTTP_PROXY,accepted,"unset policy retains isolated runner compatibility");
+}finally{
+  await rm(temp,{recursive:true,force:true});
+}
+console.log("PASS: Codex-only proxy validation, persistent local policy, isolated child environment, disable and legacy behavior.");

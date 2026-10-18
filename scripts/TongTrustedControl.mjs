@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { TongProjectAccess } from "./TongProjectAccess.mjs";
-import { TongTrustedPolicy, TongTrustedCodexBroker } from "./TongTrustedCodexBroker.mjs";
+import { TongTrustedPolicy, TongTrustedCodexBroker, normalizeLoopbackProxy } from "./TongTrustedCodexBroker.mjs";
 import {confirmLocally} from './TongLocalConfirmation.mjs';
 import {authorizeAgentDockDevelopment} from './TongAgentDockAuthorization.mjs';
 
@@ -19,12 +19,28 @@ const access = new TongProjectAccess(stateDir ? { registryPath: join(stateDir, "
 const [command, ...args] = input;
 
 function usage() {
-  throw new Error("Usage: node scripts/TongTrustedControl.mjs [--state-dir ABSOLUTE_DIRECTORY] status | enable --codex ABSOLUTE_CODEX_EXE | disable | stop | grant PROJECT_ID | authorize-development PROJECT_ID [--git-commit] [--git-push] | preflight PROJECT_ID | revoke PROJECT_ID | task TASK_ID | approve TASK_ID");
+  throw new Error("Usage: node scripts/TongTrustedControl.mjs [--state-dir ABSOLUTE_DIRECTORY] status | proxy set LOOPBACK_HTTP_URL | proxy off | enable --codex ABSOLUTE_CODEX_EXE | disable | stop | grant PROJECT_ID | authorize-development PROJECT_ID [--git-commit] [--git-push] | preflight PROJECT_ID | revoke PROJECT_ID | task TASK_ID | approve TASK_ID");
 }
 
 try {
   if (command === "status" && args.length === 0) {
     console.log(JSON.stringify(await policy.status(), null, 2));
+  } else if (command === "proxy" && args[0] === "set" && args.length === 2) {
+    const origin = normalizeLoopbackProxy(args[1]);
+    await confirmLocally({action:"Enable Codex-only local proxy "+origin,targets:"Tong trusted Codex proxy policy",
+      scope:"Only future Codex App Server child processes use this loopback proxy. Does not change Windows proxy settings.",
+      risk:"If the local proxy is unavailable, Codex network requests may fail.",
+      recovery:"Use proxy off from a local interactive PowerShell 7 terminal.",
+      duration:"Persists until disabled or changed."});
+    const stored = await policy.configureCodexProxy(origin);
+    console.log("Codex-only local proxy stored: "+stored);
+  } else if (command === "proxy" && args[0] === "off" && args.length === 1) {
+    await confirmLocally({action:"Disable Codex-only local proxy",targets:"Tong trusted Codex proxy policy",
+      scope:"Future Codex App Server child processes use the default network behavior; existing turns stay unchanged.",
+      risk:"Previous Codex reconnect delays may return.",recovery:"Use proxy set with the same trusted loopback address.",
+      duration:"Persists until changed."});
+    await policy.configureCodexProxy(null);
+    console.log("Codex-only local proxy disabled.");
   } else if (command === "enable" && args.length === 2 && args[0] === "--codex") {
     await policy.enable(args[1]);
     console.log("Trusted Windows Codex enabled locally. Each project and task still requires its own grant and approval.");
