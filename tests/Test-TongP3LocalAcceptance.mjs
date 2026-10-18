@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { childEnv, argumentsForUser } from '../scripts/Run-TongP3LocalAcceptance.mjs';
+import { childEnv, argumentsForUser, selectClaudeAuthEnvironment } from '../scripts/Run-TongP3LocalAcceptance.mjs';
 import { win32 } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
@@ -151,6 +151,12 @@ const parentEnv={
   ANTHROPIC_API_KEY:'SYNTHETIC_API_KEY_MUST_NOT_BE_USED',
   GITHUB_TOKEN:'SYNTHETIC_GITHUB_TOKEN_MUST_NOT_BE_USED',
   NODE_OPTIONS:'--require malicious.js',
+  USERNAME:'Example',
+  HOMEDRIVE:'C:',
+  HOMEPATH:'\\Users\\Example',
+  USERDOMAIN:'EXAMPLE-DOMAIN',
+  HTTPS_PROXY:'http://127.0.0.1:8899',
+  NODE_EXTRA_CA_CERTS:'C:\\Certs\\org-ca.pem',
 };
 assert.deepEqual(argumentsForUser(['--provider','claude','--auth-check']),{
   provider:'claude',mode:'auth-check',sessionId:undefined,
@@ -175,9 +181,45 @@ assert.equal(env.ANTHROPIC_API_KEY,undefined);
 assert.equal(env.GITHUB_TOKEN,undefined);
 assert.equal(env.NODE_OPTIONS,undefined);
 assert.equal(env.DSH_HOME,undefined);
+assert.equal(env.USERNAME,undefined);
+assert.equal(env.HTTPS_PROXY,undefined);
+const withIdentity=childEnv('claude','C:\\Temp\\separate',parentEnv,'windows-context');
+assert.equal(withIdentity.USERNAME,parentEnv.USERNAME);
+assert.equal(withIdentity.HOMEDRIVE,parentEnv.HOMEDRIVE);
+assert.equal(withIdentity.HTTPS_PROXY,undefined);
+const withNetwork=childEnv('claude','C:\\Temp\\separate',parentEnv,'network-context');
+assert.equal(withNetwork.USERNAME,parentEnv.USERNAME);
+assert.equal(withNetwork.HTTPS_PROXY,parentEnv.HTTPS_PROXY);
+assert.equal(withNetwork.NODE_EXTRA_CA_CERTS,parentEnv.NODE_EXTRA_CA_CERTS);
+for (const candidate of [env,withIdentity,withNetwork]) {
+  for (const disallowed of ['ANTHROPIC_API_KEY','GITHUB_TOKEN','NODE_OPTIONS']) {
+    assert.equal(candidate[disallowed],undefined);
+  }
+}
+const calls=[];
+const selected=await selectClaudeAuthEnvironment({source:parentEnv,check:async (candidate,tier)=>{
+  calls.push(tier);
+  return candidate.HTTPS_PROXY ? 'authenticated':'not-authenticated';
+}});
+assert.deepEqual(calls,['base','windows-context','network-context']);
+assert.equal(selected.tier,'network-context');
+assert.equal(selected.status,'authenticated');
+assert.equal(selected.env.HTTPS_PROXY,parentEnv.HTTPS_PROXY);
+assert.equal(selected.env.ANTHROPIC_API_KEY,undefined);
+const selectedIdentity=await selectClaudeAuthEnvironment({source:parentEnv,
+  check:async candidate=>candidate.USERNAME?'authenticated':'not-authenticated'});
+assert.equal(selectedIdentity.tier,'windows-context');
+assert.equal(selectedIdentity.checks.length,2);
+const notAuthenticated=await selectClaudeAuthEnvironment({source:parentEnv,
+  check:async ()=>'not-authenticated'});
+assert.equal(notAuthenticated.env,null);
+assert.equal(notAuthenticated.checks.length,3);
+await assert.rejects(selectClaudeAuthEnvironment({source:parentEnv,
+  check:async ()=>'secret error from CLI'}),/Invalid Claude authentication status/);
 const dshEnv=childEnv('dsh','C:\\Temp\\separate',parentEnv);
 assert.equal(dshEnv.DSH_HOME,'C:\\Temp\\separate');
 assert.equal(dshEnv.CLAUDE_CONFIG_DIR,undefined);
 assert.equal(dshEnv.CLAUDE_CODE_OAUTH_TOKEN,undefined);
-assert.throws(()=>childEnv('unknown','C:\\Temp',parentEnv),/Unknown local provider/);
+assert.throws(()=>childEnv('unknown','C:\\Temp',parentEnv),/Invalid local provider environment/);
+assert.throws(()=>childEnv('dsh','C:\\Temp',parentEnv,'network-context'),/Invalid local provider environment/);
 console.log('PASS: opt-in CLI acceptance, selective OAuth env inheritance, preflight login, categorical diagnostics, no secret disclosure.');

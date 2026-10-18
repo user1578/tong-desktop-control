@@ -48,6 +48,10 @@ A targeted follow-up fix in `codex/p3-claude-auth-diagnostics` forwards only the
 
 This prints only the presence of OAuth/config selectors, and auth status in the filtered context. If that remains unauthenticated, it also checks `claude auth status` with the *same local PowerShell process environment* for comparison, without running the model or outputting credentials. Exit code 0 means the filtered auth check passed; code 2 means no authenticated Claude session could be confirmed. The user should run this in the PowerShell window where their direct CLI login was verified; the separate Tong-runner login status cannot substitute for that comparison.
 
+**Confirmed follow-up:** In the user's *same* interactive PowerShell, the narrowed child reported `not-authenticated`, while `claude auth status` launched with its full inherited environment reported `authenticated`. The cause is environment filtering, not a proven expired OAuth login. No model call was sent during this comparison.
+
+The Stage E auth environment selector now tries three non-mutating, fixed allowlists in order: `base`, `windows-context` (e.g. `USERNAME`, `HOMEDRIVE`, `HOMEPATH`, `USERDOMAIN`), then `network-context` (existing HTTP(S) proxy, CA path and no-proxy settings). It reports only the status of each probe and the selected tier. The *first authenticated tier* is used unchanged for a separately approved model call; none of the tiers inherit `ANTHROPIC_API_KEY`, `NODE_OPTIONS`, `GITHUB_TOKEN` or arbitrary environment values. If they all fail, the full inherited environment is used **only** for a read-only diagnostic, never for a model call. This preserves the signed-in PowerShell credentials without copying token values or prompting for login.
+
 User should check locally:
 
 ```powershell

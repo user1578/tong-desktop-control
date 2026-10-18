@@ -38,26 +38,57 @@ export function argumentsForUser(argv) {
     throw new Error('Authentication-only check supports Claude without session selection');
   return {provider,mode,sessionId};
 }
-// Preserve only the Claude-specific OAuth/configuration settings supplied by
-// the USER'S interactive PowerShell session. They may be required to find its
-// existing login; never print these values or persist them in the test report.
-// Deliberately do not forward ANTHROPIC_API_KEY, which overrides OAuth billing.
-export function childEnv(provider, stateHome, source = process.env) {
-  if (!['claude','dsh'].includes(provider)) throw new Error('Unknown local provider');
+// Claude's saved OAuth credentials may depend on the Windows logon context
+// or inherited proxy configuration. Probe bounded allowlisted environments
+// from least to most contextual, without forwarding arbitrary secrets.
+const WINDOWS_CONTEXT = Object.freeze([
+  'USERNAME','USERDOMAIN','USERDOMAIN_ROAMINGPROFILE','HOMEDRIVE','HOMEPATH',
+  'LOGONSERVER','COMPUTERNAME','OS','SYSTEMDRIVE','PROGRAMDATA',
+  'ALLUSERSPROFILE','PROCESSOR_ARCHITECTURE',
+]);
+const NETWORK_CONTEXT = Object.freeze([
+  'HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY','NODE_EXTRA_CA_CERTS',
+  'NODE_USE_ENV_PROXY','SSL_CERT_FILE',
+]);
+const CLAUDE_TIERS = Object.freeze(['base','windows-context','network-context']);
+export function childEnv(provider, stateHome, source = process.env, tier = 'base') {
+  if (!['claude','dsh'].includes(provider) ||
+      !CLAUDE_TIERS.includes(tier) || (provider==='dsh' && tier!=='base')) {
+    throw new Error('Invalid local provider environment');
+  }
   const env = {};
   const allowed=['SystemRoot','WINDIR','ComSpec','PATH','PATHEXT','USERPROFILE',
     'APPDATA','LOCALAPPDATA','TEMP','TMP','HOME'];
   if (provider === 'claude') {
-    allowed.push('CLAUDE_CONFIG_DIR','CLAUDE_CODE_OAUTH_TOKEN',
-      'XDG_CONFIG_HOME','XDG_DATA_HOME');
+    allowed.push('CLAUDE_CONFIG_DIR','CLAUDE_SECURESTORAGE_CONFIG_DIR',
+      'CLAUDE_CODE_OAUTH_TOKEN','XDG_CONFIG_HOME','XDG_DATA_HOME');
+    if(tier!=='base') allowed.push(...WINDOWS_CONTEXT);
+    if(tier==='network-context') allowed.push(...NETWORK_CONTEXT);
   }
   for(const key of allowed) {
     const match=Object.keys(source).find(x=>x.toLowerCase()===key.toLowerCase());
     if(match) env[key]=source[match];
   }
-  // A new profile avoids modifying or consuming the Desktop-owned DSH profile.
+  // Never implicitly forward ANTHROPIC_API_KEY: it overrides OAuth billing.
+  // DSH gets its own home; this Claude-only change cannot affect its profile.
   if(provider==='dsh')env.DSH_HOME=stateHome;
   return env;
+}
+
+// The returned environment is always one of the explicit allowlists above.
+// Failed probes are not used for model execution.
+export async function selectClaudeAuthEnvironment({source = process.env, check}) {
+  if(typeof check !== 'function') throw new Error('Claude auth preflight callback is required');
+  const checks=[];
+  for(const tier of CLAUDE_TIERS){
+    const env=childEnv('claude',null,source,tier);
+    const status=await check(env,tier);
+    if(!['authenticated','not-authenticated','unavailable'].includes(status))
+      throw new Error('Invalid Claude authentication status');
+    checks.push({tier,status});
+    if(status==='authenticated') return {env,tier,status,checks};
+  }
+  return {env:null,tier:null,status:checks.at(-1).status,checks};
 }
 async function runBounded(executable,args,{cwd,env,stdin='',timeoutMs=10000}={}) {
   const windowsCmd=executable.toLowerCase().endsWith('.cmd');
@@ -132,14 +163,12 @@ export async function main(argv=process.argv.slice(2)) {
   try {
     const work=join(base,'empty-workdir'),profile=join(base,'separate-dsh-home');
     await mkdir(work);await mkdir(profile);
-    const env=childEnv(provider,profile);
-    if (provider==='claude') {
-      // Print key presence only, never the contents of OAuth/config variables.
-      const authInputs=['CLAUDE_CONFIG_DIR','CLAUDE_CODE_OAUTH_TOKEN']
-        .filter(key=>Object.keys(env).some(name=>name.toLowerCase()===key.toLowerCase()));
-      console.log('Claude authentication settings inherited: '+
-        (authInputs.length ? authInputs.join(', ') : 'none (using default profile)'));
-    }
+    let env=childEnv(provider,profile);
+    // Print presence only; never the OAuth value or account details.
+    const authInputs=['CLAUDE_CONFIG_DIR','CLAUDE_CODE_OAUTH_TOKEN']
+      .filter(key=>Object.keys(env).some(name=>name.toLowerCase()===key.toLowerCase()));
+    console.log('Claude authentication settings inherited: '+
+      (authInputs.length ? authInputs.join(', ') : 'none (using default profile)'));
     const firstHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     const versionReply=await runBounded(binary,['--version'],
       {cwd:work,env,timeoutMs:15000});
@@ -147,17 +176,27 @@ export async function main(argv=process.argv.slice(2)) {
       throw new Error('CLI version check failed: '+classifyLocalAcceptanceFailure(versionReply));
     verifyLocalAcceptanceVersion(plan,versionReply.stdout);
 
-    // In the EXACT environment we will use for the model call, check whether
-    // the CLI has a working login. Do not copy API keys or OAuth credentials.
-    const authReply=await runBounded(binary,['auth','status'],{
-      cwd:work,env,timeoutMs:15000,
+    // Probe only documented, bounded groups. Use the FIRST authenticated
+    // environment for the test; never fall back to raw process.env for models.
+    const selected=await selectClaudeAuthEnvironment({
+      check: async candidate => {
+        const receipt=await runBounded(binary,['auth','status'],{
+          cwd:work,env:candidate,timeoutMs:15000,
+        });
+        return checkClaudeLocalAuth(receipt);
+      },
     });
-    const auth=checkClaudeLocalAuth(authReply);
+    for(const item of selected.checks) {
+      console.log('Claude auth '+item.tier+': '+item.status);
+    }
+    const auth=selected.env ? 'authenticated' : selected.status;
     console.log('Claude authentication preflight: '+auth);
-    if(auth!=='authenticated'){
-      // Only compare auth status with the exact environment the user supplied
-      // to this local console. Never use this less-filtered environment to run
-      // a model, and never display the auth response or environment contents.
+    if(selected.env){
+      env=selected.env;
+      console.log('Claude approved environment profile: '+selected.tier);
+    } else {
+      // Diagnostic only; a raw inherited environment can contain unrelated
+      // credentials and must NEVER be used for a model request.
       const inheritedAuthReply=await runBounded(binary,['auth','status'],{
         cwd:work,env:process.env,timeoutMs:15000,
       });
@@ -166,16 +205,12 @@ export async function main(argv=process.argv.slice(2)) {
     }
     if(mode==='auth-check'){
       console.log('Authentication-only check complete; no model request sent.');
-      return auth==='authenticated'?0:2;
+      return selected.env?0:2;
     }
-    if(auth==='not-authenticated') {
-      throw new Error('Claude CLI is not logged in in this execution environment. '+
-        'Use your OWN PowerShell 7 window to check `claude auth status` and sign in if needed. '+
+    if(!selected.env) {
+      throw new Error('Claude login cannot be verified with the approved '+
+        'environment profiles. Run --auth-check and share only the status lines. '+
         'No model request was sent.');
-    }
-    if(auth!=='authenticated') {
-      throw new Error('Claude authentication status could not be confirmed. '+
-        'Check `claude auth status` in your own PowerShell 7 window. No model request was sent.');
     }
     const secondHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     if(firstHash!==secondHash)throw new Error('Provider executable changed before execution');
