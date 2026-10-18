@@ -2,6 +2,10 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P3 · Existing DeepSeek Harness Desktop runtime (development only)
+
+Tong can now locate and validate the **CLI bundled with an existing DeepSeek Harness Desktop installation**, without installing a duplicate DSH or changing PATH. This is a read-only discovery layer; a bundled Headless/SDK CLI session is **not yet verified to appear or resume in the Desktop UI**. Claude Code remains a separate CLI-only Agent. See [docs/P3-DSH-Desktop-StageD.md](docs/P3-DSH-Desktop-StageD.md) and `node --test tests/Test-TongDshDesktopRuntime.mjs`.
+
 ## P3 · DeepSeek Harness and durable workflow logs (development only)
 
 An optional third provider bridge now supports a **mocked DeepSeek Harness Python SDK contract** with version-bound per-stage approval, exact new/resumed session IDs and typed completion checks. A separate atomic workflow journal records task statuses and native session IDs and rejects conflicting project workflows across coordinator instances. **Neither the DSH runtime nor real model calls are enabled:** local `dsh` is not installed, and the Python SDK package was not found on the configured index. See [docs/P3-DSH-and-Durable-StageC.md](docs/P3-DSH-and-Durable-StageC.md). The real Windows runner, restricted DSH profile and production integration remain future milestones.

@@ -1,0 +1,29 @@
+name: P3 DSH Desktop runtime
+
+on:
+  push:
+    branches:
+      - 'codex/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  runtime-discovery:
+    name: Desktop discovery (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: JavaScript syntax
+        run: |
+          node --check scripts/TongDshDesktopRuntime.mjs
+          node --check tests/Test-TongDshDesktopRuntime.mjs
+      - name: Simulated Desktop installation and path safety
+        run: node --test tests/Test-TongDshDesktopRuntime.mjs
