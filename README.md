@@ -2,6 +2,10 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P3 · Claude Code adapter (development only)
+
+An isolated Claude Code adapter now prepares fixed noninteractive text-only CLI requests, supports new or explicitly resumed native session IDs, and validates bounded JSON results. It does **not** launch Claude itself: a separately approved Windows runner is required, and the production task manager continues to accept only Codex. Details, limitations and next integration stages are in [docs/P3-Claude-Adapter-Stage-A.md](docs/P3-Claude-Adapter-Stage-A.md). Run its synthetic contract test with `node --test tests/Test-TongClaudeCodeAdapter.mjs`.
+
 ## P3 · Windows read-only inspection (development)
 
 The first P3 increment adds `tong_windows_inspect` with `kind: "processes" | "services"`, an optional **exact** `name` filter and a `limit` of 1–100 (default 30). Process results contain only name, PID and working-set bytes; service results contain service name, display name and status. Responses explicitly report `truncated`. The tool runs a fixed local PowerShell 7 script, never accepts scripts or shell arguments, and cannot terminate processes or change services. No command lines, environment variables, account information or executable paths are returned.
