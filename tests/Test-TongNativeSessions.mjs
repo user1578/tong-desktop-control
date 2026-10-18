@@ -22,9 +22,10 @@ class ProtocolProcess extends EventEmitter {
         let result = {};
         if (m.method === 'initialize') result = { userAgent: 'local-schema' };
         if (m.method === 'thread/list') result = pages[this.page++];
+        if (m.method === 'project/list') result = { data: [{ id: 'desktop-project', roots: [{ path: cwd }] }], nextCursor: null };
         if (m.method === 'thread/read') { onRead(); result = { thread: stored }; }
         if (m.method === 'thread/resume') result = { thread: stored };
-        if (m.method === 'thread/start') result = { thread: thread('new') };
+        if (m.method === 'thread/start') result = { thread: thread('new', { projectId: m.params.projectId }) };
         if (m.method === 'turn/start') result = { turn: { id: 'turn-1', status: 'inProgress' } };
         this.stdout.write(JSON.stringify({ id: m.id, result })+'\n');
         if (m.method === 'turn/start') queueMicrotask(() => {

@@ -14,12 +14,16 @@ class SimulatedAppServerProcess extends EventEmitter {
   stdout = new PassThrough();
   stderr = new PassThrough();
 
-  constructor({ interruptOnly = false, threadId = "thread-simulated", rejectThreadStart = false, rejectResumeActiveWriter = false } = {}) {
+  constructor({ interruptOnly = false, threadId = "thread-simulated", rejectThreadStart = false,
+    rejectResumeActiveWriter = false, projects = [{ id: "desktop-project", roots: [{ path: projectRoot }] }],
+    threadProjectIdOverride = null } = {}) {
     super();
     this.threadId = threadId;
     this.interruptOnly = interruptOnly;
     this.rejectThreadStart = rejectThreadStart;
     this.rejectResumeActiveWriter = rejectResumeActiveWriter;
+    this.projects = projects;
+    this.threadProjectIdOverride = threadProjectIdOverride;
     this.stdin = new Writable({
       write: (chunk, _encoding, callback) => {
         for (const line of chunk.toString("utf8").split(/\r?\n/).filter(Boolean)) this.receive(JSON.parse(line));
@@ -38,6 +42,10 @@ class SimulatedAppServerProcess extends EventEmitter {
     if (message.method === "initialize") {
       this.experimentalApi = message.params?.capabilities?.experimentalApi === true;
       response({ userAgent: "codex-cli 0.155.0-alpha.16.3" });
+    } else if (message.method === "project/list") {
+      response({ data: this.projects, nextCursor: null });
+    } else if (message.method === "project/create") {
+      response({ project: { id: "created-desktop-project", roots: message.params.roots } });
     } else if (message.method === "thread/read") {
       response({ thread: { id: message.params.threadId, cwd: projectRoot, source: "appServer", status: { type: "notLoaded" } } });
     } else if (message.method === "thread/start" || message.method === "thread/resume") {
@@ -50,7 +58,8 @@ class SimulatedAppServerProcess extends EventEmitter {
       } else if (this.rejectThreadStart) {
         this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
           message: "Invalid request token=synthetic-secret C:\\Users\\Private\\config.toml" } });
-      } else response({ thread: { id: message.params.threadId ?? this.threadId } });
+      } else response({ thread: { id: message.params.threadId ?? this.threadId,
+        ...(message.method === "thread/start" ? { projectId: this.threadProjectIdOverride ?? message.params.projectId } : {}) } });
     }
     else if (message.method === "turn/start") {
       if (!this.experimentalApi || message.params?.runtimeWorkspaceRoots?.length !== 1
@@ -142,6 +151,8 @@ assert.deepEqual(processes[0].requests.find((request) => request.method === "ini
   { experimentalApi: true, requestAttestation: false });
 assert.equal(processes[0].requests.find((request) => request.method === "thread/start").params.sandbox, "workspace-write");
 assert.equal(processes[0].requests.find((request) => request.method === "thread/start").params.approvalPolicy, "on-request");
+assert.equal(processes[0].requests.find((request) => request.method === "thread/start").params.projectId,
+  "desktop-project", "new native sessions must be assigned to the matching Codex Desktop project");
 assert.deepEqual(processes[0].requests.find((request) => request.method === "turn/start").params.runtimeWorkspaceRoots,
   [projectRoot]);
 
@@ -158,6 +169,39 @@ assert.equal(resumed.threadId, "thread-existing");
 assert.ok(resumedProcess.requests.some((request) => request.method === "thread/resume"
   && request.params.threadId === "thread-existing"));
 assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/start"));
+assert.ok(!resumedProcess.requests.some((request) => request.method.startsWith("project/")),
+  "continuing an existing Desktop session must preserve its existing project assignment");
+
+const newProjectProcess = new SimulatedAppServerProcess({ projects: [] });
+const newProjectAdapter = new CodexAppServerAdapter({ executable: codexExecutable,
+  env: workerEnvironment, requestTimeoutMs: 500, shutdownTimeoutMs: 20,
+  spawnProcess: () => newProjectProcess });
+await newProjectAdapter.runTask({ cwd: projectRoot, prompt: "New project session." });
+assert.deepEqual(newProjectProcess.requests.find((r) => r.method === "project/create").params.roots,
+  [{ path: projectRoot }], "missing project must be registered with exactly the authorized root");
+assert.equal(newProjectProcess.requests.find((r) => r.method === "thread/start").params.projectId,
+  "created-desktop-project");
+
+const duplicateProjectProcess = new SimulatedAppServerProcess({ projects: [
+  { id: "project-one", roots: [{ path: projectRoot }] },
+  { id: "project-two", roots: [{ path: projectRoot }] },
+] });
+const duplicateAdapter = new CodexAppServerAdapter({ executable: codexExecutable,
+  env: workerEnvironment, requestTimeoutMs: 500, shutdownTimeoutMs: 20,
+  spawnProcess: () => duplicateProjectProcess });
+await assert.rejects(duplicateAdapter.runTask({ cwd: projectRoot, prompt: "Ambiguous project." }),
+  /Multiple Codex projects/);
+assert.ok(!duplicateProjectProcess.requests.some((r) => ["project/create", "thread/start", "turn/start"].includes(r.method)));
+
+const wrongAssignmentProcess = new SimulatedAppServerProcess({ threadProjectIdOverride: "wrong-project" });
+const wrongAssignmentAdapter = new CodexAppServerAdapter({ executable: codexExecutable,
+  env: workerEnvironment, requestTimeoutMs: 500, shutdownTimeoutMs: 20,
+  spawnProcess: () => wrongAssignmentProcess });
+await assert.rejects(wrongAssignmentAdapter.runTask({ cwd: projectRoot, prompt: "Must stay in project." }),
+  /did not confirm.*project assignment/);
+assert.ok(!wrongAssignmentProcess.requests.some((r) => r.method === "turn/start"),
+  "a thread with incorrect project identity must not execute an agent turn");
+
 assert.ok(resumedProcess.requests.some((request) => request.method === "thread/read"
   && request.params.includeTurns === false), "resume must validate stored project metadata before changing cwd");
 

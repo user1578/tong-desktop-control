@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { isAbsolute, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { basename, isAbsolute, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -244,6 +245,40 @@ export class CodexAppServerAdapter {
     });
   }
 
+  async ensureDesktopProject(peer, cwd) {
+    const root = resolve(cwd);
+    const matching = new Map();
+    let cursor;
+    for (let page = 0; page < 20; page += 1) {
+      const result = await peer.request("project/list", { limit: 100, cursor });
+      if (!Array.isArray(result.data)) throw new Error("Codex App Server returned invalid projects");
+      for (const project of result.data) {
+        if (project?.roots?.some((entry) => samePath(entry.path, root))) {
+          if (typeof project.id !== "string" || !project.id) throw new Error("Codex project ID is invalid");
+          matching.set(project.id, project);
+        }
+      }
+      cursor = result.nextCursor ?? null;
+      if (!cursor) break;
+      if (page === 19) throw new Error("Codex project discovery limit reached; cannot safely assign session");
+    }
+    if (matching.size > 1) throw new Error("Multiple Codex projects match the authorized root; select one in Codex Desktop");
+    if (matching.size === 1) return [...matching.keys()][0];
+
+    // This operation runs only after Tong's project/task authorization. It does
+    // not write Codex Desktop state files or create another project directory.
+    const idempotencyKey = "tong-project-" + createHash("sha256")
+      .update(process.platform === "win32" ? root.toLowerCase() : root).digest("hex");
+    const result = await peer.request("project/create", {
+      idempotencyKey, name: basename(root), roots: [{ path: root }],
+    });
+    if (typeof result.project?.id !== "string" || !result.project.id
+        || !result.project.roots?.some((entry) => samePath(entry.path, root))) {
+      throw new Error("Codex App Server did not confirm the authorized project root");
+    }
+    return result.project.id;
+  }
+
   async checkedSession(peer, cwd, threadId) {
     const result = await peer.request("thread/read", { threadId, includeTurns: false });
     if (!projectSession(result.thread, cwd) || result.thread.id !== threadId) {
@@ -394,10 +429,14 @@ export class CodexAppServerAdapter {
         developerInstructions: SAFETY_INSTRUCTIONS,
       };
       if (spec.threadId) await this.checkedSession(peer, spec.cwd, spec.threadId);
+      const desktopProjectId = spec.threadId ? null : await this.ensureDesktopProject(peer, spec.cwd);
       signal?.throwIfAborted();
       const thread = spec.threadId
         ? await peer.request("thread/resume", { ...threadParams, threadId: spec.threadId, excludeTurns: true })
-        : await peer.request("thread/start", threadParams);
+        : await peer.request("thread/start", { ...threadParams, projectId: desktopProjectId });
+      if (!spec.threadId && thread?.thread?.projectId !== desktopProjectId) {
+        throw new Error("Codex App Server did not confirm the new thread project assignment");
+      }
       threadId = thread?.thread?.id ?? null;
       if (typeof threadId !== "string" || threadId.length < 1 || threadId.length > 200) {
         throw new Error("Codex App Server did not return a valid thread ID");
