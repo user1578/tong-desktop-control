@@ -58,6 +58,10 @@ function extendRestrictedServer(source) {
   if (!source.includes('"tong_agent_sessions"')) {
     source = replaceOnce(source, '"tong_agent_result"', '"tong_agent_result", "tong_agent_sessions"', 'native Codex session registration guard');
   }
+  if (!source.includes('"tong_windows_inspect"')) {
+    source = replaceOnce(source, '"tong_run_command"]);', '"tong_run_command", "tong_windows_inspect"]);',
+      'Windows inspection read-only tool registration guard');
+  }
   return source;
 }
 
@@ -100,7 +104,8 @@ const files = [
     previousHash5: "e397438fd44a400f85d052cfd89396ac5a1a565962a285789017a608eb807a0d",
     previousHash6: "b71a8e616ffb337c38cba6109f922e163d82bcfa34f1bdf94a830130bcc5979c",
     previousHash7: "c4a4a03e31cbebcba197fd890bf318199c2a902a077dcd49987cb7cdc517758a",
-    patchedHash: "8cc2decf858ba0616fb674cd93432cce45bc5636ef7ccb7c1017e74645d46b20",
+    previousHash8: "8cc2decf858ba0616fb674cd93432cce45bc5636ef7ccb7c1017e74645d46b20",
+    patchedHash: "e896e4de982bed8faab799d919f284bca9eaac63acc9d9fd06f31f6832390489",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -155,7 +160,7 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7 && hash !== file.previousHash8) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}: ${sha256(patched)}`);
   await writeFile(target, patched, "utf8");

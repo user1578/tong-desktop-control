@@ -35,8 +35,16 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name),
-    ["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
+    ["tong_list_drives", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
       "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
+  const badWindowsName = await client.callTool({ name: "tong_windows_inspect", arguments: { kind: "processes", name: "*;test" } });
+  assert.equal(badWindowsName.isError, true);
+  if (process.platform === "win32") {
+    const eventLog = await client.callTool({ name: "tong_windows_inspect", arguments: { kind: "services", name: "EventLog", limit: 3 } });
+    assert.equal(eventLog.isError, undefined);
+    assert.equal(eventLog.structuredContent.kind, "services");
+    assert.ok(eventLog.structuredContent.entries.every(item => Object.keys(item).every(key => ["name", "displayName", "status"].includes(key))));
+  }
   const drives = await client.callTool({ name: "tong_list_drives", arguments: {} });
   assert.equal(drives.isError, undefined);
   assert.equal(drives.structuredContent.drives[0].status, "available");

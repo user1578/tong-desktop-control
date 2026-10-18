@@ -2,6 +2,12 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P3 · Windows read-only inspection (development)
+
+The first P3 increment adds `tong_windows_inspect` with `kind: "processes" | "services"`, an optional **exact** `name` filter and a `limit` of 1–100 (default 30). Process results contain only name, PID and working-set bytes; service results contain service name, display name and status. Responses explicitly report `truncated`. The tool runs a fixed local PowerShell 7 script, never accepts scripts or shell arguments, and cannot terminate processes or change services. No command lines, environment variables, account information or executable paths are returned.
+
+For example, after refreshing the tools for a future approved release: `tong_windows_inspect({kind: "services", name: "EventLog", limit: 5})`. This is a development change: **the running production MCP is unchanged until separately released**. Platform-independent validation and Windows service smoke tests are in `tests/Test-TongWindowsInspect.mjs`; the narrow GitHub workflow is `.github/workflows/p3-windows-inspection.yml`. Future adapters and broader system-management operations must retain their own permissions and Windows identity checks.
+
 ## P0 local workspace tools (2026-10-16 development build)
 
 This build reuses DevSpace workspace IDs, its read/write/edit tools, the Gateway and the existing local project registry. `open_workspace({})` selects the configured default (`TONG_RESTRICTED_ROOT`); `open_workspace({path: "D:\\作业\\111"})` selects a locally registered, enabled project with read or write permission. File permissions and execution grants are rechecked on every call. Opening a workspace does not create a grant. File writes need `project.write`; commands additionally need the existing independent `agent.execute` grant. Existing Guardian, OAuth, AgentDock and Codex task approval flows are unchanged.

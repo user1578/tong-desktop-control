@@ -4,6 +4,7 @@ import {TongTrustedPolicy} from './TongTrustedCodexBroker.mjs';
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
 import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
 import { closeTongWorkspaceTools } from './TongWorkspaceTools.mjs';
+import { inspectWindows } from './TongWindowsInspect.mjs';
 import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
@@ -118,6 +119,17 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     _meta: {},
     annotations: { readOnlyHint: true },
   }, safe(async () => ({ drives: await access.listDrives() })));
+
+  registerTool(server, "tong_windows_inspect", {
+    title: "Inspect Windows processes or services",
+    description: "Read a bounded snapshot of Windows process names/PIDs/memory or service names/status. Optional exact-name filter. No command line, environment, control or system changes.",
+    inputSchema: {
+      kind: z.enum(["processes", "services"]),
+      name: z.string().min(1).max(80).optional(),
+      limit: z.number().int().min(1).max(100).optional(),
+    },
+    _meta: {}, annotations: { readOnlyHint: true },
+  }, safe((input) => inspectWindows(input)));
 
   registerTool(server, "tong_scan_directory", {
     title: "Scan directory metadata",

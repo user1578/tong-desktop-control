@@ -21,6 +21,7 @@ const toolsList = {
       { name: "write" },
       { name: "edit" },
       { name: "tong_list_drives" },
+      { name: "tong_windows_inspect" },
       { name: "tong_scan_directory" },
       { name: "tong_list_projects" },
       { name: "tong_agent_start" },
@@ -43,7 +44,7 @@ const toolsList = {
 const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
-  ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_scan_directory", "tong_list_projects",
+  ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects",
     "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
@@ -65,6 +66,7 @@ const blocked = { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "
 assert.equal(findDisallowedToolCall(blocked), blocked);
 assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "read" } }), undefined);
 assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_scan_directory" } }), undefined);
+assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_windows_inspect" } }), undefined);
 assert.ok(findDisallowedToolCall({ ...blocked, params: { name: "tong_add_project" } }));
 assert.equal(findDisallowedToolCall([blocked, { ...blocked, id: 10, params: { name: "read" } }]), blocked);
 assert.deepEqual(await validateAllowedToolCall(blocked), {
@@ -140,7 +142,7 @@ try {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
 
-console.log("PASS: gateway exposes the four file tools, three metadata tools, and eight constrained agent/session tools in JSON and SSE lists.");
+console.log("PASS: gateway exposes file tools, Windows/system metadata tools, and constrained agent/session tools in JSON and SSE lists.");
 console.log("PASS: gateway detects direct and batched calls to disallowed tools.");
 console.log("PASS: gateway rejects agent executable injection and malformed task identifiers while retaining the Shell deny list.");
 console.log("PASS: gateway blocks traversal; authenticated DevSpace owns workspace grants and junction checks.");
