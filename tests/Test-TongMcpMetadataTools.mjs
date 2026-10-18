@@ -35,8 +35,17 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name),
-    ["tong_list_drives", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
+    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
       "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
+  const wrongEnvTool = await client.callTool({ name: "tong_dev_environment", arguments: {tool: "arbitrary-program"} });
+  assert.equal(wrongEnvTool.isError, true);
+  if (process.platform === "win32") {
+    const envNode = await client.callTool({ name: "tong_dev_environment", arguments: {tool: "node"} });
+    assert.equal(envNode.isError, undefined);
+    assert.equal(envNode.structuredContent.tools[0].name, "node");
+    assert.ok(envNode.structuredContent.tools[0].candidates.every(candidate =>
+      Object.keys(candidate).every(key => ["path", "fileVersion"].includes(key))));
+  }
   const badWindowsName = await client.callTool({ name: "tong_windows_inspect", arguments: { kind: "processes", name: "*;test" } });
   assert.equal(badWindowsName.isError, true);
   if (process.platform === "win32") {

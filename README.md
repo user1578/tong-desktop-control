@@ -6,7 +6,11 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 
 The first P3 increment adds `tong_windows_inspect` with `kind: "processes" | "services"`, an optional **exact** `name` filter and a `limit` of 1–100 (default 30). Process results contain only name, PID and working-set bytes; service results contain service name, display name and status. Responses explicitly report `truncated`. The tool runs a fixed local PowerShell 7 script, never accepts scripts or shell arguments, and cannot terminate processes or change services. No command lines, environment variables, account information or executable paths are returned.
 
-For example, after refreshing the tools for a future approved release: `tong_windows_inspect({kind: "services", name: "EventLog", limit: 5})`. This is a development change: **the running production MCP is unchanged until separately released**. Platform-independent validation and Windows service smoke tests are in `tests/Test-TongWindowsInspect.mjs`; the narrow GitHub workflow is `.github/workflows/p3-windows-inspection.yml`. Future adapters and broader system-management operations must retain their own permissions and Windows identity checks.
+For example, after refreshing the tools for a future approved release: `tong_windows_inspect({kind: "services", name: "EventLog", limit: 5})`.
+
+The next P3 increment adds `tong_dev_environment({tool: "all"})` (or `tool: "python"`, `"py"`, `"node"`, `"npm"`, `"git"`, `"pwsh"`, `"cmake"`, `"gcc"`, `"java"`, `"mvn"`). It enumerates **only commands discoverable on the current process PATH**, returning up to three unique application paths per tool with an explicit `truncated` flag. `fileVersion` is read from Windows file metadata and can be `null` for `.cmd` scripts or files without version information; it is **not** necessarily the same as a command-line `--version` or a complete inventory of installations. The probe does not execute discovered programs, install software, inspect credentials or mutate Windows.
+
+These are development changes: **the running production MCP is unchanged until separately released**. Targeted tests are `tests/Test-TongWindowsInspect.mjs` and `tests/Test-TongDevEnvironment.mjs`; the narrow Windows/Ubuntu GitHub workflow is `.github/workflows/p3-windows-inspection.yml`. Future adapters and broader system-management operations must retain their own permissions and Windows identity checks.
 
 ## P0 local workspace tools (2026-10-16 development build)
 

@@ -24,17 +24,23 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check scripts/TongWindowsInspect.mjs
+          node --check scripts/TongDevEnvironment.mjs
           node --check tests/Test-TongWindowsInspect.mjs
+          node --check tests/Test-TongDevEnvironment.mjs
           node --check scripts/TongMcpTools.mjs
           node --check scripts/TongMcpGateway.mjs
           node --check scripts/Apply-TongDevSpacePatch.mjs
       - name: Run portable validation and Windows read-only smoke
-        run: node --test tests/Test-TongWindowsInspect.mjs
+        run: node --test tests/Test-TongWindowsInspect.mjs tests/Test-TongDevEnvironment.mjs
       - name: Check PowerShell syntax
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $tokens = $null
           $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/TongWindowsInspect.ps1), [ref]$tokens, [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          foreach ($script in @('scripts/TongWindowsInspect.ps1','scripts/TongDevEnvironment.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+          }

@@ -15,7 +15,7 @@ const MAX_FILTERED_RESPONSE_BYTES = 2 * 1024 * 1024;
 const INBOUND_KEEP_ALIVE_TIMEOUT_MS = 15_000;
 const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
-const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_windows_inspect"]);
+const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_windows_inspect", "tong_dev_environment"]);
 const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions",

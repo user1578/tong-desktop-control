@@ -5,6 +5,7 @@ import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTool
 import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
 import { closeTongWorkspaceTools } from './TongWorkspaceTools.mjs';
 import { inspectWindows } from './TongWindowsInspect.mjs';
+import { inspectDevEnvironment } from './TongDevEnvironment.mjs';
 import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
@@ -35,7 +36,7 @@ function success(value) {
   return { content: [{ type: "text", text: JSON.stringify(value) }], structuredContent: value };
 }
 function failure(error) {
-  const message = error instanceof Error && /^(?:Path not permitted|Path not available|Invalid (?:maxDepth|limit|cursor|registry))$/.test(error.message)
+  const message = error instanceof Error && /^(?:Path not permitted|Path not available|Invalid (?:maxDepth|limit|cursor|registry|development environment query)|Windows development environment inspection unavailable)$/.test(error.message)
     ? error.message : "Metadata request failed";
   return { content: [{ type: "text", text: message }], isError: true };
 }
@@ -119,6 +120,15 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     _meta: {},
     annotations: { readOnlyHint: true },
   }, safe(async () => ({ drives: await access.listDrives() })));
+
+  registerTool(server, "tong_dev_environment", {
+    title: "Inspect Windows development tools on PATH",
+    description: "Read installed developer tool paths and Windows file-version metadata for a fixed allowlist. Does not execute discovered programs, install packages, or change system state. Missing file versions are null.",
+    inputSchema: {
+      tool: z.enum(["all", "python", "py", "node", "npm", "git", "pwsh", "cmake", "gcc", "java", "mvn"]).optional(),
+    },
+    _meta: {}, annotations: { readOnlyHint: true },
+  }, safe((input) => inspectDevEnvironment(input)));
 
   registerTool(server, "tong_windows_inspect", {
     title: "Inspect Windows processes or services",
