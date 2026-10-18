@@ -1,0 +1,33 @@
+name: P3 DSH and durable workflows
+
+on:
+  push:
+    branches:
+      - 'codex/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sdk-contracts:
+    name: DSH and journal contracts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate source syntax
+        run: |
+          node --check scripts/TongDshSdkAdapter.mjs
+          node --check scripts/TongWorkflowJournal.mjs
+          node --check scripts/TongAgentProviders.mjs
+          node --check scripts/TongMultiAgentOrchestrator.mjs
+          node --check tests/Test-TongDshSdkAdapter.mjs
+          node --check tests/Test-TongWorkflowJournal.mjs
+      - name: Synthetic SDK and durable workflow regression
+        run: node --test tests/Test-TongDshSdkAdapter.mjs tests/Test-TongWorkflowJournal.mjs tests/Test-TongMultiAgentOrchestrator.mjs tests/Test-TongClaudeCodeAdapter.mjs

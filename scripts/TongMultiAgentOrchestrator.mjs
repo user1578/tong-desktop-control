@@ -27,11 +27,14 @@ function stagePrompt(step, previous) {
 
 export class TongMultiAgentOrchestrator {
   #registry;
+  #journal;
   #activeRoots = new Set();
 
-  constructor({ registry } = {}) {
+  constructor({ registry, journal } = {}) {
     if (!registry || typeof registry.get !== 'function') throw new Error('Multi-agent registry is required');
+    if (journal && typeof journal.start !== 'function') throw new Error('Invalid workflow journal');
     this.#registry = registry;
+    this.#journal = journal ?? null;
   }
 
   async runWorkflow(input, { signal, onEvent = () => {} } = {}) {
@@ -60,6 +63,8 @@ export class TongMultiAgentOrchestrator {
         step.sessionId ?? null, step.timeoutMs, step.requiredCapabilities,
       ])).digest('hex'),
     }));
+    let journalHandle = null;
+    let outcome = 'failed';
     const checkAbort = () => signal?.throwIfAborted();
     const emit = event => onEvent(Object.freeze({
       workflowId: workflow.workflowId,
@@ -68,6 +73,7 @@ export class TongMultiAgentOrchestrator {
     }));
     try {
       checkAbort();
+      journalHandle = await this.#journal?.start(workflow);
       for (let i = 0; i < providers.length; i++) {
         checkAbort();
         const step = workflow.steps[i];
@@ -98,6 +104,7 @@ export class TongMultiAgentOrchestrator {
           throw new Error('Provider authorization expired or was revoked');
         }
         const taskId = randomUUID();
+        await journalHandle?.record({ type: 'step-started', index: i, agent: step.agent, taskId });
         emit({ type: 'step-started', index: i, agent: step.agent, taskId });
         let raw;
         try {
@@ -127,9 +134,11 @@ export class TongMultiAgentOrchestrator {
           });
           records.push(record);
           previous = record;
+          await journalHandle?.record({ type: 'step-completed', index: i, agent: step.agent, taskId, sessionId: result.sessionId });
           emit({ type: 'step-completed', index: i, agent: step.agent, taskId, sessionId: result.sessionId });
         } catch (error) {
           // Never expose raw provider errors, prompts or credentials in status events.
+          await journalHandle?.record({ type: 'step-failed', index: i, agent: step.agent, taskId });
           emit({ type: 'step-failed', index: i, agent: step.agent, taskId });
           // Avoid leaking untrusted stderr, provider errors or credentials
           // through public workflow status.
@@ -137,6 +146,7 @@ export class TongMultiAgentOrchestrator {
         }
       }
       emit({ type: 'workflow-completed', completedSteps: records.length });
+      outcome = 'completed';
       return Object.freeze({
         workflowId: workflow.workflowId,
         projectId: workflow.projectId,
@@ -144,7 +154,8 @@ export class TongMultiAgentOrchestrator {
         steps: Object.freeze(records),
       });
     } finally {
-      this.#activeRoots.delete(identity);
+      try { await journalHandle?.finish(signal?.aborted ? 'cancelled' : outcome); }
+      finally { this.#activeRoots.delete(identity); }
     }
   }
 }

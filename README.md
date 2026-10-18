@@ -2,6 +2,10 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## P3 · DeepSeek Harness and durable workflow logs (development only)
+
+An optional third provider bridge now supports a **mocked DeepSeek Harness Python SDK contract** with version-bound per-stage approval, exact new/resumed session IDs and typed completion checks. A separate atomic workflow journal records task statuses and native session IDs and rejects conflicting project workflows across coordinator instances. **Neither the DSH runtime nor real model calls are enabled:** local `dsh` is not installed, and the Python SDK package was not found on the configured index. See [docs/P3-DSH-and-Durable-StageC.md](docs/P3-DSH-and-Durable-StageC.md). The real Windows runner, restricted DSH profile and production integration remain future milestones.
+
 ## P3 · Multi-agent orchestration core (development only)
 
 P3 Stage B introduces a provider registry and a serial Codex→Claude workflow coordinator with per-stage authorization checks, scoped native session handling, bounded result handoff, cancellation, status events and in-memory same-project exclusion. **This is a synthetic-tested core, not yet wired to production MCP or persistent task storage.** Claude requires its own approved runner and authorization; Codex still uses its reviewed broker. Details: [docs/P3-MultiAgent-Core-StageB.md](docs/P3-MultiAgent-Core-StageB.md). Run `node --test tests/Test-TongMultiAgentOrchestrator.mjs` for the contract suite.

@@ -132,6 +132,56 @@ export function claudeProvider({ adapter, authorize } = {}) {
   };
 }
 
+// The SDK owns its own credentials, persisted sessions and plugin tools.
+// This bridge is registered ONLY by an authorized manager supplying an
+// independently reviewed DSH runner, not by merely finding dsh on PATH.
+export function dshProvider({ adapter, authorize } = {}) {
+  if (!adapter || typeof adapter.runTask !== 'function' ||
+      typeof adapter.runtimeVersion !== 'string' ||
+      typeof adapter.dshHome !== 'string' || typeof authorize !== 'function') {
+    throw fail('DeepSeek Harness runner, state root and authorization are required');
+  }
+  return {
+    id: 'dsh',
+    sessionModes: ['new','existing'],
+    async preflight(spec) {
+      const grant = await authorize({
+        agent: 'dsh', projectId: spec.projectId, projectRoot: spec.projectRoot,
+        task: spec.task, scope: spec.scope, sessionMode: spec.sessionMode,
+        workType: spec.workType, requiredCapabilities: spec.requiredCapabilities,
+        workflowId: spec.workflowId, stepIndex: spec.stepIndex,
+        approvalDigest: spec.approvalDigest, runtimeVersion: adapter.runtimeVersion,
+        dshHome: resolve(adapter.dshHome), profile: 'sdk',
+      });
+      if (grant?.approved !== true || grant?.mode !== 'trusted-windows' ||
+          grant?.agent !== 'dsh' || grant?.projectId !== spec.projectId ||
+          grant?.projectRoot !== spec.projectRoot || grant?.workflowId !== spec.workflowId ||
+          grant?.stepIndex !== spec.stepIndex || grant?.approvalDigest !== spec.approvalDigest ||
+          grant?.runtimeVersion !== adapter.runtimeVersion ||
+          grant?.dshHome !== resolve(adapter.dshHome) || grant?.profile !== 'sdk') {
+        throw fail('DeepSeek Harness execution is not independently authorized');
+      }
+      return Object.freeze({ mode: grant.mode, grantId: grant.grantId ?? null });
+    },
+    normalizeResult(raw) {
+      return {
+        completed: raw?.status === 'completed',
+        summary: raw?.text,
+        sessionId: raw?.sessionId,
+      };
+    },
+    async runTask(spec, callbacks) {
+      if (spec.authorization?.mode !== 'trusted-windows')
+        throw fail('DeepSeek Harness requires a trusted Windows grant');
+      return adapter.runTask({
+        cwd: spec.projectRoot, task: spec.prompt, scope: spec.scope,
+        sessionMode: spec.sessionMode, ...(spec.sessionId ? { sessionId: spec.sessionId } : {}),
+        timeoutMs: spec.timeoutMs,
+      }, callbacks);
+    },
+  };
+}
+
 export function validateMultiAgentWorkflow(spec) {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec) ||
       Object.keys(spec).some(key => !['projectId','projectRoot','steps','workflowId'].includes(key)) ||
