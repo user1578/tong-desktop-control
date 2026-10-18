@@ -52,6 +52,20 @@ This prints only the presence of OAuth/config selectors, and auth status in the 
 
 The Stage E auth environment selector now tries three non-mutating, fixed allowlists in order: `base`, `windows-context` (e.g. `USERNAME`, `HOMEDRIVE`, `HOMEPATH`, `USERDOMAIN`), then `network-context` (existing HTTP(S) proxy, CA path and no-proxy settings). It reports only the status of each probe and the selected tier. The *first authenticated tier* is used unchanged for a separately approved model call; none of the tiers inherit `ANTHROPIC_API_KEY`, `NODE_OPTIONS`, `GITHUB_TOKEN` or arbitrary environment values. If they all fail, the full inherited environment is used **only** for a read-only diagnostic, never for a model call. This preserves the signed-in PowerShell credentials without copying token values or prompting for login.
 
+### Stage F — read-only excluded-variable isolation
+
+The user's newest local diagnostic still reports `base`, `windows-context` and `network-context` as `not-authenticated` while the **full inherited** PowerShell environment returns `authenticated`. The difference is now confirmed at the process environment level; the specific responsible variable(s) are not yet known.
+
+Run the following **only** in the same interactive PowerShell 7 session:
+
+```powershell
+& 'D:\node\node.exe' .\scripts\Run-TongP3LocalAcceptance.mjs --provider claude --auth-isolate
+```
+
+This mode performs bounded (`<=16`) `claude auth status` probes in a fresh temporary directory. It starts with the previous `network-context` allowlist and only adds subsets of excluded environment variables, identifying a single candidate when possible. **Only variable names and categorical outcomes are printed—never values, account identities, or raw Claude output.** CLI execution-modifier variables (including `NODE_OPTIONS` and `NODE_PATH`) are excluded from those probes. Values under investigation are used only for read-only `auth status` checks: **never copied into a model invocation or production worker**.
+
+A `single-variable-candidate` means the named variable appears necessary/sufficient within this diagnostic, **not** that it is safe to forward it automatically. If `requiresManualReview` is true (for example `ANTHROPIC_API_KEY`), do not enable it in the model runner; API-key authentication may have a different billing path than the existing OAuth session. `multiple-variables-needed`, `probe-limit` or `execution-modifiers-excluded` need further manual investigation. The test can take several seconds; it never requests interactive approval or runs a model.
+
 User should check locally:
 
 ```powershell

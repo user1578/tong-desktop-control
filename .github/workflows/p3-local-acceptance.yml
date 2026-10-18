@@ -25,6 +25,8 @@ jobs:
         run: |
           node --check scripts/TongP3LocalAcceptance.mjs
           node --check scripts/Run-TongP3LocalAcceptance.mjs
+          node --check scripts/TongClaudeAuthDifferential.mjs
           node --check tests/Test-TongP3LocalAcceptance.mjs
+          node --check tests/Test-TongClaudeAuthDifferential.mjs
       - name: Run synthetic acceptance tests (no CLI installation, no models)
-        run: node --test tests/Test-TongP3LocalAcceptance.mjs
+        run: node --test tests/Test-TongP3LocalAcceptance.mjs tests/Test-TongClaudeAuthDifferential.mjs

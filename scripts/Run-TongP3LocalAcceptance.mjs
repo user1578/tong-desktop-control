@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
+import { isolateClaudeAuthDifference } from './TongClaudeAuthDifferential.mjs';
 import {
   checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
   findLocalAcceptanceBinary, prepareLocalProviderAcceptance,
@@ -15,7 +16,7 @@ const MAX_BUFFER = 262144;
 const safePrint = value => JSON.stringify(value, null, 2);
 export function argumentsForUser(argv) {
   const choices = argv.filter(x => x.startsWith('--'));
-  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--session-id'].includes(x))) {
+  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id'].includes(x))) {
     throw new Error('Unknown acceptance option');
   }
   let provider = null, mode = 'dry-run', sessionId;
@@ -27,15 +28,15 @@ export function argumentsForUser(argv) {
       if (sessionId!==undefined || !argv[i+1] || argv[i+1].startsWith('--'))
         throw new Error('An exact native session ID is required');
       sessionId=argv[++i];
-    } else if (argv[i]==='--run' || argv[i]==='--auth-check') {
+    } else if (['--run','--auth-check','--auth-isolate'].includes(argv[i])) {
       if(mode!=='dry-run')throw new Error('Select one acceptance mode');
-      mode=argv[i]==='--run'?'run':'auth-check';
+      mode=argv[i]==='--run'?'run':argv[i]==='--auth-check'?'auth-check':'auth-isolate';
     }
     else if (argv[i]!=='--dry-run') throw new Error('Unknown acceptance option');
   }
   if(!provider) throw new Error('Required: --provider claude|dsh');
-  if(mode==='auth-check' && (provider!=='claude' || sessionId!==undefined))
-    throw new Error('Authentication-only check supports Claude without session selection');
+  if(['auth-check','auth-isolate'].includes(mode) && (provider!=='claude' || sessionId!==undefined))
+    throw new Error('Authentication-only checks support Claude without session selection');
   return {provider,mode,sessionId};
 }
 // Claude's saved OAuth credentials may depend on the Windows logon context
@@ -140,9 +141,9 @@ export async function main(argv=process.argv.slice(2)) {
   const binary=await findLocalAcceptanceBinary(plan,{inspect:lstat,realpath});
   console.log(safePrint({
     provider,mode,binary,expectedVersion:plan.expectedVersion,
-    sessionMode:mode==='auth-check'?'not-started':plan.sessionMode,
-    plannedSessionId:mode==='auth-check'?null:plan.sessionId,
-    marker:mode==='auth-check'?null:plan.marker,
+    sessionMode:['auth-check','auth-isolate'].includes(mode)?'not-started':plan.sessionMode,
+    plannedSessionId:['auth-check','auth-isolate'].includes(mode)?null:plan.sessionId,
+    marker:['auth-check','auth-isolate'].includes(mode)?null:plan.marker,
     desktopVisibility:plan.desktopVisibility,
     isolation:plan.isolation,
     note:'Only run --run in a local interactive PowerShell 7 window.',
@@ -206,6 +207,26 @@ export async function main(argv=process.argv.slice(2)) {
     if(mode==='auth-check'){
       console.log('Authentication-only check complete; no model request sent.');
       return selected.env?0:2;
+    }
+    if(mode==='auth-isolate'){
+      if(selected.env){
+        console.log('An approved environment profile already authenticates; no isolation needed.');
+        return 0;
+      }
+      const result=await isolateClaudeAuthDifference({
+        source:process.env,
+        baseline:childEnv('claude',null,process.env,'network-context'),
+        check:async candidate => {
+          const response=await runBounded(binary,['auth','status'],{
+            cwd:work,env:candidate,timeoutMs:12000,
+          });
+          return checkClaudeLocalAuth(response);
+        },
+      });
+      console.log('Claude excluded-environment diagnostic (names only): '+safePrint(result));
+      console.log('No discovered variables are automatically authorized for model execution.');
+      console.log('Authentication-only diagnostic complete; no model request sent.');
+      return result.status==='single-variable-candidate'?0:2;
     }
     if(!selected.env) {
       throw new Error('Claude login cannot be verified with the approved '+
