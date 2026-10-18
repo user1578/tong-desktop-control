@@ -7,7 +7,7 @@ import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { isolateClaudeAuthDifference } from './TongClaudeAuthDifferential.mjs';
 import {
-  checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
+  checkClaudeFirstPartyOAuth, checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
   findLocalAcceptanceBinary, prepareLocalProviderAcceptance,
   summarizeAcceptanceResult, verifyLocalAcceptanceVersion,
 } from './TongP3LocalAcceptance.mjs';
@@ -16,14 +16,17 @@ const MAX_BUFFER = 262144;
 const safePrint = value => JSON.stringify(value, null, 2);
 export function argumentsForUser(argv) {
   const choices = argv.filter(x => x.startsWith('--'));
-  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id'].includes(x))) {
+  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id','--inherit-anthropic-auth-token'].includes(x))) {
     throw new Error('Unknown acceptance option');
   }
-  let provider = null, mode = 'dry-run', sessionId;
+  let provider = null, mode = 'dry-run', sessionId, inheritAnthropicAuthToken = false;
   for(let i=0;i<argv.length;i++) {
     if(argv[i]==='--provider') {
       if(provider!==null || !['claude','dsh'].includes(argv[i+1])) throw new Error('Choose claude or dsh');
       provider = argv[++i];
+    } else if (argv[i]==='--inherit-anthropic-auth-token') {
+      if(inheritAnthropicAuthToken)throw new Error('Duplicate explicit token option');
+      inheritAnthropicAuthToken=true;
     } else if (argv[i]==='--session-id') {
       if (sessionId!==undefined || !argv[i+1] || argv[i+1].startsWith('--'))
         throw new Error('An exact native session ID is required');
@@ -37,7 +40,9 @@ export function argumentsForUser(argv) {
   if(!provider) throw new Error('Required: --provider claude|dsh');
   if(['auth-check','auth-isolate'].includes(mode) && (provider!=='claude' || sessionId!==undefined))
     throw new Error('Authentication-only checks support Claude without session selection');
-  return {provider,mode,sessionId};
+  if(inheritAnthropicAuthToken && (provider!=='claude' || !['auth-check','run'].includes(mode)))
+    throw new Error('Explicit Anthropic token inheritance requires a Claude auth-check or interactive run');
+  return {...{provider,mode,sessionId}, ...(inheritAnthropicAuthToken ? {inheritAnthropicAuthToken:true} : {})};
 }
 // Claude's saved OAuth credentials may depend on the Windows logon context
 // or inherited proxy configuration. Probe bounded allowlisted environments
@@ -52,9 +57,10 @@ const NETWORK_CONTEXT = Object.freeze([
   'NODE_USE_ENV_PROXY','SSL_CERT_FILE',
 ]);
 const CLAUDE_TIERS = Object.freeze(['base','windows-context','network-context']);
-export function childEnv(provider, stateHome, source = process.env, tier = 'base') {
+export function childEnv(provider, stateHome, source = process.env, tier = 'base', options = {}) {
   if (!['claude','dsh'].includes(provider) ||
-      !CLAUDE_TIERS.includes(tier) || (provider==='dsh' && tier!=='base')) {
+      !CLAUDE_TIERS.includes(tier) || (provider==='dsh' && tier!=='base') ||
+      (options.inheritAnthropicAuthToken && provider!=='claude')) {
     throw new Error('Invalid local provider environment');
   }
   const env = {};
@@ -65,6 +71,9 @@ export function childEnv(provider, stateHome, source = process.env, tier = 'base
       'CLAUDE_CODE_OAUTH_TOKEN','XDG_CONFIG_HOME','XDG_DATA_HOME');
     if(tier!=='base') allowed.push(...WINDOWS_CONTEXT);
     if(tier==='network-context') allowed.push(...NETWORK_CONTEXT);
+    // Credential forwarding requires an explicit local command-line opt-in;
+    // the option is NEVER enabled by the default auth probes or production.
+    if(options.inheritAnthropicAuthToken === true) allowed.push('ANTHROPIC_AUTH_TOKEN');
   }
   for(const key of allowed) {
     const match=Object.keys(source).find(x=>x.toLowerCase()===key.toLowerCase());
@@ -132,7 +141,7 @@ async function runBounded(executable,args,{cwd,env,stdin='',timeoutMs=10000}={})
 }
 
 export async function main(argv=process.argv.slice(2)) {
-  const {provider,mode,sessionId}=argumentsForUser(argv);
+  const {provider,mode,sessionId,inheritAnthropicAuthToken=false}=argumentsForUser(argv);
   if(process.platform!=='win32') throw new Error('Local provider acceptance requires Windows');
   const userProfile=process.env.USERPROFILE??homedir();
   const localAppData=process.env.LOCALAPPDATA??join(userProfile,'AppData','Local');
@@ -204,9 +213,28 @@ export async function main(argv=process.argv.slice(2)) {
       console.log('Claude auth in current PowerShell environment (read-only): '+
         checkClaudeLocalAuth(inheritedAuthReply));
     }
+    let approvedEnv=selected.env;
+    if(inheritAnthropicAuthToken && !approvedEnv){
+      if(typeof process.env.ANTHROPIC_AUTH_TOKEN!=='string' ||
+          !process.env.ANTHROPIC_AUTH_TOKEN.trim()){
+        throw new Error('ANTHROPIC_AUTH_TOKEN was not set in this PowerShell. No model request sent.');
+      }
+      const tokenEnv=childEnv('claude',profile,process.env,'network-context',
+        {inheritAnthropicAuthToken:true});
+      const tokenReply=await runBounded(binary,['auth','status'],{
+        cwd:work,env:tokenEnv,timeoutMs:15000,
+      });
+      const tokenStatus=checkClaudeFirstPartyOAuth(tokenReply);
+      console.log('Claude explicitly inherited token authentication: '+tokenStatus);
+      if(tokenStatus==='first-party-oauth'){
+        approvedEnv=tokenEnv;
+        env=tokenEnv;
+        console.log('Claude approved environment profile: explicit-anthropic-auth-token');
+      }
+    }
     if(mode==='auth-check'){
       console.log('Authentication-only check complete; no model request sent.');
-      return selected.env?0:2;
+      return approvedEnv?0:2;
     }
     if(mode==='auth-isolate'){
       if(selected.env){
@@ -228,10 +256,8 @@ export async function main(argv=process.argv.slice(2)) {
       console.log('Authentication-only diagnostic complete; no model request sent.');
       return result.status==='single-variable-candidate'?0:2;
     }
-    if(!selected.env) {
-      throw new Error('Claude login cannot be verified with the approved '+
-        'environment profiles. Run --auth-check and share only the status lines. '+
-        'No model request was sent.');
+    if(!approvedEnv) {
+      throw new Error('Claude authentication unavailable with approved environments. No model request sent.');
     }
     const secondHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     if(firstHash!==secondHash)throw new Error('Provider executable changed before execution');

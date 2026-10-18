@@ -66,6 +66,20 @@ This mode performs bounded (`<=16`) `claude auth status` probes in a fresh tempo
 
 A `single-variable-candidate` means the named variable appears necessary/sufficient within this diagnostic, **not** that it is safe to forward it automatically. If `requiresManualReview` is true (for example `ANTHROPIC_API_KEY`), do not enable it in the model runner; API-key authentication may have a different billing path than the existing OAuth session. `multiple-variables-needed`, `probe-limit` or `execution-modifiers-excluded` need further manual investigation. The test can take several seconds; it never requests interactive approval or runs a model.
 
+### Stage G — explicit, local-only ANTHROPIC_AUTH_TOKEN transfer
+
+The user's PowerShell `--auth-isolate` diagnostic identified exactly one excluded variable, **`ANTHROPIC_AUTH_TOKEN`**, as sufficient to make `claude auth status` succeed. The token's **value was not retrieved or displayed**. This does not, by itself, prove its provider or billing method.
+
+The new flag `--inherit-anthropic-auth-token` is **opt-in** and accepted only with the Claude `--auth-check` or interactive `--run` commands. Without that flag, the variable stays excluded. No copy is written to disk, no model is started by an auth check, and no production Tong environment policy changes.
+
+First run the following from the SAME interactive PowerShell with the working direct Claude login:
+
+```powershell
+& 'D:\node\node.exe' .\scripts\Run-TongP3LocalAcceptance.mjs --provider claude --auth-check --inherit-anthropic-auth-token
+```
+
+Only if the returned line is `Claude explicitly inherited token authentication: first-party-oauth` should a separate interactive `--run --inherit-anthropic-auth-token` acceptance be considered. The local `--run` keeps its `Y` approval, fixed text-only prompt, version check, no-tools CLI flags and bounded process. It still is **NOT a production Job-backed sandbox**. Other authentication methods and providers are refused when using the explicit token option; do not assume a different credential grants the same account entitlements or billing. The token is **not** registered in Tong, exported to files, or copied into the CLI command-line arguments. Do not paste its value into chat or commit it to Git.
+
 User should check locally:
 
 ```powershell

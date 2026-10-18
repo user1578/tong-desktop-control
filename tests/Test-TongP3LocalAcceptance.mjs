@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import {
   prepareLocalProviderAcceptance, findLocalAcceptanceBinary,
   verifyLocalAcceptanceVersion, summarizeAcceptanceResult,
-  checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
+  checkClaudeFirstPartyOAuth, checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
 } from '../scripts/TongP3LocalAcceptance.mjs';
 
 const localAppData='C:\\Users\\Example\\AppData\\Local';
@@ -111,6 +111,21 @@ assert.equal(checkClaudeLocalAuth({
     loggedIn:true,authMethod:'claude.ai',accountUuid:'private-id',
   }),
 }), 'authenticated');
+assert.equal(checkClaudeFirstPartyOAuth({
+  exitCode:0,stdout:JSON.stringify({
+    loggedIn:true,authMethod:'oauth_token',apiProvider:'firstParty',
+    accountUuid:'SYNTHETIC_PRIVATE_ACCOUNT'
+  })
+}),'first-party-oauth');
+assert.equal(checkClaudeFirstPartyOAuth({
+  exitCode:0,stdout:JSON.stringify({
+    loggedIn:true,authMethod:'api_key',apiProvider:'thirdParty'
+  })
+}),'other-authentication');
+assert.equal(checkClaudeFirstPartyOAuth({
+  exitCode:1,stdout:JSON.stringify({loggedIn:false,authMethod:'none'})
+}),'not-authenticated');
+assert.equal(checkClaudeFirstPartyOAuth({exitCode:1,stdout:'invalid json'}),'unavailable');
 assert.equal(checkClaudeLocalAuth({
   exitCode:1,stdout:'unparseable private error',
 }), 'unavailable');
@@ -151,6 +166,7 @@ const parentEnv={
   ANTHROPIC_API_KEY:'SYNTHETIC_API_KEY_MUST_NOT_BE_USED',
   GITHUB_TOKEN:'SYNTHETIC_GITHUB_TOKEN_MUST_NOT_BE_USED',
   NODE_OPTIONS:'--require malicious.js',
+  ANTHROPIC_AUTH_TOKEN:'SYNTHETIC_CREDENTIAL_DO_NOT_DISPLAY',
   USERNAME:'Example',
   HOMEDRIVE:'C:',
   HOMEPATH:'\\Users\\Example',
@@ -164,13 +180,23 @@ assert.deepEqual(argumentsForUser(['--provider','claude','--auth-check']),{
 assert.deepEqual(argumentsForUser(['--provider','claude','--run']),{
   provider:'claude',mode:'run',sessionId:undefined,
 });
+assert.deepEqual(argumentsForUser(['--provider','claude','--auth-check','--inherit-anthropic-auth-token']),{
+  provider:'claude',mode:'auth-check',sessionId:undefined,inheritAnthropicAuthToken:true,
+});
+assert.deepEqual(argumentsForUser(['--provider','claude','--run','--inherit-anthropic-auth-token']),{
+  provider:'claude',mode:'run',sessionId:undefined,inheritAnthropicAuthToken:true,
+});
 for(const argv of [
   ['--provider','dsh','--auth-check'],
   ['--provider','claude','--auth-check','--run'],
   ['--provider','claude','--auth-check','--session-id','synthetic-session'],
   ['--provider','claude','--diagnose'],
+  ['--provider','claude','--auth-isolate','--inherit-anthropic-auth-token'],
+  ['--provider','dsh','--run','--inherit-anthropic-auth-token'],
+  ['--provider','claude','--dry-run','--inherit-anthropic-auth-token'],
+  ['--provider','claude','--run','--inherit-anthropic-auth-token','--inherit-anthropic-auth-token'],
 ]){
-  assert.throws(()=>argumentsForUser(argv),/acceptance|Unknown|Authentication|Select one/i);
+  assert.throws(()=>argumentsForUser(argv),/acceptance|Unknown|Authentication|Select one|Explicit Anthropic token|Duplicate explicit token/i);
 }
 const env=childEnv('claude','C:\\Temp\\separate',parentEnv);
 assert.equal(env.CLAUDE_CONFIG_DIR,parentEnv.CLAUDE_CONFIG_DIR);
@@ -178,6 +204,7 @@ assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN,parentEnv.CLAUDE_CODE_OAUTH_TOKEN);
 assert.equal(env.XDG_CONFIG_HOME,parentEnv.XDG_CONFIG_HOME);
 assert.equal(env.USERPROFILE,parentEnv.USERPROFILE);
 assert.equal(env.ANTHROPIC_API_KEY,undefined);
+assert.equal(env.ANTHROPIC_AUTH_TOKEN,undefined);
 assert.equal(env.GITHUB_TOKEN,undefined);
 assert.equal(env.NODE_OPTIONS,undefined);
 assert.equal(env.DSH_HOME,undefined);
@@ -187,6 +214,13 @@ const withIdentity=childEnv('claude','C:\\Temp\\separate',parentEnv,'windows-con
 assert.equal(withIdentity.USERNAME,parentEnv.USERNAME);
 assert.equal(withIdentity.HOMEDRIVE,parentEnv.HOMEDRIVE);
 assert.equal(withIdentity.HTTPS_PROXY,undefined);
+const withExplicitToken=childEnv('claude','C:\\Temp\\separate',parentEnv,'network-context',{
+  inheritAnthropicAuthToken:true,
+});
+assert.equal(withExplicitToken.ANTHROPIC_AUTH_TOKEN,parentEnv.ANTHROPIC_AUTH_TOKEN);
+assert.equal(withExplicitToken.ANTHROPIC_API_KEY,undefined);
+assert.equal(withExplicitToken.NODE_OPTIONS,undefined);
+assert.equal(withExplicitToken.GITHUB_TOKEN,undefined);
 const withNetwork=childEnv('claude','C:\\Temp\\separate',parentEnv,'network-context');
 assert.equal(withNetwork.USERNAME,parentEnv.USERNAME);
 assert.equal(withNetwork.HTTPS_PROXY,parentEnv.HTTPS_PROXY);
@@ -220,6 +254,10 @@ const dshEnv=childEnv('dsh','C:\\Temp\\separate',parentEnv);
 assert.equal(dshEnv.DSH_HOME,'C:\\Temp\\separate');
 assert.equal(dshEnv.CLAUDE_CONFIG_DIR,undefined);
 assert.equal(dshEnv.CLAUDE_CODE_OAUTH_TOKEN,undefined);
+assert.equal(dshEnv.ANTHROPIC_AUTH_TOKEN,undefined);
+assert.throws(()=>childEnv('dsh','C:\\Temp',parentEnv,'base',{
+  inheritAnthropicAuthToken:true,
+}),/Invalid local provider environment/);
 assert.throws(()=>childEnv('unknown','C:\\Temp',parentEnv),/Invalid local provider environment/);
 assert.throws(()=>childEnv('dsh','C:\\Temp',parentEnv,'network-context'),/Invalid local provider environment/);
 console.log('PASS: opt-in CLI acceptance, selective OAuth env inheritance, preflight login, categorical diagnostics, no secret disclosure.');

@@ -110,6 +110,24 @@ export function checkClaudeLocalAuth(receipt) {
   return 'unavailable';
 }
 
+// The sensitive ANTHROPIC_AUTH_TOKEN is only eligible for an opt-in local
+// acceptance if the same CLI reports first-party OAuth authentication. The
+// status does not disclose its value or prove any particular billing outcome.
+export function checkClaudeFirstPartyOAuth(receipt) {
+  if (!receipt || typeof receipt !== 'object' || receipt.timedOut ||
+      typeof receipt.stdout !== 'string' ||
+      Buffer.byteLength(receipt.stdout, 'utf8') > 8192) return 'unavailable';
+  try {
+    const data=JSON.parse(receipt.stdout);
+    if (data?.loggedIn === false) return 'not-authenticated';
+    if (data?.loggedIn === true && receipt.exitCode === 0) {
+      return data.authMethod === 'oauth_token' && data.apiProvider === 'firstParty'
+        ? 'first-party-oauth' : 'other-authentication';
+    }
+  } catch {}
+  return 'unavailable';
+}
+
 // Diagnostics are deliberately categorical. Never show raw stderr, stdout,
 // account metadata, command arguments, or bearer tokens to the caller.
 export function classifyLocalAcceptanceFailure(receipt) {
