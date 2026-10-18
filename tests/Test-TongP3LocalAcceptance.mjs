@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { childEnv, argumentsForUser } from '../scripts/Run-TongP3LocalAcceptance.mjs';
 import { win32 } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
@@ -138,4 +139,45 @@ for (const receipt of [{exitCode:1,stderrPreview:'Authorization: Bearer very-sec
   assert.ok(!category.includes('secret'));
   assert.ok(!category.includes('token'));
 }
-console.log('PASS: opt-in local CLI acceptance, preflight login, bounded categorical diagnostics, no secret disclosure.');
+const parentEnv={
+  SystemRoot:'C:\\Windows',
+  PATH:'C:\\Windows\\System32',
+  USERPROFILE:'C:\\Users\\Example',
+  APPDATA:'C:\\Users\\Example\\AppData\\Roaming',
+  LOCALAPPDATA:'C:\\Users\\Example\\AppData\\Local',
+  CLAUDE_CONFIG_DIR:'C:\\Users\\Example\\.claude-personal',
+  CLAUDE_CODE_OAUTH_TOKEN:'SYNTHETIC_NEVER_REAL_OAUTH_TOKEN',
+  XDG_CONFIG_HOME:'C:\\Users\\Example\\xdg',
+  ANTHROPIC_API_KEY:'SYNTHETIC_API_KEY_MUST_NOT_BE_USED',
+  GITHUB_TOKEN:'SYNTHETIC_GITHUB_TOKEN_MUST_NOT_BE_USED',
+  NODE_OPTIONS:'--require malicious.js',
+};
+assert.deepEqual(argumentsForUser(['--provider','claude','--auth-check']),{
+  provider:'claude',mode:'auth-check',sessionId:undefined,
+});
+assert.deepEqual(argumentsForUser(['--provider','claude','--run']),{
+  provider:'claude',mode:'run',sessionId:undefined,
+});
+for(const argv of [
+  ['--provider','dsh','--auth-check'],
+  ['--provider','claude','--auth-check','--run'],
+  ['--provider','claude','--auth-check','--session-id','synthetic-session'],
+  ['--provider','claude','--diagnose'],
+]){
+  assert.throws(()=>argumentsForUser(argv),/acceptance|Unknown|Authentication|Select one/i);
+}
+const env=childEnv('claude','C:\\Temp\\separate',parentEnv);
+assert.equal(env.CLAUDE_CONFIG_DIR,parentEnv.CLAUDE_CONFIG_DIR);
+assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN,parentEnv.CLAUDE_CODE_OAUTH_TOKEN);
+assert.equal(env.XDG_CONFIG_HOME,parentEnv.XDG_CONFIG_HOME);
+assert.equal(env.USERPROFILE,parentEnv.USERPROFILE);
+assert.equal(env.ANTHROPIC_API_KEY,undefined);
+assert.equal(env.GITHUB_TOKEN,undefined);
+assert.equal(env.NODE_OPTIONS,undefined);
+assert.equal(env.DSH_HOME,undefined);
+const dshEnv=childEnv('dsh','C:\\Temp\\separate',parentEnv);
+assert.equal(dshEnv.DSH_HOME,'C:\\Temp\\separate');
+assert.equal(dshEnv.CLAUDE_CONFIG_DIR,undefined);
+assert.equal(dshEnv.CLAUDE_CODE_OAUTH_TOKEN,undefined);
+assert.throws(()=>childEnv('unknown','C:\\Temp',parentEnv),/Unknown local provider/);
+console.log('PASS: opt-in CLI acceptance, selective OAuth env inheritance, preflight login, categorical diagnostics, no secret disclosure.');

@@ -13,9 +13,9 @@ import {
 
 const MAX_BUFFER = 262144;
 const safePrint = value => JSON.stringify(value, null, 2);
-function argumentsForUser(argv) {
+export function argumentsForUser(argv) {
   const choices = argv.filter(x => x.startsWith('--'));
-  if (choices.some(x => !['--provider','--dry-run','--run','--session-id'].includes(x))) {
+  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--session-id'].includes(x))) {
     throw new Error('Unknown acceptance option');
   }
   let provider = null, mode = 'dry-run', sessionId;
@@ -27,19 +27,33 @@ function argumentsForUser(argv) {
       if (sessionId!==undefined || !argv[i+1] || argv[i+1].startsWith('--'))
         throw new Error('An exact native session ID is required');
       sessionId=argv[++i];
-    } else if (argv[i]==='--run') mode = 'run';
+    } else if (argv[i]==='--run' || argv[i]==='--auth-check') {
+      if(mode!=='dry-run')throw new Error('Select one acceptance mode');
+      mode=argv[i]==='--run'?'run':'auth-check';
+    }
     else if (argv[i]!=='--dry-run') throw new Error('Unknown acceptance option');
   }
   if(!provider) throw new Error('Required: --provider claude|dsh');
+  if(mode==='auth-check' && (provider!=='claude' || sessionId!==undefined))
+    throw new Error('Authentication-only check supports Claude without session selection');
   return {provider,mode,sessionId};
 }
-function childEnv(provider, stateHome) {
+// Preserve only the Claude-specific OAuth/configuration settings supplied by
+// the USER'S interactive PowerShell session. They may be required to find its
+// existing login; never print these values or persist them in the test report.
+// Deliberately do not forward ANTHROPIC_API_KEY, which overrides OAuth billing.
+export function childEnv(provider, stateHome, source = process.env) {
+  if (!['claude','dsh'].includes(provider)) throw new Error('Unknown local provider');
   const env = {};
   const allowed=['SystemRoot','WINDIR','ComSpec','PATH','PATHEXT','USERPROFILE',
     'APPDATA','LOCALAPPDATA','TEMP','TMP','HOME'];
+  if (provider === 'claude') {
+    allowed.push('CLAUDE_CONFIG_DIR','CLAUDE_CODE_OAUTH_TOKEN',
+      'XDG_CONFIG_HOME','XDG_DATA_HOME');
+  }
   for(const key of allowed) {
-    const match=Object.keys(process.env).find(x=>x.toLowerCase()===key.toLowerCase());
-    if(match)env[key]=process.env[match];
+    const match=Object.keys(source).find(x=>x.toLowerCase()===key.toLowerCase());
+    if(match) env[key]=source[match];
   }
   // A new profile avoids modifying or consuming the Desktop-owned DSH profile.
   if(provider==='dsh')env.DSH_HOME=stateHome;
@@ -95,13 +109,15 @@ export async function main(argv=process.argv.slice(2)) {
   const binary=await findLocalAcceptanceBinary(plan,{inspect:lstat,realpath});
   console.log(safePrint({
     provider,mode,binary,expectedVersion:plan.expectedVersion,
-    sessionMode:plan.sessionMode,plannedSessionId:plan.sessionId,
-    marker:plan.marker,desktopVisibility:plan.desktopVisibility,
+    sessionMode:mode==='auth-check'?'not-started':plan.sessionMode,
+    plannedSessionId:mode==='auth-check'?null:plan.sessionId,
+    marker:mode==='auth-check'?null:plan.marker,
+    desktopVisibility:plan.desktopVisibility,
     isolation:plan.isolation,
     note:'Only run --run in a local interactive PowerShell 7 window.',
   }));
   if(mode==='dry-run')return 0;
-  if(!process.stdin.isTTY || !process.stdout.isTTY) {
+  if(mode==='run' && (!process.stdin.isTTY || !process.stdout.isTTY)) {
     throw new Error('Interactive local console is required; MCP and CI cannot approve this run');
   }
   if(provider==='dsh') {
@@ -110,13 +126,20 @@ export async function main(argv=process.argv.slice(2)) {
   console.log('This is NOT a production Tong worker or an OS sandbox.');
   console.log('The CLI uses the local user profile; no repository files are requested.');
   console.log('Timeout cancellation is best-effort and is not Windows Job isolation.');
-  console.log('Native session mode: '+plan.sessionMode+'; target: '+plan.sessionId);
+  if(mode==='run')console.log('Native session mode: '+plan.sessionMode+'; target: '+plan.sessionId);
   const base=await mkdtemp(join(tmpdir(),'tong-p3-local-acceptance-'));
   let keepResult=false;
   try {
     const work=join(base,'empty-workdir'),profile=join(base,'separate-dsh-home');
     await mkdir(work);await mkdir(profile);
     const env=childEnv(provider,profile);
+    if (provider==='claude') {
+      // Print key presence only, never the contents of OAuth/config variables.
+      const authInputs=['CLAUDE_CONFIG_DIR','CLAUDE_CODE_OAUTH_TOKEN']
+        .filter(key=>Object.keys(env).some(name=>name.toLowerCase()===key.toLowerCase()));
+      console.log('Claude authentication settings inherited: '+
+        (authInputs.length ? authInputs.join(', ') : 'none (using default profile)'));
+    }
     const firstHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     const versionReply=await runBounded(binary,['--version'],
       {cwd:work,env,timeoutMs:15000});
@@ -131,6 +154,20 @@ export async function main(argv=process.argv.slice(2)) {
     });
     const auth=checkClaudeLocalAuth(authReply);
     console.log('Claude authentication preflight: '+auth);
+    if(auth!=='authenticated'){
+      // Only compare auth status with the exact environment the user supplied
+      // to this local console. Never use this less-filtered environment to run
+      // a model, and never display the auth response or environment contents.
+      const inheritedAuthReply=await runBounded(binary,['auth','status'],{
+        cwd:work,env:process.env,timeoutMs:15000,
+      });
+      console.log('Claude auth in current PowerShell environment (read-only): '+
+        checkClaudeLocalAuth(inheritedAuthReply));
+    }
+    if(mode==='auth-check'){
+      console.log('Authentication-only check complete; no model request sent.');
+      return auth==='authenticated'?0:2;
+    }
     if(auth==='not-authenticated') {
       throw new Error('Claude CLI is not logged in in this execution environment. '+
         'Use your OWN PowerShell 7 window to check `claude auth status` and sign in if needed. '+
