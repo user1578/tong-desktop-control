@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { isolateClaudeAuthDifference } from './TongClaudeAuthDifferential.mjs';
+import { prepareExplicitClaudeRouting } from './TongClaudeExplicitRouting.mjs';
 import {
   checkClaudeFirstPartyOAuth, checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
   claudeEnvironmentHints, summarizeClaudeProcessFailure,
@@ -17,10 +18,10 @@ const MAX_BUFFER = 262144;
 const safePrint = value => JSON.stringify(value, null, 2);
 export function argumentsForUser(argv) {
   const choices = argv.filter(x => x.startsWith('--'));
-  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id','--inherit-anthropic-auth-token'].includes(x))) {
+  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id','--inherit-anthropic-auth-token','--inherit-claude-routing'].includes(x))) {
     throw new Error('Unknown acceptance option');
   }
-  let provider = null, mode = 'dry-run', sessionId, inheritAnthropicAuthToken = false;
+  let provider = null, mode = 'dry-run', sessionId, inheritAnthropicAuthToken = false, inheritClaudeRouting = false;
   for(let i=0;i<argv.length;i++) {
     if(argv[i]==='--provider') {
       if(provider!==null || !['claude','dsh'].includes(argv[i+1])) throw new Error('Choose claude or dsh');
@@ -28,6 +29,9 @@ export function argumentsForUser(argv) {
     } else if (argv[i]==='--inherit-anthropic-auth-token') {
       if(inheritAnthropicAuthToken)throw new Error('Duplicate explicit token option');
       inheritAnthropicAuthToken=true;
+    } else if (argv[i]==='--inherit-claude-routing') {
+      if(inheritClaudeRouting)throw new Error('Duplicate explicit routing option');
+      inheritClaudeRouting=true;
     } else if (argv[i]==='--session-id') {
       if (sessionId!==undefined || !argv[i+1] || argv[i+1].startsWith('--'))
         throw new Error('An exact native session ID is required');
@@ -43,7 +47,11 @@ export function argumentsForUser(argv) {
     throw new Error('Authentication-only checks support Claude without session selection');
   if(inheritAnthropicAuthToken && (provider!=='claude' || !['auth-check','run'].includes(mode)))
     throw new Error('Explicit Anthropic token inheritance requires a Claude auth-check or interactive run');
-  return {...{provider,mode,sessionId}, ...(inheritAnthropicAuthToken ? {inheritAnthropicAuthToken:true} : {})};
+  if(inheritClaudeRouting && (provider!=='claude' || !['auth-check','run'].includes(mode)))
+    throw new Error('Explicit routing requires Claude auth-check or interactive run');
+  return {provider,mode,sessionId,
+    ...(inheritAnthropicAuthToken ? {inheritAnthropicAuthToken:true} : {}),
+    ...(inheritClaudeRouting ? {inheritClaudeRouting:true} : {})};
 }
 // Claude's saved OAuth credentials may depend on the Windows logon context
 // or inherited proxy configuration. Probe bounded allowlisted environments
@@ -142,7 +150,8 @@ async function runBounded(executable,args,{cwd,env,stdin='',timeoutMs=10000}={})
 }
 
 export async function main(argv=process.argv.slice(2)) {
-  const {provider,mode,sessionId,inheritAnthropicAuthToken=false}=argumentsForUser(argv);
+  const {provider,mode,sessionId,inheritAnthropicAuthToken=false,
+    inheritClaudeRouting=false}=argumentsForUser(argv);
   if(process.platform!=='win32') throw new Error('Local provider acceptance requires Windows');
   const userProfile=process.env.USERPROFILE??homedir();
   const localAppData=process.env.LOCALAPPDATA??join(userProfile,'AppData','Local');
@@ -183,6 +192,13 @@ export async function main(argv=process.argv.slice(2)) {
     const configHints=claudeEnvironmentHints(process.env);
     // No values, token fragments, or API URLs are shown.
     console.log('Claude local config (presence only): '+safePrint(configHints));
+    const routing=inheritClaudeRouting ? prepareExplicitClaudeRouting(process.env) : null;
+    if(routing){
+      console.log('Claude explicit routing prepared (names only): '+safePrint({
+        endpointInherited:routing.endpointInherited,
+        modelSelectorsInherited:routing.modelSelectorsInherited,
+      }));
+    }
     const firstHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     const versionReply=await runBounded(binary,['--version'],
       {cwd:work,env,timeoutMs:15000});
@@ -263,10 +279,17 @@ export async function main(argv=process.argv.slice(2)) {
     if(!approvedEnv) {
       throw new Error('Claude authentication unavailable with approved environments. No model request sent.');
     }
-    if(configHints.customApiEndpointConfigured) {
-      throw new Error('ANTHROPIC_BASE_URL is configured in this PowerShell but is excluded from the '+
-        'test subprocess. A model call could reach an unintended API endpoint; stopped before model execution. '+
-        'Run --auth-check and review the endpoint configuration (do not share its value).');
+    if((configHints.customApiEndpointConfigured || configHints.modelOverrideConfigured) &&
+       !inheritClaudeRouting){
+      throw new Error('Custom Claude API routing/model overrides are configured but not inherited. '+
+        'Use explicit --inherit-claude-routing after read-only auth-check. No model request sent.');
+    }
+    if(routing){
+      // Preserve exactly the selected user-owned routing variables for the
+      // approved local text test, without forwarding arbitrary process.env.
+      env={...env,...routing.env};
+      console.log('Claude routing selected explicitly; endpoint/model values are hidden.');
+      console.log('Claude auth metadata does not confirm the destination provider or billing.');
     }
     const secondHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     if(firstHash!==secondHash)throw new Error('Provider executable changed before execution');

@@ -91,6 +91,52 @@ A further potentially important mismatch: the interactive shell can define `ANTH
 
 First, ask the user to run **only** the previous no-model, explicit-OAuth auth-check command and report the four boolean indicators, not endpoint values or tokens. Only after the endpoint / provider routing question is resolved should a new paid-model run be considered.
 
+### Stage I — explicit local API endpoint and model routing
+
+The user's newest **no-model** check established all four input indicators:
+`customApiEndpointConfigured:true`, `modelOverrideConfigured:true`,
+`anthropicAuthTokenConfigured:true`, `anthropicApiKeyConfigured:false`.
+This confirms a concrete mismatch: earlier paid-model acceptance requests copied the
+token but silently excluded the interactive shell's custom API endpoint and model
+selector(s). This can explain the fast `exitCode=1`, although the original
+failure is not conclusively reconstructed.
+
+New **separately opted-in** flag `--inherit-claude-routing` is available for
+Claude `--auth-check` (read-only) and `--run` (requires another local `Y`
+approval). It passes only these exact user-owned variables, when present:
+
+`ANTHROPIC_BASE_URL`, `ANTHROPIC_MODEL`,
+`ANTHROPIC_DEFAULT_SONNET_MODEL`,
+`ANTHROPIC_DEFAULT_OPUS_MODEL`,
+`ANTHROPIC_DEFAULT_HAIKU_MODEL`.
+
+No arbitrary environment variables, `ANTHROPIC_API_KEY`, or additional tokens
+are inherited. The API address and model selector **values are never printed,
+saved or embedded in CLI command arguments**; only the forwarding status and
+variable names are displayed. The endpoint must be HTTPS or loopback HTTP,
+without URL-embedded credentials, query strings, or fragments. A nonconforming
+endpoint is rejected before running a model. The default run still fails closed
+whenever the parent specifies a custom API endpoint **or** model override
+without this explicit flag.
+
+**First run only a read-only check**, in the already authenticated PowerShell 7:
+
+```powershell
+& 'D:\node\node.exe' .\scripts\Run-TongP3LocalAcceptance.mjs --provider claude --auth-check --inherit-anthropic-auth-token --inherit-claude-routing
+```
+
+This confirms the intended routing selectors can be prepared without revealing
+or calling the endpoint. The status `oauth_token / firstParty` refers to CLI
+authentication metadata, **not** proof that a custom `ANTHROPIC_BASE_URL`
+routes to Anthropic or uses any particular billing mechanism. After the user
+checks the routing and agrees to a real model call through that existing
+custom endpoint, they may separately run `--run` with the two explicit flags
+and enter `Y` on their own computer. Failed model runs report only
+categorized and structured error metadata.
+
+This is a local development acceptance only. **No production Tong provider,
+grant, OAuth identity, credential store, or MCP tool was modified.**
+
 User should check locally:
 
 ```powershell
