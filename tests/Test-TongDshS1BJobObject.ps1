@@ -41,6 +41,9 @@ try {
     }
     $rejected=@(& $exe '--canary' 'arbitrary-user-executable' 2>&1)
     if($LASTEXITCODE -eq 0) {throw 'DSH-S1B arbitrary execution option was not rejected'}
+    # A deliberate nonzero exit from the negative canary must not become the
+    # PowerShell script's final exit code after all assertions have passed.
+    $global:LASTEXITCODE = 0
     [pscustomobject]@{
         status='passed'
         canaries=@($results)
