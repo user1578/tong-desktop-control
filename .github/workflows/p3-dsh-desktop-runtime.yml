@@ -34,3 +34,7 @@ jobs:
           node --check tests/Test-TongDshS0Audit.mjs
       - name: Simulated Desktop installation and path safety
         run: node --test tests/Test-TongDshDesktopRuntime.mjs tests/Test-TongDshS0Audit.mjs tests/Test-TongDshS1Policy.mjs tests/Test-TongDshS1SyntheticRunner.mjs
+      - name: Windows native DSH Job Object mock canaries (no DSH model)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/Test-TongDshS1BJobObject.ps1
