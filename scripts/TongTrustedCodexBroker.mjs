@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { appendFile, mkdir, open, readFile, realpath, rename, stat, unlink, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, resolve, parse, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { CodexAppServerAdapter } from "./TongCodexAppServer.mjs";
@@ -10,6 +10,14 @@ const PROJECT_ID = /^[a-z][a-z0-9-]{1,39}$/;
 const TASK_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TASK_FIELDS = new Set(["taskId", "projectId", "cwd", "task", "scope", "prompt", "timeoutMs", "threadId", "continuationMessage", "resumeCount", "workType", "requiredCapabilities"]);
 export const DEVELOPMENT_CAPABILITIES = Object.freeze(['project.read','project.write','command.execute','dependency.install','codex.session']);
+const ROOT_GRANT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const windowsKey = value => process.platform==='win32'
+  ? win32.normalize(value).replace(/[\\/]+$/, '').toLowerCase() : resolve(value);
+function trustedRootContains(root, target) {
+  const key=windowsKey(root), path=windowsKey(target);
+  return path===key || path.startsWith(key+(process.platform==='win32'?'\\':'/'));
+}
+
 const developmentCapabilities = new Set([...DEVELOPMENT_CAPABILITIES,'git.commit','git.push']);
 export function requestedCapabilities(input) {
   if (input.workType !== undefined && !['development','high-impact'].includes(input.workType)) throw new Error('Invalid work type');
@@ -37,7 +45,17 @@ function validatePolicy(value) {
         || new Set(value.developmentGrants.map(g => g?.projectId)).size !== value.developmentGrants.length
         || value.developmentGrants.some(g => !PROJECT_ID.test(g?.projectId) || !value.projects.includes(g.projectId)
           || typeof g.root !== 'string' || !isAbsolute(g.root) || !Array.isArray(g.capabilities)
-          || g.capabilities.some(c => !developmentCapabilities.has(c)) || !DEVELOPMENT_CAPABILITIES.every(c => g.capabilities.includes(c)))))
+          || g.capabilities.some(c => !developmentCapabilities.has(c)) || !DEVELOPMENT_CAPABILITIES.every(c => g.capabilities.includes(c))
+          || (g.originTrustGrantId !== undefined && !ROOT_GRANT_ID.test(g.originTrustGrantId)))))
+      || (value.trustedRoots !== undefined && (!Array.isArray(value.trustedRoots)
+        || value.trustedRoots.length > 32
+        || new Set(value.trustedRoots.map(g => windowsKey(g?.root ?? ''))).size !== value.trustedRoots.length
+        || value.trustedRoots.some(g => !g || typeof g.root !== 'string' || !isAbsolute(g.root)
+          || (process.platform === 'win32' && !/^[A-Za-z]:[\\/]/.test(g.root))
+          || windowsKey(g.root) === windowsKey(parse(g.root).root)
+          || /[\u0000\r\n]/.test(g.root) || !ROOT_GRANT_ID.test(g.grantId ?? '')
+          || !Array.isArray(g.capabilities) || g.capabilities.some(c => !developmentCapabilities.has(c))
+          || !DEVELOPMENT_CAPABILITIES.every(c => g.capabilities.includes(c)))))
       || (value.codexProxyUrl !== undefined && value.codexProxyUrl !== null
         && (!isValidLoopbackProxy(value.codexProxyUrl)))
       || (value.executable !== null && (typeof value.executable !== "string"
@@ -110,10 +128,10 @@ export class TongTrustedPolicy {
 
   async status() {
     const { enabled, executable, projects, generation, approvals, emergencyStopped = false,
-      developmentGrants = [], codexProxyUrl = null } = await this.read();
+      developmentGrants = [], trustedRoots = [], codexProxyUrl = null } = await this.read();
     return { mode: enabled ? "trusted-windows" : "isolated", enabled, executable,
       projects, pendingApprovals: approvals.length, generation, emergencyStopped, developmentGrants,
-      codexProxyUrl };
+      trustedRoots, codexProxyUrl };
   }
 
   async enable(executable) {
@@ -158,6 +176,59 @@ export class TongTrustedPolicy {
     }, { projectId });
   }
 
+  async trustRoot(directory,access,{gitCommit=false,gitPush=false}={}) {
+    if (typeof directory !== 'string' || !isAbsolute(directory)
+       || (process.platform==='win32' && !/^[A-Za-z]:[\\/]/.test(directory))
+       || !access || typeof access.checkDirectory !== 'function'
+       || typeof gitCommit!=='boolean' || typeof gitPush!=='boolean')
+       throw new Error('Invalid trusted folder request');
+    const root=await access.checkDirectory(directory);
+    if(windowsKey(root)===windowsKey(parse(root).root))
+       throw new Error('Cannot trust an entire disk');
+    const actual=await realpath(root);
+    if(!samePath(actual,root))throw new Error('Trusted folder changed');
+    const dangerous=[this.policyPath,this.taskStatePath,this.auditPath];
+    if(dangerous.some(path=>trustedRootContains(root,path)))
+       throw new Error('Cannot trust the authorization state directory');
+    const capabilities=[...DEVELOPMENT_CAPABILITIES,...(gitCommit?['git.commit']:[]),...(gitPush?['git.push']:[])];
+    const grant={root,grantId:randomUUID(),capabilities,issuedAt:new Date().toISOString()};
+    await this.mutate('trust-project-folder',value=>{
+      if(!value.enabled || !value.executable)throw disabled();
+      value.trustedRoots ??=[];
+      if(value.trustedRoots.some(g=>windowsKey(g.root)===windowsKey(root)))
+        throw new Error('Trusted folder is already configured');
+      value.trustedRoots.push(grant);
+      value.generation+=1;
+    },{root,grantId:grant.grantId,capabilities});
+    return grant;
+  }
+
+  async trustedRootFor(projectPath) {
+    const value=await this.read();
+    if(!value.enabled || !value.executable)return null;
+    const matched=(value.trustedRoots ?? []).filter(item=>trustedRootContains(item.root,projectPath));
+    return matched.length ? matched.sort((a,b)=>b.root.length-a.root.length)[0] : null;
+  }
+
+  async untrustRoot(root) {
+    await this.mutate('untrust-project-folder',value=>{
+      const prior=(value.trustedRoots??[]).filter(g=>windowsKey(g.root)===windowsKey(root));
+      if(!prior.length)throw new Error('Trusted folder was not found');
+      const removed=new Set(prior.map(g=>g.grantId));
+      const inherited=(value.developmentGrants??[]).filter(g=>removed.has(g.originTrustGrantId));
+      const inheritedIds=new Set(inherited.map(g=>g.projectId));
+      value.trustedRoots=(value.trustedRoots??[]).filter(g=>!removed.has(g.grantId));
+      value.developmentGrants=(value.developmentGrants??[]).filter(g=>!removed.has(g.originTrustGrantId));
+      for(const projectId of inheritedIds){
+        if(!value.developmentGrants.some(g=>g.projectId===projectId)){
+          value.projects=value.projects.filter(id=>id!==projectId);
+          value.approvals=value.approvals.filter(a=>a.projectId!==projectId);
+        }
+      }
+      value.generation+=1;
+    },{root});
+  }
+
   async revoke(projectId) {
     if (!PROJECT_ID.test(projectId)) throw new Error("Invalid project id");
     await this.mutate("revoke", (value) => { value.projects = value.projects.filter((id) => id !== projectId);
@@ -167,7 +238,7 @@ export class TongTrustedPolicy {
     }, { projectId });
   }
 
-  async authorizeDevelopment(projectId, access, {gitCommit = false, gitPush = false,expectedRoot} = {}) {
+  async authorizeDevelopment(projectId, access, {gitCommit = false, gitPush = false,expectedRoot,originTrustGrantId} = {}) {
     if (typeof gitCommit !== 'boolean' || typeof gitPush !== 'boolean') throw new Error('Invalid Git authorization');
     if (!await access.authorize('agent.execute',projectId) || !await access.authorize('project.write',projectId)) throw new Error('Project requires write and agent.execute authorization');
     const project = (await access.listProjects()).find(p => p.id === projectId && p.available && p.status === 'enabled');
@@ -175,7 +246,12 @@ export class TongTrustedPolicy {
     if(expectedRoot !== undefined && !samePath(project.root,expectedRoot)) throw new Error('Project changed during confirmation');
     const contains = (root,path) => { const part=resolve(path).toLowerCase();const base=resolve(root).toLowerCase();return part===base || part.startsWith(base+'\\') || part.startsWith(base+'/'); };
     if ([this.policyPath,this.taskStatePath,this.auditPath].some(p => contains(project.root,p))) throw new Error('Authorization state must be outside the project');
-    const grant = {projectId,grantId:randomUUID(),root:project.root,capabilities:[...DEVELOPMENT_CAPABILITIES,...(gitCommit?['git.commit']:[]),...(gitPush?['git.push']:[])],issuedAt:new Date().toISOString()};
+    if(originTrustGrantId!==undefined){
+      const trust=await this.trustedRootFor(project.root);
+      if(!trust||trust.grantId!==originTrustGrantId)
+        throw new Error('Folder trust does not authorize this project');
+    }
+    const grant = {projectId,grantId:randomUUID(),root:project.root,capabilities:[...DEVELOPMENT_CAPABILITIES,...(gitCommit?['git.commit']:[]),...(gitPush?['git.push']:[])],issuedAt:new Date().toISOString(),...(originTrustGrantId?{originTrustGrantId}:{})};
     await this.mutate('authorize-development',value => {
       if (!value.enabled || !value.projects.includes(projectId)) throw disabled();
       value.developmentGrants = [...(value.developmentGrants ?? []).filter(g => g.projectId !== projectId),grant];
@@ -290,6 +366,9 @@ export class TongTrustedCodexBroker {
     if (!samePath(actual, config.executable) || !(await stat(actual)).isFile()) throw new Error("Configured Codex executable changed");
     const requested = requestedCapabilities({workType,requiredCapabilities});
     const grant = (config.developmentGrants ?? []).find(g => g.projectId === projectId && samePath(g.root,projectRoot));
+    if(grant?.originTrustGrantId && !(config.trustedRoots??[]).some(t=>
+      t.grantId===grant.originTrustGrantId && trustedRootContains(t.root,projectRoot)))
+      throw new Error('Trusted folder inheritance is no longer valid');
     if(grant && (!await this.access.authorize('project.write',projectId) || !await this.access.authorize('project.read',projectId))) throw new Error('Project is not authorized for agent.execute');
     if (grant && workType !== 'high-impact' && requested.some(c => !grant.capabilities.includes(c))) throw new Error('Required capability is outside project authorization');
     return { config, project, authorization:{mode:grant && workType !== 'high-impact'?'project-development':'local-task-confirmation',requiredCapabilities:requested,capabilities:grant?.capabilities ?? [],root:projectRoot} };

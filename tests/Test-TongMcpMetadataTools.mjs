@@ -35,7 +35,7 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name),
-    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
+    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_project_prepare", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
       "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
   const wrongEnvTool = await client.callTool({ name: "tong_dev_environment", arguments: {tool: "arbitrary-program"} });
   assert.equal(wrongEnvTool.isError, true);
@@ -67,6 +67,10 @@ try {
   assert.equal(projects.isError, undefined);
   assert.equal(projects.structuredContent.projects[1].id, "registered");
   assert.deepEqual(projects.structuredContent.projects[1].effectiveCapabilities, ["project.metadata", "project.read", "project.write"]);
+  const untrustedPrepare=await client.callTool({name:'tong_project_prepare',arguments:{projectPath:registered}});
+  assert.equal(untrustedPrepare.isError,undefined);
+  assert.equal(untrustedPrepare.structuredContent.ready,false);
+  assert.equal(untrustedPrepare.structuredContent.reason,'folder-needs-local-trust');
   const startRequest = { projectId: "registered", agent: "codex", task: "synthetic task", scope: "project files",
     idempotencyKey: "mcp-client-request-0001" };
   const deniedStart = await client.callTool({ name: "tong_agent_start", arguments: startRequest });

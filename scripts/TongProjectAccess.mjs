@@ -131,6 +131,10 @@ export class TongProjectAccess {
     this.scanBudgetMs = Math.min(Math.max(scanBudgetMs, 1), 1_500);
   }
 
+  // Use the same guarded directory validation for pretrusted-folder enrollment.
+  // This rejects protected paths, reparse points and changed ancestors.
+  async checkDirectory(path) { return checkedDirectory(path); }
+
   async readRegistry() {
     let document;
     try { document = JSON.parse(await readFile(this.registryPath, "utf8")); }

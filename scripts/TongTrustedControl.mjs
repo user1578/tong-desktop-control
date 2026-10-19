@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { TongProjectAccess } from "./TongProjectAccess.mjs";
+import { prepareTrustedProject } from './TongQuickProject.mjs';
 import { TongTrustedPolicy, TongTrustedCodexBroker, normalizeLoopbackProxy } from "./TongTrustedCodexBroker.mjs";
 import {confirmLocally} from './TongLocalConfirmation.mjs';
 import {authorizeAgentDockDevelopment} from './TongAgentDockAuthorization.mjs';
@@ -19,12 +20,41 @@ const access = new TongProjectAccess(stateDir ? { registryPath: join(stateDir, "
 const [command, ...args] = input;
 
 function usage() {
-  throw new Error("Usage: node scripts/TongTrustedControl.mjs [--state-dir ABSOLUTE_DIRECTORY] status | proxy set LOOPBACK_HTTP_URL | proxy off | enable --codex ABSOLUTE_CODEX_EXE | disable | stop | grant PROJECT_ID | authorize-development PROJECT_ID [--git-commit] [--git-push] | preflight PROJECT_ID | revoke PROJECT_ID | task TASK_ID | approve TASK_ID");
+  throw new Error("Usage: node scripts/TongTrustedControl.mjs [--state-dir ABSOLUTE_DIRECTORY] status | trust-folder ABSOLUTE_PATH [--git-commit] [--git-push] | untrust-folder ABSOLUTE_PATH | prepare-folder ABSOLUTE_PROJECT_PATH | proxy set LOOPBACK_HTTP_URL | proxy off | enable --codex ABSOLUTE_CODEX_EXE | disable | stop | grant PROJECT_ID | authorize-development PROJECT_ID [--git-commit] [--git-push] | preflight PROJECT_ID | revoke PROJECT_ID | task TASK_ID | approve TASK_ID");
 }
 
 try {
   if (command === "status" && args.length === 0) {
     console.log(JSON.stringify(await policy.status(), null, 2));
+  } else if(command==='trust-folder' && args.length>=1 && args.length<=3) {
+    const folder=args[0];
+    if(args.slice(1).some(x=>!['--git-commit','--git-push'].includes(x)) ||
+       new Set(args.slice(1)).size!==args.slice(1).length)usage();
+    const verified=await access.checkDirectory(folder);
+    const gitCommit=args.includes('--git-commit'),gitPush=args.includes('--git-push');
+    await confirmLocally({
+      action:'长期信任此文件夹下的开发项目（Codex原生会话、项目读写、构建测试、依赖安装）'+
+         (gitCommit?'、Git提交':'')+(gitPush?'、Git推送':''),
+      targets:verified,
+      scope:'今后通过Tong指定该文件夹内的项目时，自动登记与复用开发授权；仅限此目录与其真实子目录',
+      risk:'普通开发可修改已授权项目代码；明确要求的Git操作按勾选权限执行',
+      recovery:'使用同一入口取消此文件夹信任，撤销由该文件夹继承的Codex开发授权',
+      duration:'本机持续有效，直到撤销或管理状态被重置；不包括系统权限、生产部署和重要数据删除',
+    });
+    const result=await policy.trustRoot(verified,access,{gitCommit,gitPush});
+    console.log('Trusted folder saved. Future subprojects can connect without new task confirmations.');
+    console.log(JSON.stringify({root:result.root,gitCommit,gitPush},null,2));
+  } else if(command==='untrust-folder' && args.length===1) {
+    const trusted=(await policy.status()).trustedRoots.find(x=>x.root.toLowerCase()===args[0].toLowerCase());
+    if(!trusted)throw new Error('Folder is not currently trusted');
+    await confirmLocally({action:'撤销此文件夹的长期信任和继承的Codex开发授权',targets:trusted.root,
+      scope:'此目录下自动继承的开发许可关闭；原有非继承授权不受影响',
+      risk:'已有代码和Git历史不变，新的自动Codex任务停止获得授权',
+      recovery:'如需重新使用，可再次选择此目录并进行本机确认',duration:'直到重新授权'});
+    await policy.untrustRoot(trusted.root);
+    console.log('Trusted folder revoked.');
+  } else if(command==='prepare-folder' && args.length===1) {
+    console.log(JSON.stringify(await prepareTrustedProject({projectPath:args[0]},{access,policy}),null,2));
   } else if (command === "proxy" && args[0] === "set" && args.length === 2) {
     const origin = normalizeLoopbackProxy(args[1]);
     await confirmLocally({action:"Enable Codex-only local proxy "+origin,targets:"Tong trusted Codex proxy policy",

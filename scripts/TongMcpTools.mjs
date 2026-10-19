@@ -1,6 +1,7 @@
 import { TongProjectAccess, configureTongWorkspaceState } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
 import {TongTrustedPolicy} from './TongTrustedCodexBroker.mjs';
+import {prepareTrustedProject} from './TongQuickProject.mjs';
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
 import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
 import { closeTongWorkspaceTools } from './TongWorkspaceTools.mjs';
@@ -164,9 +165,20 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     let policy,authorizationPolicyAvailable=true;
     try{policy=await new TongTrustedPolicy(stateDir?{policyPath:join(stateDir,'trusted-codex.json')}:{}).status();}
     catch{authorizationPolicyAvailable=false;policy={enabled:false,developmentGrants:[]};}
-    return {projects:(await access.listProjects()).map(project=>({...project,developmentAuthorization:policy.enabled&&project.effectiveCapabilities.includes('project.write')&&project.effectiveCapabilities.includes('agent.execute')?(policy.developmentGrants.find(g=>g.projectId===project.id&&g.root===project.root)??null):null})),authorizationPolicyAvailable,
+    return {projects:(await access.listProjects()).map(project=>({...project,developmentAuthorization:policy.enabled&&project.effectiveCapabilities.includes('project.write')&&project.effectiveCapabilities.includes('agent.execute')?(policy.developmentGrants.find(g=>g.projectId===project.id&&g.root===project.root)??null):null})),trustedFolders:(policy.trustedRoots??[]).map(item=>({root:item.root,gitCommit:item.capabilities.includes('git.commit'),gitPush:item.capabilities.includes('git.push')})),authorizationPolicyAvailable,
       confirmation:{clientElicitationAvailable:Boolean(server.server?.getClientCapabilities?.()?.elicitation),verifiedUserPresence:false,authorizationMethod:'local-interactive-console',chatTextCanAuthorize:false}};
   }));
+
+  registerTool(server, 'tong_project_prepare', {
+    title:'Auto-connect a project inside a previously trusted folder',
+    description:'Resolve and register a requested local project, attach the already locally approved persistent Codex development grant, then return the project ID. Only operates inside a directory the user previously trusted on their Windows machine. For new folder roots, returns needs-local-trust; never elevates permissions based solely on chat text.',
+    inputSchema:{
+      projectPath:z.string().min(4).max(1024).describe('Existing absolute local project folder requested by the user'),
+      projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/).optional(),
+    },
+    annotations:{readOnlyHint:false,destructiveHint:false},_meta:{},
+  },safeAgent(async input=>prepareTrustedProject(input,{access,policy:new TongTrustedPolicy(stateDir?{
+    policyPath:join(stateDir,'trusted-codex.json'),taskStatePath:join(stateDir,'agent-tasks.json')}:{} )})));
 
   registerTool(server, "tong_agent_start", {
     title: "Start a Codex project task",
