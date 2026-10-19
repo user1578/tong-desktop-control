@@ -80,6 +80,17 @@ First run the following from the SAME interactive PowerShell with the working di
 
 Only if the returned line is `Claude explicitly inherited token authentication: first-party-oauth` should a separate interactive `--run --inherit-anthropic-auth-token` acceptance be considered. The local `--run` keeps its `Y` approval, fixed text-only prompt, version check, no-tools CLI flags and bounded process. It still is **NOT a production Job-backed sandbox**. Other authentication methods and providers are refused when using the explicit token option; do not assume a different credential grants the same account entitlements or billing. The token is **not** registered in Tong, exported to files, or copied into the CLI command-line arguments. Do not paste its value into chat or commit it to Git.
 
+### Stage H — real CLI failure telemetry without credential leaks
+
+After the local Claude session invocation was retried with connectivity restored, the run still failed rapidly with `exitCode=1`. This rules out treating a prior temporary disconnection as the established root cause. **The exact original error remains unknown**, because the earlier runner suppressed stderr and structured output details.
+
+The runner now computes **safe structured failure metadata**: `category`, `exitCode`, `elapsedMs`, `stdoutKind`, `stderrPresent`, recognized `resultType`/`resultSubtype`, and count of structured errors. It analyzes bounded CLI JSON `errors`, `error.message`, and failed `result` in memory to recognize authentication, network, model, quota or provider errors. It never prints or saves raw stderr, URLs, response text, tokens, account data or session prompts.
+
+A further potentially important mismatch: the interactive shell can define `ANTHROPIC_BASE_URL` (custom provider/gateway) or model override environment variables while the filtered acceptance child omits those settings. A successful `auth status` does **not** prove that an actual model call targets the intended API endpoint. The `--auth-check` output now reports only booleans:
+`customApiEndpointConfigured`, `modelOverrideConfigured`, `anthropicAuthTokenConfigured`, `anthropicApiKeyConfigured`. If the custom API endpoint exists, **the local --run fails closed before a model request**, rather than silently substituting a default endpoint. This change does not copy the endpoint or credentials into any log or Tong production grant. A separately reviewed user opt-in would be required for intentional gateway calls.
+
+First, ask the user to run **only** the previous no-model, explicit-OAuth auth-check command and report the four boolean indicators, not endpoint values or tokens. Only after the endpoint / provider routing question is resolved should a new paid-model run be considered.
+
 User should check locally:
 
 ```powershell

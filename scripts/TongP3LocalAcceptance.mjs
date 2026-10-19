@@ -128,6 +128,26 @@ export function checkClaudeFirstPartyOAuth(receipt) {
   return 'unavailable';
 }
 
+// Expose only coarse, presence-only configuration hints, never values.
+// ANTHROPIC_BASE_URL and model selectors are intentionally not inherited
+// by the local acceptance runner unless a separate approval path is designed.
+export function claudeEnvironmentHints(source = {}) {
+  if (!source || typeof source !== 'object') throw invalid('invalid CLI environment');
+  const names = Object.keys(source);
+  const has = key => names.some(item =>
+    item.toLowerCase() === key.toLowerCase() &&
+    typeof source[item] === 'string' && source[item].trim().length > 0);
+  return Object.freeze({
+    customApiEndpointConfigured: has('ANTHROPIC_BASE_URL'),
+    modelOverrideConfigured: [
+      'ANTHROPIC_MODEL','ANTHROPIC_DEFAULT_SONNET_MODEL',
+      'ANTHROPIC_DEFAULT_OPUS_MODEL','ANTHROPIC_DEFAULT_HAIKU_MODEL',
+    ].some(has),
+    anthropicAuthTokenConfigured: has('ANTHROPIC_AUTH_TOKEN'),
+    anthropicApiKeyConfigured: has('ANTHROPIC_API_KEY'),
+  });
+}
+
 // Diagnostics are deliberately categorical. Never show raw stderr, stdout,
 // account metadata, command arguments, or bearer tokens to the caller.
 export function classifyLocalAcceptanceFailure(receipt) {
@@ -151,6 +171,58 @@ export function classifyLocalAcceptanceFailure(receipt) {
     if (data?.type === 'result') return 'unexpected-result';
   } catch { return 'unexpected-output'; }
   return 'unexpected-result';
+}
+
+// Safe-to-share process summary for failed CLI runs. Never surface raw
+// stdout/stderr, user prompts, account IDs, endpoint URLs, or credential data.
+export function summarizeClaudeProcessFailure(receipt) {
+  if(!receipt || typeof receipt !== 'object') {
+    return Object.freeze({category:'no-process-result',exitCode:null,
+      elapsedMs:null,stdoutKind:'unknown',stderrPresent:false,
+      resultType:null,resultSubtype:null,structuredErrorCount:0});
+  }
+  const stdout=typeof receipt.stdout==='string'?receipt.stdout:'';
+  let stdoutKind=stdout.trim()?'text':'empty';
+  let resultType=null, resultSubtype=null, structuredErrorCount=0;
+  let category=classifyLocalAcceptanceFailure(receipt);
+  let parsed=null;
+  if(stdout && Buffer.byteLength(stdout,'utf8')<=262144) {
+    try { parsed=JSON.parse(stdout); } catch {}
+  }
+  if(parsed && typeof parsed==='object' && !Array.isArray(parsed)) {
+    stdoutKind='json';
+    if(['result','error','system'].includes(parsed.type)) resultType=parsed.type;
+    if(['success','error_during_execution','error_max_turns',
+         'error_max_budget_usd','error_max_structured_output_retries'].includes(parsed.subtype))
+      resultSubtype=parsed.subtype;
+    const errors=Array.isArray(parsed.errors)?parsed.errors.slice(0,8):[];
+    structuredErrorCount=errors.length;
+    const messages=[
+      ...errors.filter(x=>typeof x==='string'),
+      typeof parsed.error?.message==='string'?parsed.error.message:'',
+      typeof parsed.error==='string'?parsed.error:'',
+      typeof parsed.result==='string'&&parsed.is_error===true?parsed.result:'',
+    ];
+    // Pattern matching is transient. Raw strings are never returned or logged.
+    const internal=messages.join('\n').slice(0,16384);
+    if(/(?:401|403)\b|authentication|unauthori[sz]ed|invalid.?token|invalid.?api.?key|expired.?oauth|please log in/i.test(internal)) category='authentication';
+    else if(/(?:429)\b|rate.?limit|overloaded/i.test(internal)) category='rate-limit';
+    else if(/model.*(?:not found|unavailable|invalid|unsupported)|invalid.*model/i.test(internal)) category='model';
+    else if(/(?:billing|credits?|insufficient.?balance|quota|payment required)/i.test(internal)) category='billing-or-quota';
+    else if(/(?:ENOTFOUND|ECONN|ETIMEDOUT|network|fetch failed|proxy|certificate|TLS)/i.test(internal)) category='network';
+    else if(parsed.is_error===true || parsed.type==='error') category='provider-reported-error';
+  }
+  // Only exact metadata from the process result is returned, never arbitrary
+  // values such as error.message, commandline, URL, or stderr snippet.
+  return Object.freeze({
+    category,
+    exitCode:Number.isInteger(receipt.exitCode)?receipt.exitCode:null,
+    elapsedMs:Number.isFinite(receipt.elapsedMs)?Math.max(0,Math.round(receipt.elapsedMs)):null,
+    stdoutKind,
+    stderrPresent:!!(receipt.stderrBytes || receipt.stderrPreview),
+    resultType,resultSubtype,structuredErrorCount,
+    timedOut:receipt.timedOut===true,
+  });
 }
 
 export function summarizeAcceptanceResult(plan, receipt) {

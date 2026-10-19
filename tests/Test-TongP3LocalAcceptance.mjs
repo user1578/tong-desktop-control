@@ -6,6 +6,7 @@ import {
   prepareLocalProviderAcceptance, findLocalAcceptanceBinary,
   verifyLocalAcceptanceVersion, summarizeAcceptanceResult,
   checkClaudeFirstPartyOAuth, checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
+  claudeEnvironmentHints, summarizeClaudeProcessFailure,
 } from '../scripts/TongP3LocalAcceptance.mjs';
 
 const localAppData='C:\\Users\\Example\\AppData\\Local';
@@ -260,4 +261,61 @@ assert.throws(()=>childEnv('dsh','C:\\Temp',parentEnv,'base',{
 }),/Invalid local provider environment/);
 assert.throws(()=>childEnv('unknown','C:\\Temp',parentEnv),/Invalid local provider environment/);
 assert.throws(()=>childEnv('dsh','C:\\Temp',parentEnv,'network-context'),/Invalid local provider environment/);
-console.log('PASS: opt-in CLI acceptance, selective OAuth env inheritance, preflight login, categorical diagnostics, no secret disclosure.');
+const hints=claudeEnvironmentHints({
+  ANTHROPIC_BASE_URL:'https://private-internal.example.test/secret',
+  ANTHROPIC_AUTH_TOKEN:'TOKEN_VALUE_NEVER_SHOW',
+  ANTHROPIC_MODEL:'my-private-model',
+  ANTHROPIC_API_KEY:'KEY_VALUE_NEVER_SHOW',
+});
+assert.deepEqual(hints,{
+  customApiEndpointConfigured:true,modelOverrideConfigured:true,
+  anthropicAuthTokenConfigured:true,anthropicApiKeyConfigured:true,
+});
+assert.ok(!JSON.stringify(hints).includes('private'));
+assert.ok(!JSON.stringify(hints).includes('TOKEN_VALUE'));
+assert.ok(Object.isFrozen(hints));
+assert.deepEqual(claudeEnvironmentHints({}),{
+  customApiEndpointConfigured:false,modelOverrideConfigured:false,
+  anthropicAuthTokenConfigured:false,anthropicApiKeyConfigured:false,
+});
+
+const safeFailure=summarizeClaudeProcessFailure({
+  exitCode:1,elapsedMs:2123,stderrBytes:18,
+  stderrPreview:'Auth token SECRET_SUPER_PRIVATE_DO_NOT_PRINT',
+  stdout:JSON.stringify({
+    type:'result',subtype:'error_during_execution',is_error:true,
+    result:'API Error: 404 model not found for https://private.example.test?token=SECRET',
+    errors:['model unavailable: SECRET_PRIVATE_KEY'],
+    session_id:'SENSITIVE_SESSION_ID',
+  }),
+});
+assert.deepEqual(safeFailure,{
+  category:'model',exitCode:1,elapsedMs:2123,
+  stdoutKind:'json',stderrPresent:true,resultType:'result',
+  resultSubtype:'error_during_execution',structuredErrorCount:1,
+  timedOut:false,
+});
+for(const privateValue of ['SECRET_SUPER_PRIVATE','SECRET_PRIVATE_KEY',
+  'private.example.test','SENSITIVE_SESSION_ID']) {
+  assert.ok(!JSON.stringify(safeFailure).includes(privateValue));
+}
+const networkFailure=summarizeClaudeProcessFailure({
+  exitCode:1,stdout:JSON.stringify({
+    type:'result',subtype:'error_during_execution',is_error:true,
+    errors:['fetch failed ECONNRESET to internal.gateway'],
+  }),stderrBytes:0,
+});
+assert.equal(networkFailure.category,'network');
+const authFailure=summarizeClaudeProcessFailure({
+  exitCode:1,stdout:JSON.stringify({
+    type:'result',subtype:'error_during_execution',is_error:true,
+    errors:['HTTP 401 unauthorized'],
+  }),
+});
+assert.equal(authFailure.category,'authentication');
+assert.deepEqual(summarizeClaudeProcessFailure(null),{
+  category:'no-process-result',exitCode:null,elapsedMs:null,
+  stdoutKind:'unknown',stderrPresent:false,resultType:null,
+  resultSubtype:null,structuredErrorCount:0,
+});
+console.log('PASS: local Claude acceptance, no-secret endpoint hints, structured failures and OAuth environment tests.');

@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { isolateClaudeAuthDifference } from './TongClaudeAuthDifferential.mjs';
 import {
   checkClaudeFirstPartyOAuth, checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
+  claudeEnvironmentHints, summarizeClaudeProcessFailure,
   findLocalAcceptanceBinary, prepareLocalProviderAcceptance,
   summarizeAcceptanceResult, verifyLocalAcceptanceVersion,
 } from './TongP3LocalAcceptance.mjs';
@@ -179,6 +180,9 @@ export async function main(argv=process.argv.slice(2)) {
       .filter(key=>Object.keys(env).some(name=>name.toLowerCase()===key.toLowerCase()));
     console.log('Claude authentication settings inherited: '+
       (authInputs.length ? authInputs.join(', ') : 'none (using default profile)'));
+    const configHints=claudeEnvironmentHints(process.env);
+    // No values, token fragments, or API URLs are shown.
+    console.log('Claude local config (presence only): '+safePrint(configHints));
     const firstHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     const versionReply=await runBounded(binary,['--version'],
       {cwd:work,env,timeoutMs:15000});
@@ -259,6 +263,11 @@ export async function main(argv=process.argv.slice(2)) {
     if(!approvedEnv) {
       throw new Error('Claude authentication unavailable with approved environments. No model request sent.');
     }
+    if(configHints.customApiEndpointConfigured) {
+      throw new Error('ANTHROPIC_BASE_URL is configured in this PowerShell but is excluded from the '+
+        'test subprocess. A model call could reach an unintended API endpoint; stopped before model execution. '+
+        'Run --auth-check and review the endpoint configuration (do not share its value).');
+    }
     const secondHash=createHash('sha256').update(await readFile(binary)).digest('hex');
     if(firstHash!==secondHash)throw new Error('Provider executable changed before execution');
 
@@ -271,17 +280,16 @@ export async function main(argv=process.argv.slice(2)) {
       cwd:work,env,stdin:plan.prompt+'\n',timeoutMs:plan.timeoutMs,
     });
     if(receipt.overflow || receipt.timedOut || receipt.exitCode!==0) {
-      const category=classifyLocalAcceptanceFailure(receipt);
-      throw new Error('Claude test failed: category='+category+
-        '; exitCode='+String(receipt.exitCode)+
-        '; elapsedMs='+String(receipt.elapsedMs)+'. No raw provider output was displayed.');
+      const diagnostic=summarizeClaudeProcessFailure(receipt);
+      throw new Error('Claude test failed (safe diagnostic): '+safePrint(diagnostic)+
+        '. Raw provider output was not displayed.');
     }
     let result;
     try { result=summarizeAcceptanceResult(plan,receipt); }
     catch {
-      const category=classifyLocalAcceptanceFailure(receipt);
-      throw new Error('Claude response verification failed: category='+category+
-        '; elapsedMs='+String(receipt.elapsedMs)+'. No raw provider output was displayed.');
+      const diagnostic=summarizeClaudeProcessFailure(receipt);
+      throw new Error('Claude response verification failed (safe diagnostic): '+
+        safePrint(diagnostic)+'. Raw provider output was not displayed.');
     }
     const report={
       ...result,expectedVersion:plan.expectedVersion,
