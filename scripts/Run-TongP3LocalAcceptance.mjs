@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 import { isolateClaudeAuthDifference } from './TongClaudeAuthDifferential.mjs';
 import { prepareExplicitClaudeRouting } from './TongClaudeExplicitRouting.mjs';
+import { loadClaudeResumeContext } from './TongClaudeResumeContext.mjs';
 import {
   checkClaudeFirstPartyOAuth, checkClaudeLocalAuth, classifyLocalAcceptanceFailure,
   claudeEnvironmentHints, summarizeClaudeProcessFailure,
@@ -18,10 +19,10 @@ const MAX_BUFFER = 262144;
 const safePrint = value => JSON.stringify(value, null, 2);
 export function argumentsForUser(argv) {
   const choices = argv.filter(x => x.startsWith('--'));
-  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id','--inherit-anthropic-auth-token','--inherit-claude-routing'].includes(x))) {
+  if (choices.some(x => !['--provider','--dry-run','--run','--auth-check','--auth-isolate','--session-id','--resume-from-report','--inherit-anthropic-auth-token','--inherit-claude-routing'].includes(x))) {
     throw new Error('Unknown acceptance option');
   }
-  let provider = null, mode = 'dry-run', sessionId, inheritAnthropicAuthToken = false, inheritClaudeRouting = false;
+  let provider = null, mode = 'dry-run', sessionId, resumeFromReport, inheritAnthropicAuthToken = false, inheritClaudeRouting = false;
   for(let i=0;i<argv.length;i++) {
     if(argv[i]==='--provider') {
       if(provider!==null || !['claude','dsh'].includes(argv[i+1])) throw new Error('Choose claude or dsh');
@@ -32,6 +33,10 @@ export function argumentsForUser(argv) {
     } else if (argv[i]==='--inherit-claude-routing') {
       if(inheritClaudeRouting)throw new Error('Duplicate explicit routing option');
       inheritClaudeRouting=true;
+    } else if (argv[i]==='--resume-from-report') {
+      if(resumeFromReport!==undefined || !argv[i+1] || argv[i+1].startsWith('--'))
+        throw new Error('A local Claude acceptance report is required for resume');
+      resumeFromReport=argv[++i];
     } else if (argv[i]==='--session-id') {
       if (sessionId!==undefined || !argv[i+1] || argv[i+1].startsWith('--'))
         throw new Error('An exact native session ID is required');
@@ -49,7 +54,11 @@ export function argumentsForUser(argv) {
     throw new Error('Explicit Anthropic token inheritance requires a Claude auth-check or interactive run');
   if(inheritClaudeRouting && (provider!=='claude' || !['auth-check','run'].includes(mode)))
     throw new Error('Explicit routing requires Claude auth-check or interactive run');
+  if((sessionId!==undefined || resumeFromReport!==undefined) &&
+     (provider!=='claude' || mode!=='run' || sessionId===undefined || resumeFromReport===undefined))
+    throw new Error('Claude resume requires session ID, original report, and interactive run');
   return {provider,mode,sessionId,
+    ...(resumeFromReport!==undefined ? {resumeFromReport} : {}),
     ...(inheritAnthropicAuthToken ? {inheritAnthropicAuthToken:true} : {}),
     ...(inheritClaudeRouting ? {inheritClaudeRouting:true} : {})};
 }
@@ -150,7 +159,7 @@ async function runBounded(executable,args,{cwd,env,stdin='',timeoutMs=10000}={})
 }
 
 export async function main(argv=process.argv.slice(2)) {
-  const {provider,mode,sessionId,inheritAnthropicAuthToken=false,
+  const {provider,mode,sessionId,resumeFromReport,inheritAnthropicAuthToken=false,
     inheritClaudeRouting=false}=argumentsForUser(argv);
   if(process.platform!=='win32') throw new Error('Local provider acceptance requires Windows');
   const userProfile=process.env.USERPROFILE??homedir();
@@ -184,6 +193,12 @@ export async function main(argv=process.argv.slice(2)) {
     const work=join(base,'empty-workdir'),profile=join(base,'separate-dsh-home');
     await mkdir(work);await mkdir(profile);
     let env=childEnv(provider,profile);
+    const binarySha256=createHash('sha256').update(await readFile(binary)).digest('hex');
+    const resumeContext=resumeFromReport ? await loadClaudeResumeContext({
+      reportPath:resumeFromReport,tempRoot:tmpdir(),sessionId,
+      expectedVersion:plan.expectedVersion,binarySha256,
+    }) : null;
+    if(resumeContext)console.log('Claude resume report verified; original session workspace will be reused.');
     // Print presence only; never the OAuth value or account details.
     const authInputs=['CLAUDE_CONFIG_DIR','CLAUDE_CODE_OAUTH_TOKEN']
       .filter(key=>Object.keys(env).some(name=>name.toLowerCase()===key.toLowerCase()));
@@ -199,7 +214,7 @@ export async function main(argv=process.argv.slice(2)) {
         modelSelectorsInherited:routing.modelSelectorsInherited,
       }));
     }
-    const firstHash=createHash('sha256').update(await readFile(binary)).digest('hex');
+    const firstHash=binarySha256;
     const versionReply=await runBounded(binary,['--version'],
       {cwd:work,env,timeoutMs:15000});
     if(versionReply.exitCode!==0||versionReply.timedOut||versionReply.overflow)
@@ -300,7 +315,7 @@ export async function main(argv=process.argv.slice(2)) {
     finally { reader.close(); }
     if(decision.trim()!=='Y')throw new Error('User declined local acceptance');
     const receipt=await runBounded(binary,plan.args,{
-      cwd:work,env,stdin:plan.prompt+'\n',timeoutMs:plan.timeoutMs,
+      cwd:resumeContext?.workdir ?? work,env,stdin:plan.prompt+'\n',timeoutMs:plan.timeoutMs,
     });
     if(receipt.overflow || receipt.timedOut || receipt.exitCode!==0) {
       const diagnostic=summarizeClaudeProcessFailure(receipt);

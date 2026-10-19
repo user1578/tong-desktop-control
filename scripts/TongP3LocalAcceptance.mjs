@@ -41,12 +41,19 @@ export function prepareLocalProviderAcceptance({
     : ['--profile','headless','--json',
       ...(sessionMode === 'existing' ? ['--session-id', chosenSession] : []), '-'];
   const marker = provider === 'claude' ? 'TONG_P3_CLAUDE_TEXT_OK' : 'TONG_P3_DSH_TEXT_OK';
-  const prompt = [
-    'Respond with exactly the text ' + marker + '.',
-    'This is a text-only native session acceptance test.',
-    'Do not use tools, inspect files, run commands, or change settings.',
-    'Do not begin any additional task.',
-  ].join('\n');
+  const prompt = provider==='claude' && sessionMode==='existing'
+    ? [
+        'This is a native-session memory test.',
+        'Reply with exactly your immediately previous assistant message in this conversation.',
+        'Do not infer or invent previous content if no earlier turn is available.',
+        'Do not use tools, inspect files, run commands, or change settings.',
+      ].join('\n')
+    : [
+        'Respond with exactly the text ' + marker + '.',
+        'This is a text-only native session acceptance test.',
+        'Do not use tools, inspect files, run commands, or change settings.',
+        'Do not begin any additional task.',
+      ].join('\n');
   return Object.freeze({
     provider, sessionMode, sessionId: chosenSession,
     localAppData, executable: exe, expectedVersion: provider === 'claude' ? CLAUDE_VERSION : DSH_VERSION,

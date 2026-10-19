@@ -137,6 +137,54 @@ categorized and structured error metadata.
 This is a local development acceptance only. **No production Tong provider,
 grant, OAuth identity, credential store, or MCP tool was modified.**
 
+### Stage J — first REAL Claude session succeeded; verify exact native resume
+
+The user completed a real, interactively approved Claude CLI request on the
+existing custom endpoint/model route. The first acceptance report confirmed
+`status:passed`, `markerConfirmed:true`, native session ID
+`d9d4c771-572a-457b-ba07-4410f8798e44`, Claude version `2.1.236`,
+and 2558ms duration, with the report at:
+
+```text
+C:\Users\Rune\AppData\Local\Temp\tong-p3-local-acceptance-AnPLiz\acceptance-result.json
+```
+
+Read-only verification confirmed the matching session JSONL file exists under
+the *original* `empty-workdir` project key in the user's Claude session
+directory. The original report and working directory are preserved. **That
+session is created successfully, but its restoration has NOT yet been tested
+with a real Claude turn.**
+
+The previous local acceptance wrapper mistakenly generated a **new temporary
+work directory** when `--session-id` was passed, potentially creating a
+different Claude project scope and preventing native resume. The new wrapper
+requires both `--session-id` and `--resume-from-report` for `--run`.
+It validates the original receipt, exact session ID, pinned CLI version,
+binary SHA-256, the dedicated temp directory location and canonical
+non-symlinked report/workdir. It uses the original project working directory
+on the next model call, never reading session JSONL content or rewriting
+Claude's session files.
+
+The **resume prompt does not reveal the known marker**: it asks Claude to
+repeat its immediately preceding assistant reply from conversation history.
+A pass now verifies the resumed session's historical context rather than
+a new stateless turn repeating a marker supplied in the new prompt.
+
+Run from a locally owned interactive PowerShell 7, after reviewing the custom
+API endpoint's usage/billing:
+
+```powershell
+Set-Location 'D:\Tong\development\tong-desktop-control'
+& 'D:\node\node.exe' .\scripts\Run-TongP3LocalAcceptance.mjs --provider claude --run --inherit-anthropic-auth-token --inherit-claude-routing --session-id 'd9d4c771-572a-457b-ba07-4410f8798e44' --resume-from-report 'C:\Users\Rune\AppData\Local\Temp\tong-p3-local-acceptance-AnPLiz\acceptance-result.json'
+```
+
+A new prompt is sent **only after** local explicit `Y` approval. The
+acceptance CLI is not a Windows Job sandbox and remains outside the running
+production Tong. The custom API/provider may charge according to its own
+billing; first-party OAuth status alone does not identify routing or billing.
+No pre-existing dirty operations documentation or production auth grants are
+changed.
+
 User should check locally:
 
 ```powershell
