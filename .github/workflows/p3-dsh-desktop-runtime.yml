@@ -24,6 +24,8 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check scripts/TongDshDesktopRuntime.mjs
+          node --check scripts/TongDshS0Audit.mjs
           node --check tests/Test-TongDshDesktopRuntime.mjs
+          node --check tests/Test-TongDshS0Audit.mjs
       - name: Simulated Desktop installation and path safety
-        run: node --test tests/Test-TongDshDesktopRuntime.mjs
+        run: node --test tests/Test-TongDshDesktopRuntime.mjs tests/Test-TongDshS0Audit.mjs
