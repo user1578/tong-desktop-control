@@ -2,14 +2,21 @@ import {readFile,writeFile,mkdir,copyFile,lstat,stat,rename,realpath} from 'node
 import {join,dirname,relative,isAbsolute,sep} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
+import {execFile} from 'node:child_process';
 
 const BASE='D:\\Tong\\state\\p27-autonomy-candidate-20261017';
+const [action,snapshot,releaseOverride,candidateOverride,commitOverride,...extra]=process.argv.slice(2);
+if([releaseOverride,candidateOverride,commitOverride].filter(value=>value!==undefined).length%3)throw Error('INCOMPLETE_RELEASE_BINDING');
+for(const [value,prefix] of [[releaseOverride,'quick-trust-release-'],[candidateOverride,'quick-trust-candidate-']]){
+ if(value!==undefined&&(dirname(value)!==BASE||!new RegExp('^'+prefix+'[a-f0-9]{7,40}$').test(relative(BASE,value))))throw Error('RELEASE_SCOPE_DENIED');
+}
+if(commitOverride!==undefined&&!/^[a-f0-9]{40}$/.test(commitOverride))throw Error('COMMIT_BINDING_DENIED');
 const RUNTIME='D:\\Tong\\runtime';
 const ROOTS={app:'D:\\Tong\\app',manager:join(RUNTIME,'releases','manager')};
 const ORIGINAL={app:'a1b56b3666651c3648327f05e0ea4154284645c3',manager:'a1b56b3666651c3648327f05e0ea4154284645c3'};
-const NEW='d9983bbc5fe1640f51d4a649ff0f018c9f458c6f';
-const RELEASE=join(BASE,'quick-trust-release-d9983bb');
-const CANDIDATE=join(BASE,'quick-trust-candidate-d9983bb');
+const NEW=commitOverride??'d9983bbc5fe1640f51d4a649ff0f018c9f458c6f';
+const RELEASE=releaseOverride??join(BASE,'quick-trust-release-d9983bb');
+const CANDIDATE=candidateOverride??join(BASE,'quick-trust-candidate-d9983bb');
 const nodeManager=join(RUNTIME,'releases','manager','scripts');
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const read=async path=>JSON.parse(await readFile(path,'utf8'));
@@ -26,7 +33,7 @@ async function regular(p){const s=await lstat(p);const actual=await realpath(p);
 async function verified(p,entry){await regular(p);const b=await data(p);if(b.length!==entry.size||sha(b)!==entry.sha256)fail('HASH_MISMATCH:'+entry.path);return b;}
 async function official(){
  const manifest=await read(join(RELEASE,'release-manifest.json'));
- if(manifest.commit!==NEW||manifest.sourceFiles.length!==265)fail('UNEXPECTED_CANDIDATE');
+ if(manifest.commit!==NEW||!manifest.sourceFiles.some(file=>file.path==='scripts/TongQuickProject.mjs'))fail('UNEXPECTED_CANDIDATE');
  const {verifyRelease}=await import(pathToFileURL(join(CANDIDATE,'scripts','TongRuntimeRelease.mjs')).href);
  await verifyRelease({releaseRoot:RELEASE});
  const oldPins={app:await read(join(RUNTIME,'run','release-pin.json')),manager:await read(join(RUNTIME,'run','manager-pin.json'))};
@@ -120,9 +127,16 @@ async function recordStage(dir,stage){
 async function assertStopped(){
  const {runtimeStatus}=await import(pathToFileURL(join(ROOTS.manager,'scripts','TongAgentDockRuntime.mjs')).href);
  const current=await runtimeStatus(RUNTIME);
- if(current.supervisorAlive||current.guardianAlive||current.phase!=='stopped'||!current.runId)fail('RUNTIME_NOT_STOPPED');
+ if(current.supervisorAlive||current.guardianAlive||!['stopped','abnormal_exit'].includes(current.phase)||!current.runId)fail('RUNTIME_NOT_STOPPED');
  const guardian=await read(join(RUNTIME,'run','guardian.json'));
  if(guardian.runId!==current.runId||!guardian.finishedAt||guardian.jobActiveAfterCleanup!==0)fail('GUARDIAN_CLEANUP_NOT_PROVEN');
+ const probe=new URL('TongCutoverStoppedRunProbe.mjs',import.meta.url);
+ const {fileURLToPath}=await import('node:url');
+ const proof=await new Promise((ok,reject)=>execFile(process.execPath,[fileURLToPath(probe),current.runId],{windowsHide:true,timeout:30000,maxBuffer:16384},(error,out)=>{
+   if(error){reject(Error('GUARDIAN_CLEANUP_NOT_PROVEN'));return;}
+   try{ok(JSON.parse(out))}catch{reject(Error('INVALID_CLEANUP_PROOF'))}
+ }));
+ if(!proof.ok||proof.readOnly!==true||proof.expectedRunId!==current.runId||proof.matchingOwnedPids!==0||proof.jobActive!==0||proof.blockedPortCount!==0)fail('GUARDIAN_CLEANUP_NOT_PROVEN');
  return current;
 }
 
@@ -266,7 +280,6 @@ async function rollback(dir){
  await recordStage(dir,'rolled-back-old-code');
  console.log(JSON.stringify({ok:true,stage:'rolled-back-old-code',snapshot:dir,oldApp:ORIGINAL.app,oldManager:ORIGINAL.manager,recoveryPermissionNeedsFreshHumanApproval:true}));
 }
-const [action,snapshot,...extra]=process.argv.slice(2);
 try{
  if(extra.length)fail('UNEXPECTED_ARGUMENTS');
  if(action==='preflight'){

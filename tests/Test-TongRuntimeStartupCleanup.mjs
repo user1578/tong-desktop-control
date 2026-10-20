@@ -5,7 +5,7 @@ import {loginFixture,sha} from './fixtures/TongLoginRecoveryFixture.mjs';
 import {createProductionSimulationProfile} from '../scripts/TongProductionProfile.mjs';
 import {issueSimulationLoginRecovery,withLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
 import {startRuntime} from '../scripts/TongAgentDockRuntime.mjs';
-import {protectSecret} from '../scripts/TongRuntimeSecurity.mjs';
+import {protectSecret,processIdentity} from '../scripts/TongRuntimeSecurity.mjs';
 
 const {root,profile:initial}=await loginFixture({ports:{gatewayPort:27876,upstreamPort:27877,agentdockPort:28766}});
 // Replace only the synthetic Supervisor entry: actual manager/Guardian/launch
@@ -27,7 +27,12 @@ for(let attempt=0;attempt<3;attempt++){
   assert.ok(guardian.finishedAt);assert.equal(guardian.nodeExitCode,23);assert.equal(guardian.jobActiveAfterCleanup,0);
   const terminal=JSON.parse(await readFile(join(root,'run','runtime.json'),'utf8'));
   assert.equal(terminal.runId,guardian.runId);assert.equal(terminal.phase,'abnormal_exit');
-  if(attempt===0)await writeFile(join(root,'run','runtime.json'),JSON.stringify({schemaVersion:1,runId:guardian.runId,phase:'abnormal_exit',supervisor:{pid:guardian.nodePid,exe:process.execPath,startTicks:'1'},children:[],descendants:[]}));
+  if(attempt===0){
+    // Model a PID recycled by the next login monitor. The completed named Job
+    // is empty, and the current process has a different creation identity.
+    const recycled={...await processIdentity(process.pid),startTicks:'1'};
+    await writeFile(join(root,'run','runtime.json'),JSON.stringify({schemaVersion:1,runId:guardian.runId,phase:'abnormal_exit',supervisor:{pid:guardian.nodePid,exe:process.execPath,startTicks:'1'},children:[],descendants:[recycled]}));
+  }
 }
 // The real breakaway refusal is exercised by Test-TongRuntimeGuardian. At the
 // manager boundary use a pinned, no-spawn launcher acknowledgement, since

@@ -15,7 +15,7 @@ const record = await load(join(ROOT, 'run', 'runtime.json'));
 const guardian = await load(join(ROOT, 'run', 'guardian.json'));
 const failures = [];
 if (record.runId !== expected || guardian.runId !== expected) failures.push('RUN_ID_MISMATCH');
-if (record.phase !== 'stopped' || !guardian.finishedAt || guardian.jobAssigned !== true
+if (!['stopped','abnormal_exit'].includes(record.phase) || !Number.isFinite(Date.parse(guardian.finishedAt)) || guardian.jobAssigned !== true
     || guardian.jobActiveAfterCleanup !== 0) failures.push('GUARDIAN_STOP_NOT_PROVEN');
 if (guardian.jobName !== 'Local\\TongRuntime-' + expected || guardian.killOnJobClose !== true)
   failures.push('JOB_IDENTITY_MISMATCH');
@@ -34,7 +34,10 @@ for (const identity of identities) {
     if (security.sameProcess(current, identity)) same += 1;
   }
 }
-if (live) failures.push('RECORDED_PID_STILL_IN_USE');
+// A PID may be recycled after its named kill-on-close Job has finished. The
+// original process identity must be gone, and the independently queried Job
+// and every endpoint below must still be empty.
+if (same) failures.push('RECORDED_PID_STILL_IN_USE');
 let jobActive = null;
 try {
   const state = await security.runtimeJobState(expected);

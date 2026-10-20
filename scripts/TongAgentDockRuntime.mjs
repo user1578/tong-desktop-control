@@ -159,10 +159,17 @@ async function reconciliationProof(root,runId){
   }
   return selected;
 }
-async function oldRuntimeGone(root,record,guardian){
-  // A present PID with different identity is ambiguous, never permission to
-  // terminate it or to treat the previous Job as clean.
-  for(const identity of previousIdentities(record,guardian))if(await processIdentity(identity.pid))throw fail('RECONCILIATION_DENIED');
+async function oldRuntimeGone(root,record,guardian,{completed=false}={}){
+  // A completed, named kill-on-close Job provides cleanup evidence independent
+  // of recycled Windows PIDs. Never kill or mistake a replacement process for
+  // the recorded one. Lost/legacy Guardians retain the conservative PID gate.
+  if(completed&&(!guardian.finishedAt||!Number.isFinite(Date.parse(guardian.finishedAt))
+    ||guardian.jobAssigned!==true||guardian.jobActiveAfterCleanup!==0
+    ||guardian.jobName!==`Local\\TongRuntime-${record.runId}`||guardian.killOnJobClose!==true))throw fail('RECONCILIATION_DENIED');
+  for(const identity of previousIdentities(record,guardian)){
+    const actual=await processIdentity(identity.pid);
+    if(actual&&(!completed||sameProcess(actual,identity)))throw fail('RECONCILIATION_DENIED');
+  }
   if(guardian.jobName!==undefined){
     if(guardian.jobName!==`Local\\TongRuntime-${record.runId}`||guardian.killOnJobClose!==true)throw fail('RECONCILIATION_DENIED');
     if((await runtimeJobState(record.runId)).activeProcesses!==0)throw fail('CLEANUP_REQUIRED');
@@ -224,7 +231,7 @@ async function guardianComplete(root,runId) {
   if(guardian.jobActiveAfterCleanup!==0||guardian.jobAssigned!==true)return false;
   const record=await json(join(root,'run','runtime.json'));
   if(record?.runId!==runId||guardian.nodePid!==record.supervisor?.pid)return false;
-  try{await oldRuntimeGone(root,record,guardian);return true;}catch{return false;}
+  try{await oldRuntimeGone(root,record,guardian,{completed:guardian.jobName!==undefined});return true;}catch{return false;}
 }
 export async function startRuntime(root,{startupTimeoutMs}={}) {
   if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');

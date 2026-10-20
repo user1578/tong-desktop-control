@@ -66,13 +66,16 @@ try {
   };
   await setCase();
   assert.deepEqual((await invoke()).failures, [], 'valid Guardian/job exit must pass');
+  await setCase({...record,phase:'abnormal_exit'});
+  assert.equal((await invoke()).ok,true,'a completed failed startup must permit bounded rollback');
   await setCase(record, guardian, { processes: {}, jobActive: 1 });
   assert.ok((await invoke()).failures.includes('JOB_STILL_ACTIVE'));
   await setCase(record, guardian, { processes: {
     91: { pid: 91, exe: 'unrelated process', startTicks: '5000' },
   }, jobActive: 0 });
-  assert.ok((await invoke()).failures.includes('RECORDED_PID_STILL_IN_USE'),
-    'reused PID must still fail closed');
+  assert.equal((await invoke()).ok,true,'a recycled PID is independent of the proven empty named Job');
+  await setCase(record,guardian,{processes:{91:record.children[0]},jobActive:0});
+  assert.ok((await invoke()).failures.includes('RECORDED_PID_STILL_IN_USE'),'the original live process must still block rollback');
   await setCase(record, { ...guardian, finishedAt: null });
   assert.ok((await invoke()).failures.includes('GUARDIAN_STOP_NOT_PROVEN'));
   await setCase(record, { ...guardian, jobName: 'wrong-job' });
@@ -83,7 +86,7 @@ try {
   try { assert.ok((await invoke()).failures.includes('PORT_BUSY_OR_UNCHECKABLE')); }
   finally { await new Promise((done) => listener.close(done)); }
   passed = true;
-  console.log('PASS: stopped-run proof accepts complete cleanup and rejects live/recycled PID, active Job, invalid Guardian, occupied port.');
+  console.log('PASS: stopped/failed-start cleanup and recycled PID; original live process, active Job, invalid Guardian and occupied port rejected.');
 } finally {
   await temp.finish(passed);
 }
