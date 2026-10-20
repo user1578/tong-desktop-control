@@ -4,6 +4,9 @@ import {join,resolve,relative,isAbsolute,sep,dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {verifyRelease} from './TongRuntimeRelease.mjs';
 
+// Historical app-only upgrade helper. Login recovery requires app and manager
+// to share one pinned release, so do not permit this old helper to mutate production.
+if(process.argv[2] && process.argv[2]!=='preflight')throw Error('APP_ONLY_CUTOVER_DISABLED');
 const OLD='a1b56b3666651c3648327f05e0ea4154284645c3';
 const NEXT='0a2da3c61a71da65191640bd18e4711992430667';
 const BASE='D:\\Tong\\state\\p27-autonomy-candidate-20261017';

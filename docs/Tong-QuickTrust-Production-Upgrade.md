@@ -1,4 +1,6 @@
-# Tong Quick Trust 生产升级交接（2026-10-20）
+# Tong Quick Trust 生产升级交接（旧方案，已停用）
+
+**此文档所述“只升级应用”流程会导致登录恢复授权校验失败，禁止再次执行。请使用 [完整修正版](Tong-QuickTrust-Full-Production-Retry.md)，它同步升级应用和Manager并修复了MCP白名单遗漏。**
 
 状态：**新应用候选、离线恢复、旧应用源码快照及生产只读预检完成；生产尚未切换。**
 

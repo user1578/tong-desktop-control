@@ -1,4 +1,7 @@
 param([ValidateSet('Preflight','Deploy')][string]$Mode='Preflight')
+# The app-only procedure is obsolete: production login recovery requires
+# application and Manager to share the SAME signed release digest.
+if($Mode -eq 'Deploy'){throw 'APP_ONLY_UPGRADE_DISABLED: use Invoke-TongQuickTrustFullProduction.ps1'}
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $node='D:\node\node.exe'
