@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { TongWorkerBroker } from "./TongWorkerBroker.mjs";
 import { openCodexDesktopThread } from "./TongCodexDesktopLink.mjs";
+import { notifyWindowsTask } from "./TongWindowsTaskNotice.mjs";
 import { TongTrustedPolicy, TongTrustedCodexBroker, TongExecutorRouter, requestedCapabilities } from "./TongTrustedCodexBroker.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -193,7 +194,8 @@ export class TongAgentTaskManager {
   constructor({ access, workerBroker, statePath = DEFAULT_STATE_PATH, trustedPolicyPath,
     maxConcurrent = 2, defaultTimeoutMs = 30 * 60 * 1_000,
     maxTaskRuntimeMs = MAX_TASK_TIMEOUT_MS, collectResult = collectGitResult,
-    openDesktopThread = openCodexDesktopThread, now = () => Date.now() } = {}) {
+    openDesktopThread = openCodexDesktopThread, notifyOnCompletion = false,
+    notifyTask = notifyWindowsTask, now = () => Date.now() } = {}) {
     if (!access || typeof access.authorize !== "function" || typeof access.listProjects !== "function") {
       throw new TypeError("TongAgentTaskManager requires project access");
     }
@@ -209,6 +211,8 @@ export class TongAgentTaskManager {
     this.access = access;
     this.workerBroker = workerBroker;
     this.openDesktopThread = openDesktopThread;
+    this.notifyOnCompletion = notifyOnCompletion;
+    this.notifyTask = notifyTask;
     this.statePath = resolve(statePath);
     this.managerLockPath = `${this.statePath}.manager.lock`;
     this.managerLock = null;
@@ -500,6 +504,41 @@ export class TongAgentTaskManager {
     // Do not steal focus for resumed sessions or sessions created by isolated workers.
     const openNewDesktopSession = task.executorMode === "trusted-windows"
       && !task.codexSessionId && !continuationMessage;
+    let desktopOpenPromise = null;
+    let desktopOpenSucceeded = false;
+    let desktopEarlyAttempted = false;
+    const tryOpenDesktop = async (phase) => {
+      const sessionId = task.codexSessionId;
+      if (!openNewDesktopSession || desktopOpenSucceeded || !sessionId) return;
+      if (desktopOpenPromise) return desktopOpenPromise;
+      desktopOpenPromise = (async () => {
+        try {
+          if (await this.openDesktopThread(sessionId)) {
+            desktopOpenSucceeded = true;
+            await this.addLog(taskId, "status", phase === "running"
+              ? "Codex Desktop session deep link dispatched during active turn."
+              : "Codex Desktop session deep link dispatched after turn.");
+          }
+        } catch (error) {
+          await this.addLog(taskId, "desktop", `Codex Desktop auto-open unavailable: ${cleanText(error?.message ?? "unknown").slice(0, 300)}`).catch(() => {});
+        }
+      })();
+      try { await desktopOpenPromise; }
+      finally { desktopOpenPromise = null; }
+    };
+    const sendFinishNotice = async () => {
+      if (!this.notifyOnCompletion || task.executorMode !== "trusted-windows") return;
+      const last = this.document.tasks.find(record => record.taskId === taskId);
+      const status = last?.status;
+      if (!["success", "failed", "cancelled", "waiting_user_action"].includes(status)) return;
+      try {
+        if (await this.notifyTask({ projectId: task.projectId, status })) {
+          await this.addLog(taskId, "status", "Windows desktop task notification dispatched.");
+        }
+      } catch (error) {
+        await this.addLog(taskId, "desktop", `Windows notification unavailable: ${cleanText(error?.message ?? "unknown").slice(0, 200)}`).catch(() => {});
+      }
+    };
     const timeoutMs = Math.min(task.timeoutMs, this.maxTaskRuntimeMs);
     let timeout;
     const armExecutionTimeout = () => {
@@ -557,6 +596,12 @@ export class TongAgentTaskManager {
           const writing = this.addLog(taskId, kind, message);
           pendingLogs.push(writing);
           void writing.catch(() => {});
+          // These events occur only after the first native turn has actually
+          // started. Dispatch without blocking Codex's notification stream.
+          if (openNewDesktopSession && !desktopEarlyAttempted && ["agent", "progress_event"].includes(kind)) {
+            desktopEarlyAttempted = true;
+            void writing.then(() => tryOpenDesktop("running")).catch(() => {});
+          }
           return writing;
         },
         onState: (state) => {
@@ -603,17 +648,13 @@ export class TongAgentTaskManager {
         record.pendingApproval = false;
         record.continuationMessage = null;
       });
-      // Dispatch only after the native turn has finished and its App Server writer exited.
-      // Session visibility is best-effort; never fail a completed task over a UI issue.
+      // If an early read-only Desktop open did not dispatch, retry after the
+      // App Server turn and native writer have completed. Never fail the task.
       if (openNewDesktopSession && result?.threadId === current.codexSessionId) {
-        try {
-          if (await this.openDesktopThread(result.threadId)) {
-            await this.addLog(taskId, "status", "Codex Desktop session deep link dispatched.");
-          }
-        } catch (error) {
-          await this.addLog(taskId, "desktop", `Codex Desktop auto-open unavailable: ${cleanText(error?.message ?? "unknown").slice(0, 300)}`).catch(() => {});
-        }
+        if (desktopOpenPromise) await desktopOpenPromise;
+        if (!desktopOpenSucceeded) await tryOpenDesktop("finished");
       }
+      await sendFinishNotice();
     } catch (error) {
       await Promise.allSettled(pendingLogs);
       const execution = this.active.get(taskId);
@@ -645,6 +686,7 @@ export class TongAgentTaskManager {
             suggestion: "Review task logs and local Codex availability before submitting another request." };
         }
       });
+      await sendFinishNotice();
     } finally {
       if (timeout) clearTimeout(timeout);
       this.active.delete(taskId);

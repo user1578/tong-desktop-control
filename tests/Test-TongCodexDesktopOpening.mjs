@@ -12,8 +12,11 @@ const ids = [
   "01a15948-8cc6-7353-93a9-5daa57f83707",
 ];
 const opened = [];
+const notifications = [];
 let next = 0;
 let failToOpen = false;
+let holdFirstTurn = true;
+let releaseFirstTurn;
 const manager = new TongAgentTaskManager({
   statePath: join(root, "state.json"),
   access: {
@@ -31,6 +34,10 @@ const manager = new TongAgentTaskManager({
       await onSessionId(threadId);
       await onLog("正在检查 SQLite 状态", "agent");
       await onLog(JSON.stringify({type:"commandExecution",event:"started"}), "progress_event");
+      if (holdFirstTurn) {
+        holdFirstTurn = false;
+        await new Promise(resolve => { releaseFirstTurn = resolve; });
+      }
       return { threadId, turnId: "turn-synthetic", turnStatus: "completed", summary: "Read-only synthetic test." };
     },
     close: async () => {},
@@ -40,6 +47,8 @@ const manager = new TongAgentTaskManager({
     if (failToOpen) throw new Error("No interactive Desktop handler");
     return true;
   },
+  notifyOnCompletion: true,
+  notifyTask: async notice => { notifications.push(notice); return true; },
   collectResult: async () => ({ changedFiles: [], diffSummary: "", gitAvailable: true }),
 });
 
@@ -65,27 +74,49 @@ async function run(mode, key, sessionId) {
 }
 
 try {
-  const fresh = await run("new", "desktop-opening-test-new-001");
+  const start = await manager.start({
+    projectId: "travelguard", agent: "codex", task: "synthetic read only", scope: "no changes",
+    idempotencyKey: "desktop-opening-test-new-001", sessionMode: "new",
+  });
   await until(() => opened.length === 1);
+  assert.equal((await manager.status(start.taskId)).status, "running",
+    "Desktop should open during an active native turn, not only after completion");
+  const logsDuring = await manager.logs({ taskId: start.taskId, limit: 100 });
+  await until(() => releaseFirstTurn);
+  releaseFirstTurn();
+  const fresh = await until(async () => {
+    const status = await manager.status(start.taskId);
+    return status.status === "success" ? status : null;
+  });
+  assert.equal(logsDuring.entries.some(e => e.message.includes("deep link dispatched during active turn")), true);
   assert.equal(fresh.codexSessionId, ids[0]);
   assert.equal(fresh.progress.phase, "success");
   assert.match(fresh.progress.message, /SQLite/);
   assert.deepEqual({kind:fresh.progress.activity.kind,state:fresh.progress.activity.state},
     {kind:"commandExecution",state:"started"});
   assert.deepEqual(opened, [ids[0]], "new trusted session must open in Desktop");
+  await until(() => notifications.length === 1);
+  assert.deepEqual(notifications[0], { projectId: "travelguard", status: "success" });
 
   const continued = await run("existing", "desktop-opening-test-existing-002", ids[0]);
   assert.equal(continued.codexSessionId, ids[0]);
   assert.deepEqual(opened, [ids[0]], "existing session must not steal Desktop focus");
+  await until(() => notifications.length === 2);
+  assert.equal(notifications[1].status, "success");
 
   failToOpen = true;
   const failedOpen = await run("new", "desktop-opening-test-fallback-003");
-  await until(() => opened.length === 2);
+  await until(() => opened.length >= 2);
   assert.equal(failedOpen.codexSessionId, ids[1]);
+  assert.ok(opened.length >= 2, "failed early dispatch may be retried after the native turn");
   assert.equal((await manager.status(failedOpen.taskId)).status, "success",
     "a failed UI dispatch must not fail the Codex turn");
   await until(async () => (await manager.logs({ taskId: failedOpen.taskId, limit: 100 })).entries
     .some((entry) => entry.kind === "desktop" && entry.message.includes("auto-open unavailable")));
+  assert.deepEqual(opened, [ids[0], ids[1], ids[1]],
+    "failed early dispatch is retried exactly once after completion, not on every token");
+  await until(() => notifications.length === 3);
+  assert.equal(notifications[2].status, "success");
   console.log("Trusted Codex desktop auto-open manager tests passed.");
 } finally {
   await manager.close();

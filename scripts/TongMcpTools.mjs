@@ -107,7 +107,9 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
   access ??= preservedState ? new TongProjectAccess({ registryPath: join(stateDir,"project-access.json"),agentAccessPath:join(stateDir,"agent-execution.json"),demoRoot:preservedState.demoRoot,...(preservedState.scanRoots!==undefined?{scanRoots:preservedState.scanRoots}:{}) })
     : stateDir ? new TongProjectAccess({ registryPath: join(stateDir, "project-access.json"), agentAccessPath: join(stateDir, "agent-execution.json"), demoRoot: process.env.TONG_RESTRICTED_ROOT, scanRoots: [] }) : new TongProjectAccess();
   tasks ??= useDefaultAccess
-    ? (defaultTaskManager ??= new TongAgentTaskManager({ access, ...(stateDir ? { statePath: join(stateDir, "agent-tasks.json"), trustedPolicyPath: join(stateDir, "trusted-codex.json") } : {}) }))
+    ? (defaultTaskManager ??= new TongAgentTaskManager({ access,
+      notifyOnCompletion: true,
+      ...(stateDir ? { statePath: join(stateDir, "agent-tasks.json"), trustedPolicyPath: join(stateDir, "trusted-codex.json") } : {}) }))
     : new TongAgentTaskManager({ access });
   if (agentDock || process.env.TONG_AGENTDOCK_ENABLED === "1") {
     const close = registerAgentDockTools(server, registerTool, z, agentDock ?? new TongAgentDockRouter({ access,
