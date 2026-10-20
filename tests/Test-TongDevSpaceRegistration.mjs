@@ -44,7 +44,7 @@ try {
   assert.deepEqual(names, ["open_workspace", "read", "write", "edit",
     "tong_list_directory", "tong_delete_file", "tong_move_file", "tong_run_command",
     "tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
-    "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
+    "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_project_prepare"]);
   const secondServer = createMcpServer(config, workspaces, null, null, () => [], []);
   const secondClient = new Client({ name: "second-synthetic-client", version: "1" }, { capabilities: {} });
   const [secondClientTransport, secondServerTransport] = InMemoryTransport.createLinkedPair();
