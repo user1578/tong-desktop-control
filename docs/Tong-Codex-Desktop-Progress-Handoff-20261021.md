@@ -1,6 +1,20 @@
 # Tong × Codex Desktop 会话可见性与进度回报交接（2026-10-21）
 
-> 本文是当前阶段的持续交接记录，不代表功能已发布到生产。更新前应重新核对任务状态和 Git 版本。
+> **当前最新状态：已部署到生产（2026-10-21）。** 下方早期“尚未部署”“正在运行”等条目是历史记录，以此节和实时检查为准。
+
+## 2026-10-21 正式部署与真实Codex验收
+
+- **精确版本**：App、Manager与本次运行实例均为 `376a328d429aff0a4d826b3b5278fcef7c0368b5`；runId `8a59e87a-0b0d-490d-b27c-c752f027a70d`。用户本机PowerShell 7正式升级回显 `PRODUCTION-UPGRADE-OK`。独立复验 `ready`、`doctor.healthy=true`、7676/7677/18765监听、登录计划任务Running、AgentDock已认证MCP及网关未认证拒绝。
+- **发布材料**：`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-release-376a328`，同级 `quick-trust-candidate-376a328`。275个源码、23个原生文件及DevSpace三补丁校验通过，SQLite native加载通过。App和Manager版本、PIN需始终一致。
+- **正式回滚快照**：`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261020173137481-54c213ae`。切换前对旧版App/Manager各270项源码、旧补丁/Pin/Profile/Runner完成验证。出故障先核实快照阶段、受控停止状态及对应登录恢复授权；切勿直接覆盖运行中的生产文件。
+- **ACL阻塞解决**：用户通过本机交互确认精确移除 `D:\Tong\runtime\temp` 中两条额外Modify ACE。旧ACL SDDL备份为 `D:\Tong\state\p27-autonomy-candidate-20261017\runtime-temp-acl-before-376a328.sddl`。全部正式状态目录ACL检查通过。
+- **现有授权**：TravelGuard仍保留`git.commit`和`git.push`；`D:\作业`整体的gitPush仍为false。本轮未修改或推送业务文件。
+- **生产原生会话E2E**：任务 `60fc5bdb-af84-44e0-8642-a83c4a102a72`，新thread `01a15a73-50e9-7141-9351-abbe4d957d43`，状态success，执行约20.75秒，检查Git分支 `hsh/backend`、HEAD `1a61ae9b65a49894295ca77a0c9dde7f71ac2921`；changedFiles=[]、Git干净。
+- **新增功能实测**：原生会话标题成功设置为以`travelguard · 生产验收...`开头（目前标题仍偏长）；`tong_agent_status.progress`实际记录Agent回复、commandExecution事件与终态。日志出现`Codex Desktop session deep link dispatched.`；**等待用户亲自确认Desktop是否即时显示窗口及内容**，不可把派发成功说成UI已验收。
+- **工具可用性界限**：`tong_agent_wait`与`tong_project_prepare`已加入正式DevSpace与Gateway白名单；本聊天的现有连接尚未直接调用`tong_agent_wait`，客户端工具列表可能需刷新。ChatGPT轮次结束后主动发送消息仍未实现。
+- **开发工作树保护**：原本2项已修改tracked文档和16项未跟踪文件原地保留，未进入发布提交。旧版代码历史结论仅供参考。
+
+
 
 ## 2026-10-21 后续研发更新：进度、标题、Git Push
 
