@@ -26,12 +26,14 @@ jobs:
           node --check scripts/TongAgentProviders.mjs
           node --check scripts/TongQuickProject.mjs
           node --check tests/Test-TongQuickProject.mjs
+          node --check tests/Test-TongQuickTrustAllowlist.mjs
+          node --check scripts/Apply-TongDevSpacePatch.mjs
           node --check scripts/TongTrustedCodexBroker.mjs
           node --check scripts/TongMcpTools.mjs
           node --check scripts/TongMultiAgentOrchestrator.mjs
           node --check tests/Test-TongMultiAgentOrchestrator.mjs
       - name: Portable multi-agent and Claude contracts
-        run: node --test tests/Test-TongMultiAgentOrchestrator.mjs tests/Test-TongClaudeCodeAdapter.mjs tests/Test-TongQuickProject.mjs
+        run: node --test tests/Test-TongMultiAgentOrchestrator.mjs tests/Test-TongClaudeCodeAdapter.mjs tests/Test-TongQuickProject.mjs tests/Test-TongQuickTrustAllowlist.mjs
       - name: Native Windows Codex regression
         if: runner.os == 'Windows'
         run: node --test tests/Test-TongCodexAppServer.mjs tests/Test-TongNativeSessions.mjs
