@@ -34,6 +34,7 @@ const toolsList = {
       { name: "tong_agent_resume" },
       { name: "tong_agent_result" },
       { name: "tong_agent_sessions" },
+      { name: "tong_project_prepare" },
       { name: "bash" },
       { name: "exec_command" },
       { name: "write_stdin" },
@@ -47,7 +48,7 @@ const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
   ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_windows_inspect", "tong_dev_environment", "tong_scan_directory", "tong_list_projects",
-    "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions"],
+    "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -80,6 +81,9 @@ assert.deepEqual(await validateAllowedToolCall(blocked), {
 const validTask = { projectId: "project-1", agent: "codex", task: "Make a small change", scope: "project files and tests",
   idempotencyKey: "gateway-client-request-001" };
 assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start", arguments: validTask } }), null);
+assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start", arguments: { ...validTask, requiredCapabilities: ["project.read","git.push"] } } }), null);
+assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_project_prepare", arguments: { projectPath: "D:\\\\作业\\\\26ict\\\\TravelGuard" } } }), null);
+assert.ok(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_project_prepare", arguments: { projectPath: "oops", grant: true } } }));
 assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_start",
   arguments: { ...validTask, sessionMode: "existing", codexSessionId: "019a1234-1234-7123-8123-123456789abc" } } }), null);
 assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_sessions",
