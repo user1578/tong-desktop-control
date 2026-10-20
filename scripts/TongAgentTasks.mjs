@@ -5,6 +5,7 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { TongWorkerBroker } from "./TongWorkerBroker.mjs";
+import { openCodexDesktopThread } from "./TongCodexDesktopLink.mjs";
 import { TongTrustedPolicy, TongTrustedCodexBroker, TongExecutorRouter, requestedCapabilities } from "./TongTrustedCodexBroker.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -170,7 +171,7 @@ export class TongAgentTaskManager {
   constructor({ access, workerBroker, statePath = DEFAULT_STATE_PATH, trustedPolicyPath,
     maxConcurrent = 2, defaultTimeoutMs = 30 * 60 * 1_000,
     maxTaskRuntimeMs = MAX_TASK_TIMEOUT_MS, collectResult = collectGitResult,
-    now = () => Date.now() } = {}) {
+    openDesktopThread = openCodexDesktopThread, now = () => Date.now() } = {}) {
     if (!access || typeof access.authorize !== "function" || typeof access.listProjects !== "function") {
       throw new TypeError("TongAgentTaskManager requires project access");
     }
@@ -185,6 +186,7 @@ export class TongAgentTaskManager {
     if (!isAbsolute(statePath)) throw new Error("Task state path must be absolute");
     this.access = access;
     this.workerBroker = workerBroker;
+    this.openDesktopThread = openDesktopThread;
     this.statePath = resolve(statePath);
     this.managerLockPath = `${this.statePath}.manager.lock`;
     this.managerLock = null;
@@ -472,6 +474,10 @@ export class TongAgentTaskManager {
     if (!active) return;
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) return;
+    // A newly created trusted native session can be opened in the existing Desktop window.
+    // Do not steal focus for resumed sessions or sessions created by isolated workers.
+    const openNewDesktopSession = task.executorMode === "trusted-windows"
+      && !task.codexSessionId && !continuationMessage;
     const timeoutMs = Math.min(task.timeoutMs, this.maxTaskRuntimeMs);
     let timeout;
     const armExecutionTimeout = () => {
@@ -575,6 +581,17 @@ export class TongAgentTaskManager {
         record.pendingApproval = false;
         record.continuationMessage = null;
       });
+      // Dispatch only after the native turn has finished and its App Server writer exited.
+      // Session visibility is best-effort; never fail a completed task over a UI issue.
+      if (openNewDesktopSession && result?.threadId === current.codexSessionId) {
+        try {
+          if (await this.openDesktopThread(result.threadId)) {
+            await this.addLog(taskId, "status", "Codex Desktop session deep link dispatched.");
+          }
+        } catch (error) {
+          await this.addLog(taskId, "desktop", `Codex Desktop auto-open unavailable: ${cleanText(error?.message ?? "unknown").slice(0, 300)}`).catch(() => {});
+        }
+      }
     } catch (error) {
       await Promise.allSettled(pendingLogs);
       const execution = this.active.get(taskId);
