@@ -4,10 +4,10 @@ import {createHash,randomUUID} from 'node:crypto';
 import {dirname,join,basename,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createProductionSimulationProfile} from '../../scripts/TongProductionProfile.mjs';
-import {assertProtectedPaths,processIdentity,runtimeJobState} from '../../scripts/TongRuntimeSecurity.mjs';
+import {assertProtectedPaths,processIdentity,runtimeJobState,sameProcess} from '../../scripts/TongRuntimeSecurity.mjs';
 const project=fileURLToPath(new URL('../../',import.meta.url));
 export const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-export async function loginFixture({full=false,sharedDependencies=false,ports={},reuseRoot}={}){
+export async function loginFixture({full=false,sharedDependencies=false,ports={},reuseRoot,dependencyRoot=project}={}){
   const simulationId=reuseRoot?basename(reuseRoot):'b23-login-'+randomUUID().replaceAll('-','');
   const initial=createProductionSimulationProfile({simulationId,...ports,sourceDigest:'a'.repeat(64),releaseDigest:'b'.repeat(64),agentdockEnabled:true});
   const root=initial.root;
@@ -20,8 +20,8 @@ export async function loginFixture({full=false,sharedDependencies=false,ports={}
     if(previous.commit!=='c'.repeat(40))throw Error('FIXTURE_REUSE_NOT_SYNTHETIC');
     const record=JSON.parse(await readFile(join(root,'run','runtime.json'),'utf8'));
     const guardian=JSON.parse(await readFile(join(root,'run','guardian.json'),'utf8'));
-    if(guardian.jobName!==`Local\\TongRuntime-${record.runId}`||(await runtimeJobState(record.runId)).activeProcesses!==0)throw Error('FIXTURE_REUSE_JOB_BUSY');
-    for(const identity of [guardian,record.supervisor,...record.children,...record.descendants])if(await processIdentity(identity.pid))throw Error('FIXTURE_REUSE_PROCESS_BUSY');
+    if(!['stopped','abnormal_exit'].includes(record.phase)||!guardian.finishedAt||guardian.jobAssigned!==true||guardian.killOnJobClose!==true||guardian.jobActiveAfterCleanup!==0||guardian.jobName!==`Local\\TongRuntime-${record.runId}`||(await runtimeJobState(record.runId)).activeProcesses!==0)throw Error('FIXTURE_REUSE_JOB_BUSY');
+    for(const identity of [guardian,record.supervisor,...record.children,...record.descendants])if(sameProcess(await processIdentity(identity.pid),identity))throw Error('FIXTURE_REUSE_PROCESS_BUSY');
     const retained=join(root,'retained-'+randomUUID());await mkdir(retained);
     await cp(join(initial.codeRoot,'scripts'),join(retained,'app-scripts'),{recursive:true});
     await cp(join(initial.managerRoot,'scripts'),join(retained,'manager-scripts'),{recursive:true});
@@ -45,15 +45,15 @@ export async function loginFixture({full=false,sharedDependencies=false,ports={}
   const hashes={};
   // One ordinary, isolated dependency tree can serve both fixture releases.
   // Keep each release's relative DevSpace imports and pinned patch files local.
-  if(full&&sharedDependencies&&!reuseRoot)await cp(join(project,'node_modules'),join(root,'node_modules'),{recursive:true,force:false,errorOnExist:true});
+  if(full&&sharedDependencies&&!reuseRoot)await cp(join(dependencyRoot,'node_modules'),join(root,'node_modules'),{recursive:true,force:false,errorOnExist:true});
   for(const target of [initial.codeRoot,initial.managerRoot]){
-    if(full&&sharedDependencies){if(!reuseRoot)await cp(join(project,'node_modules','@waishnav','devspace'),join(target,'node_modules','@waishnav','devspace'),{recursive:true,force:false,errorOnExist:true});}
-    else if(full)await cp(join(project,'node_modules'),join(target,'node_modules'),{recursive:true,force:false,errorOnExist:true});
+    if(full&&sharedDependencies){if(!reuseRoot)await cp(join(dependencyRoot,'node_modules','@waishnav','devspace'),join(target,'node_modules','@waishnav','devspace'),{recursive:true,force:false,errorOnExist:true});}
+    else if(full)await cp(join(dependencyRoot,'node_modules'),join(target,'node_modules'),{recursive:true,force:false,errorOnExist:true});
     else for(const name of ['pi-tools.js','server.js','workspaces.js']){
-      const path=join('node_modules','@waishnav','devspace','dist',name);await mkdir(dirname(join(target,path)),{recursive:true});await copyFile(join(project,path),join(target,path));
+      const path=join('node_modules','@waishnav','devspace','dist',name);await mkdir(dirname(join(target,path)),{recursive:true});await copyFile(join(dependencyRoot,path),join(target,path));
     }
   }
-  for(const name of ['pi-tools.js','server.js','workspaces.js'])hashes[name]=sha(await readFile(join(project,'node_modules','@waishnav','devspace','dist',name)));
+  for(const name of ['pi-tools.js','server.js','workspaces.js'])hashes[name]=sha(await readFile(join(dependencyRoot,'node_modules','@waishnav','devspace','dist',name)));
   const node={executable:process.execPath,version:process.version,abi:process.versions.modules,platform:process.platform,arch:process.arch,sha256:sha(await readFile(process.execPath))};
   // Controlled manifests bind the final working-tree bytes. These fixtures are
   // not production releases and cannot mint any production permission.

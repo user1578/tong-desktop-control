@@ -10,7 +10,7 @@ import {protectSecret,readSecret,processIdentity,sameProcess,terminateOwnedProce
 
 // One real three-component runtime, one 601 MB dependency tree; no production
 // port, task, source, credentials, permission, process or Codex UI is modified.
-const {root,profile,project}=await loginFixture({full:true,sharedDependencies:true,reuseRoot:process.env.TONG_LOGIN_AUTO_REUSE});
+const {root,profile,project}=await loginFixture({full:true,sharedDependencies:true,reuseRoot:process.env.TONG_LOGIN_AUTO_REUSE,dependencyRoot:process.env.TONG_LOGIN_AUTO_DEPENDENCIES});
 console.log(JSON.stringify({event:'fixture_ready',root}));
 const manager=join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs');
 const reuse=!!process.env.TONG_LOGIN_AUTO_REUSE;
