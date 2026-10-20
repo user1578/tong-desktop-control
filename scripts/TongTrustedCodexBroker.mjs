@@ -328,6 +328,15 @@ export function trustedCodexEnvironment(source = process.env) {
     "LOCALAPPDATA", "TEMP", "TMP", "PATH", "PATHEXT", "ComSpec"];
   const env = Object.fromEntries(allowed.filter((key) => typeof source[key] === "string")
     .map((key) => [key, source[key]]));
+  // Codex on Windows may grant its sandbox token write access to TEMP.
+  // Do not point it at Tong's protected production runtime/temp directory,
+  // otherwise runtimeDoctor rightfully rejects the new sandbox ACEs.
+  const protectedTemp = /^([a-z]):\\Tong\\runtime\\temp\\?$/i.exec(env.TEMP ?? env.TMP ?? "");
+  if (protectedTemp) {
+    const scratch = `${protectedTemp[1]}:\\Tong\\state\\codex-sandbox-temp`;
+    env.TEMP = scratch;
+    env.TMP = scratch;
+  }
   const raw = source.TONG_CODEX_PROXY_URL;
   if (raw !== undefined) {
     const origin = normalizeLoopbackProxy(raw);

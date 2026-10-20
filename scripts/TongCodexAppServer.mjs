@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdir } from "node:fs/promises";
 import { basename, isAbsolute, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
@@ -189,7 +190,18 @@ export class CodexAppServerAdapter {
     this.shutdownTimeoutMs = shutdownTimeoutMs;
   }
 
+  async prepareTemp() {
+    // Only bootstrap the dedicated scratch directory we select in the trusted
+    // broker; do not create arbitrary directories from inherited environment.
+    if (process.platform === "win32"
+      && /^[a-z]:\\Tong\\state\\codex-sandbox-temp$/i.test(this.env.TEMP ?? "")
+      && this.env.TEMP === this.env.TMP) {
+      await mkdir(this.env.TEMP, { recursive: true });
+    }
+  }
+
   async withMetadataPeer(cwd, callback) {
+    await this.prepareTemp();
     const child = this.spawnProcess(this.executable, ["app-server", "--listen", "stdio://"], {
       cwd, env: this.env, shell: false, windowsHide: true, stdio: ["pipe", "pipe", "pipe"],
     });
@@ -298,6 +310,8 @@ export class CodexAppServerAdapter {
 
   async runTask(spec, { signal, onSessionId = () => {}, onLog = () => {}, onState = () => {}, authorizedCapabilities = [] } = {}) {
     if (!spec || typeof spec.cwd !== "string" || typeof spec.prompt !== "string") throw new Error("Invalid Codex task specification");
+    signal?.throwIfAborted();
+    await this.prepareTemp();
     signal?.throwIfAborted();
     const child = this.spawnProcess(this.executable, ["app-server", "--listen", "stdio://"], {
       cwd: spec.cwd,

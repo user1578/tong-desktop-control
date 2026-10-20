@@ -17,6 +17,15 @@ assert.equal(without.USERPROFILE, base.USERPROFILE);
 assert.equal(without.HTTP_PROXY, undefined, "unapproved network proxies are never implicitly inherited");
 assert.equal(without.HTTPS_PROXY, undefined);
 assert.equal(without.OPENAI_API_KEY, undefined, "the child environment stays allowlisted");
+// A trusted Codex subprocess must never inherit Tong's protected runtime temp:
+// Codex's Windows sandbox adds sandbox-token ACLs to its TEMP directory.
+const isolated = trustedCodexEnvironment({...base,TEMP:"D:\\Tong\\runtime\\temp",TMP:"D:\\Tong\\runtime\\temp"});
+assert.equal(isolated.TEMP, "D:\\Tong\\state\\codex-sandbox-temp");
+assert.equal(isolated.TMP, isolated.TEMP);
+const ordinary = trustedCodexEnvironment({...base,TEMP:"C:\\Users\\TestUser\\AppData\\Local\\Temp",TMP:"C:\\Users\\TestUser\\AppData\\Local\\Temp"});
+assert.equal(ordinary.TEMP, "C:\\Users\\TestUser\\AppData\\Local\\Temp",
+  "normal user TEMP roots are not rewritten");
+assert.equal(isolated.OPENAI_API_KEY, undefined);
 for(const url of ["http://127.0.0.1:7897","http://localhost:1234","http://[::1]:7897",
   "https://127.0.0.1:1234"]) {
   const result = trustedCodexEnvironment({...base,TONG_CODEX_PROXY_URL:url});

@@ -2,7 +2,15 @@
 
 > **当前最新状态：已部署到生产（2026-10-21）。** 下方早期“尚未部署”“正在运行”等条目是历史记录，以此节和实时检查为准。
 
-## 2026-10-21 用户反馈与修正（最新，仍未部署）
+## 2026-10-21 临时目录ACL再发生：必须在下次生产升级中解决（最新）
+
+- 当前生产App/Manager的Pin仍是`376a328`，运行实例记录仍为`ready`且三个端口监听，但Manager`doctor`再次返回`ACL_DENIED`，登录计划任务读到`Ready`及上次返回码1。不能把端口监听等同于健康；下一步应先恢复健康。
+- 精确复核：`D:\Tong\runtime\temp`又出现两条沙盒Modify ACE，其他受保护根目录未见同样问题。因为运行时`safeEnvironment(root)`将`TEMP/TMP`设为`D:\Tong\runtime\temp`，`trustedCodexEnvironment`原样传给Codex App Server，Codex Windows沙盒执行时很可能将沙盒SID写入该TEMP的ACL。这是已确认的环境继承链，但具体写入时点仍待升级后复验。
+- 开发分支修正：只有当Codex子进程原先继承了精确的`<drive>:\Tong\runtime\temp`时，才重定向`TEMP/TMP`为同盘的`<drive>:\Tong\state\codex-sandbox-temp`。该目录由Codex App Server启动前按受控固定路径创建，不包含授权/凭据，不改其他进程、Windows系统环境变量或者生产Manager所用TEMP。不在真实项目根目录制造临时文件。
+- 隔离环境、原生App Server及任务回归共5组通过；`Test-TongTrustedTasks`特地在项目授权测试临时路径下重跑。**本次尚未真实部署验证沙盒ACL是否彻底停止复发**。
+- 正式收尾先恢复生产runtime/temp两条ACL（需本机审批；上次修复脚本备份文件已存在，不能盲目重复运行）；随后匹配双组件Pin发布、验证doctor健康、跑一条只读Codex真实任务，立即再次检查runtime/temp是否仍干净。失败则用受控回滚，不能静默放宽ACL或覆盖授权文件。
+
+## 2026-10-21 用户反馈与修正（历史开发更新，仍未部署）
 
 - 用户反馈：运行中手动深链接没有看到新会话，短时Windows托盘气泡也没有看到。**不得把之前“派发成功、任务不中断”写成“Desktop运行中实时可见”。**
 - 结合Codex上游已公开的跨进程新会话索引、加载状态和Active Writer问题，已撤回开发分支中“运行中自动打开Desktop”的默认触发，**继续使用经过用户截图验收的“原生任务完成、writer退出后深链接打开”**。运行中进度通过Tong `tong_agent_status.progress`与有界`tong_agent_wait`提供，不能保证在Desktop渲染。
