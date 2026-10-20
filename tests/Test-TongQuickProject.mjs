@@ -33,16 +33,16 @@ try{
   assert.deepEqual({ready:before.ready,reason:before.reason},
     {ready:false,reason:'folder-needs-local-trust'});
   assert.equal((await policy.read()).projects.length,0);
-  const trusted=await policy.trustRoot(folder,access,{gitCommit:true,gitPush:true});
+  const trusted=await policy.trustRoot(folder,access,{gitCommit:true,gitPush:false});
   assert.equal(trusted.root,folder);
-  assert.equal(trusted.capabilities.includes('git.push'),true);
+  assert.equal(trusted.capabilities.includes('git.push'),false);
   await assert.rejects(policy.trustRoot(folder,access),/already configured/);
   await assert.rejects(policy.trustRoot(tmp,access),/authorization state directory/);
   const enrolled=await prepareTrustedProject({projectPath:existing,projectId:'travelguard'},
     {access,policy});
   assert.equal(enrolled.ready,true);
   assert.equal(enrolled.projectId,'travelguard');
-  assert.equal(enrolled.gitPush,true);
+  assert.equal(enrolled.gitPush,false);
   assert.equal(enrolled.needsTaskConfirmation,false);
   assert.equal(enrolled.highImpactRequiresConfirmation,true);
   let grants=(await policy.read()).developmentGrants;
@@ -52,6 +52,16 @@ try{
   await prepareTrustedProject({projectPath:existing},{access,policy});
   assert.equal((await policy.read()).developmentGrants[0].grantId,id,
     'repeated task must reuse authorization');
+  // The user separately approves Git Push for one project; folder trust
+  // must remain read/write/commit-only and must still revoke that project.
+  await policy.authorizeDevelopment('travelguard',access,{
+    gitCommit:true,gitPush:true,expectedRoot:existing,
+  });
+  const upgraded=(await policy.read()).developmentGrants.find(g=>g.projectId==='travelguard');
+  assert.equal(upgraded.originTrustGrantId,trusted.grantId);
+  assert.equal(upgraded.capabilities.includes('git.push'),true);
+  assert.equal((await prepareTrustedProject({projectPath:existing},{access,policy})).gitPush,true);
+  assert.equal((await policy.read()).trustedRoots[0].capabilities.includes('git.push'),false);
   const broker=new TongTrustedCodexBroker({access,policy,adapterFactory:()=>({
     async listSessions(){return {sessions:[]}},
   })});

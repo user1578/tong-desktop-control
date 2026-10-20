@@ -43,6 +43,27 @@ function boundedLogText(value) {
     : `${bytes.subarray(0, MAX_LOG_ENTRY_BYTES - 16).toString("utf8")} …[truncated]`;
 }
 
+function taskProgress(task) {
+  const recent = task.logs?.slice(-180) ?? [];
+  const lastActivityAt = recent.at(-1)?.timestamp ?? task.updatedAt;
+  const lastAgentText = recent.filter(entry => entry.kind === "agent").map(entry => entry.message).join("");
+  const message = lastAgentText.trim().slice(-220) || null;
+  const latestEvent = [...recent].reverse().find(entry => entry.kind === "progress_event");
+  let activity = null;
+  if (latestEvent) {
+    try {
+      const event = JSON.parse(latestEvent.message);
+      if (["commandExecution", "fileChange"].includes(event.type) && ["started", "completed"].includes(event.event)) {
+        activity = { kind: event.type, state: event.event, at: latestEvent.timestamp };
+      }
+    } catch { /* old or incomplete logs have no structured activity */ }
+  }
+  const phase = task.status === "running" ? "executing"
+    : task.status === "waiting_user_action" ? "waiting_user_action"
+    : task.status === "queued" ? "queued" : task.status;
+  return { phase, message, activity, lastActivityAt, terminal: TERMINAL_STATES.has(task.status) };
+}
+
 function publicTask(task, now = Date.now()) {
   const runtimeMs = task.startedAt
     ? Math.max(0, (task.finishedAt ? Date.parse(task.finishedAt) : now) - Date.parse(task.startedAt))
@@ -58,6 +79,7 @@ function publicTask(task, now = Date.now()) {
     updatedAt: task.updatedAt,
     finishedAt: task.finishedAt,
     runtimeMs,
+    progress: taskProgress(task),
     codexSessionId: task.codexSessionId,
     codexTurnId: task.codexTurnId ?? null,
     pendingApproval: Boolean(task.pendingApproval),
@@ -637,6 +659,26 @@ export class TongAgentTaskManager {
     const task = this.document.tasks.find((entry) => entry.taskId === taskId);
     if (!task) throw new Error("Task not found");
     return publicTask(task, this.now());
+  }
+
+  // Bounded long-poll for active ChatGPT turns. This does not send unsolicited
+  // messages after the host conversation ends.
+  async wait({ taskId, afterUpdatedAt, waitSeconds = 15 } = {}) {
+    if (typeof taskId !== "string"
+        || (afterUpdatedAt !== undefined && (typeof afterUpdatedAt !== "string"
+          || Number.isNaN(Date.parse(afterUpdatedAt))))
+        || !Number.isInteger(waitSeconds) || waitSeconds < 1 || waitSeconds > 15) {
+      throw new Error("Invalid task progress watch");
+    }
+    const deadline = this.now() + waitSeconds * 1000;
+    while (true) {
+      const task = await this.status(taskId);
+      if (task.progress.terminal || task.status === "waiting_user_action"
+          || !afterUpdatedAt || task.updatedAt !== afterUpdatedAt || this.now() >= deadline) {
+        return { task, changed: !afterUpdatedAt || task.updatedAt !== afterUpdatedAt };
+      }
+      await delay(Math.min(350, Math.max(1, deadline - this.now())));
+    }
   }
 
   async sessions({ projectId, limit = 50, cursor, searchTerm } = {}) {

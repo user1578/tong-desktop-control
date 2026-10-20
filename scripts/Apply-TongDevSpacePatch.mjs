@@ -72,6 +72,10 @@ function extendRestrictedServer(source) {
     source = replaceOnce(source, '"tong_dev_environment"]);', '"tong_dev_environment", "tong_project_prepare"]);',
       'trusted-folder project auto-onboarding tool registration guard');
   }
+  if (!source.includes('"tong_agent_wait"')) {
+    source = replaceOnce(source, '"tong_project_prepare"]);', '"tong_project_prepare", "tong_agent_wait"]);',
+      'bounded Codex progress wait tool registration guard');
+  }
   return source;
 }
 

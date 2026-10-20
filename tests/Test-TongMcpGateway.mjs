@@ -27,6 +27,7 @@ const toolsList = {
       { name: "tong_list_projects" },
       { name: "tong_agent_start" },
       { name: "tong_agent_status" },
+      { name: "tong_agent_wait" },
       { name: "tong_agent_list" },
       { name: "tong_agent_logs" },
       { name: "tong_agent_cancel" },
@@ -46,7 +47,7 @@ const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
   ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_windows_inspect", "tong_dev_environment", "tong_scan_directory", "tong_list_projects",
-    "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions"],
+    "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -69,6 +70,7 @@ assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "read" } }), u
 assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_scan_directory" } }), undefined);
 assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_windows_inspect" } }), undefined);
 assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_dev_environment" } }), undefined);
+assert.equal(findDisallowedToolCall({ ...blocked, params: { name: "tong_agent_wait" } }), undefined);
 assert.ok(findDisallowedToolCall({ ...blocked, params: { name: "tong_add_project" } }));
 assert.equal(findDisallowedToolCall([blocked, { ...blocked, id: 10, params: { name: "read" } }]), blocked);
 assert.deepEqual(await validateAllowedToolCall(blocked), {
@@ -82,6 +84,14 @@ assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { nam
   arguments: { ...validTask, sessionMode: "existing", codexSessionId: "019a1234-1234-7123-8123-123456789abc" } } }), null);
 assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_sessions",
   arguments: { projectId: "project-one", limit: 10, searchTerm: "Acceptance" } } }), null);
+const watchId = "123e4567-e89b-42d3-a456-426614174000";
+assert.equal(await validateAllowedToolCall({ method:"tools/call", params:{
+  name:"tong_agent_wait",arguments:{taskId:watchId,waitSeconds:10,afterUpdatedAt:"2026-10-21T01:30:00.000Z"}
+} }), null);
+for (const watch of [
+  {taskId:watchId,waitSeconds:60},{taskId:"../private",waitSeconds:3},
+  {taskId:watchId,afterUpdatedAt:"not a timestamp"}
+]) assert.ok(await validateAllowedToolCall({method:"tools/call",params:{name:"tong_agent_wait",arguments:watch}}));
 for (const args of [{...validTask,sessionMode:"existing"},{...validTask,codexSessionId:"../../outside"},
   {...validTask,sessionMode:"new",sessionSearch:"private"}]) {
   assert.ok(await validateAllowedToolCall({method:"tools/call",params:{name:"tong_agent_start",arguments:args}}));

@@ -220,6 +220,18 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     annotations: { readOnlyHint: true },
   }, safeAgent(async ({ taskId }) => ({ task: await tasks.status(taskId) })));
 
+  registerTool(server, "tong_agent_wait", {
+    title: "Wait for Codex task progress",
+    description: "Bounded read-only wait (up to 15 seconds) for a task update or completion. Useful only while the ChatGPT turn remains active; does not push chat messages after a turn ends.",
+    inputSchema: {
+      taskId: z.string().uuid(),
+      afterUpdatedAt: z.string().datetime().optional(),
+      waitSeconds: z.number().int().min(1).max(15).optional(),
+    },
+    _meta: {},
+    annotations: { readOnlyHint: true },
+  }, safeAgent((input) => tasks.wait(input)));
+
   registerTool(server, "tong_agent_list", {
     title: "List Codex tasks",
     description: "Read a page of persisted Codex tasks without exposing task prompts or credentials.",

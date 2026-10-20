@@ -58,6 +58,14 @@ function safeSummary(value) {
     .slice(-MAX_AGENT_MESSAGE_CHARS);
 }
 
+function nativeThreadTitle(spec) {
+  // The first task line is user-facing. Never use the long internal safety prompt as a title.
+  const task = safeSummary(spec.task ?? "").split(/\r?\n/).find(line => line.trim())?.trim() ?? "";
+  const project = String(spec.projectId ?? "").replace(/[^a-z0-9-]/gi, "").slice(0, 32);
+  const subject = task.replace(/[\r\n\t\x00-\x1f]+/g, " ").slice(0, 76);
+  return subject ? [project, subject].filter(Boolean).join(" · ").slice(0, 110) : null;
+}
+
 function safeProtocolMessage(value, limit = 300) {
   return safeSummary(String(value ?? "").replace(/[\r\n\t\x00-\x1f]+/g, " "))
     .replace(/\b(token|client[_-]?secret|api[_-]?key|password)\s*[:=]\s*[^\s,;]+/gi,
@@ -352,6 +360,9 @@ export class CodexAppServerAdapter {
       } else if (message.method === "item/started" || message.method === "item/completed") {
         const item = params.item;
         captureCommand(item);
+        if (["commandExecution", "fileChange"].includes(item?.type)) {
+          onLog(JSON.stringify({ type: item.type, event: message.method === "item/started" ? "started" : "completed" }), "progress_event");
+        }
         if (message.method === "item/completed" && item?.type === "agentMessage") agentMessages.set(item.id, item);
       } else if (message.method === "error") {
         onLog(safeSummary(params.error?.message ?? "Codex reported an error"), "error");
@@ -443,6 +454,13 @@ export class CodexAppServerAdapter {
       }
       if (spec.threadId && threadId !== spec.threadId) throw new Error("Codex App Server returned a different native session");
       await onSessionId(threadId);
+      if (!spec.threadId) {
+        const title = nativeThreadTitle(spec);
+        if (title) {
+          try { await peer.request("thread/name/set", { threadId, name: title }); }
+          catch (error) { onLog(`Optional native session title was not set: ${safeProtocolMessage(error.message)}`, "status"); }
+        }
+      }
       signal?.throwIfAborted();
       const prompt = spec.continuationMessage
         ? `${spec.prompt}\n\nContinuation request: ${spec.continuationMessage}`

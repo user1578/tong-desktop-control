@@ -154,6 +154,12 @@ try {
 
   const completed = await waitForTask(started.taskId, (task) => task.status === "success");
   assert.equal(completed.codexSessionId, "thread-1");
+  const finishedWatch = await manager.wait({ taskId: completed.taskId,
+    afterUpdatedAt: completed.updatedAt, waitSeconds: 1 });
+  assert.equal(finishedWatch.task.status, "success");
+  assert.equal(finishedWatch.task.progress.terminal, true);
+  assert.equal(finishedWatch.changed, false);
+  await assert.rejects(manager.wait({ taskId: completed.taskId, waitSeconds: 16 }), /progress watch/);
   assert.equal(completed.startedAt !== null, true);
   assert.equal(completed.finishedAt !== null, true);
   assert.deepEqual((await manager.result(started.taskId)).changedFiles, ["src/example.mjs"]);

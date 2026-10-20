@@ -26,9 +26,11 @@ const manager = new TongAgentTaskManager({
       authorization: { mode: "project-development", capabilities: ["codex.session"] },
     }),
     selectSession: async ({ codexSessionId }) => codexSessionId,
-    runTask: async (spec, { onSessionId }) => {
+    runTask: async (spec, { onSessionId, onLog }) => {
       const threadId = spec.threadId ?? ids[next++];
       await onSessionId(threadId);
+      await onLog("正在检查 SQLite 状态", "agent");
+      await onLog(JSON.stringify({type:"commandExecution",event:"started"}), "progress_event");
       return { threadId, turnId: "turn-synthetic", turnStatus: "completed", summary: "Read-only synthetic test." };
     },
     close: async () => {},
@@ -66,6 +68,10 @@ try {
   const fresh = await run("new", "desktop-opening-test-new-001");
   await until(() => opened.length === 1);
   assert.equal(fresh.codexSessionId, ids[0]);
+  assert.equal(fresh.progress.phase, "success");
+  assert.match(fresh.progress.message, /SQLite/);
+  assert.deepEqual({kind:fresh.progress.activity.kind,state:fresh.progress.activity.state},
+    {kind:"commandExecution",state:"started"});
   assert.deepEqual(opened, [ids[0]], "new trusted session must open in Desktop");
 
   const continued = await run("existing", "desktop-opening-test-existing-002", ids[0]);

@@ -17,7 +17,7 @@ const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
 const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_windows_inspect", "tong_dev_environment"]);
 const AGENT_TOOLS = new Set([
-  "tong_agent_start", "tong_agent_status", "tong_agent_list", "tong_agent_logs",
+  "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions",
 ]);
 const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...WORKSPACE_TOOLS, ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
@@ -379,6 +379,14 @@ function validateAgentToolArguments(name, args) {
           || typeof args.sessionSearch !== "string" || !args.sessionSearch.trim()
           || args.sessionSearch.length > 200 || /\0/.test(args.sessionSearch)))) return invalid;
     return null;
+  }
+  if (name === "tong_agent_wait") {
+    return exact(["taskId", "afterUpdatedAt", "waitSeconds"], ["taskId"])
+      && typeof args.taskId === "string" && uuid.test(args.taskId)
+      && (args.afterUpdatedAt === undefined || (typeof args.afterUpdatedAt === "string"
+        && !Number.isNaN(Date.parse(args.afterUpdatedAt)) && args.afterUpdatedAt.length <= 40))
+      && (args.waitSeconds === undefined || (Number.isInteger(args.waitSeconds) && args.waitSeconds >= 1 && args.waitSeconds <= 15))
+      ? null : invalid;
   }
   if (name === "tong_agent_sessions") {
     return exact(["projectId", "limit", "cursor", "searchTerm"], ["projectId"])

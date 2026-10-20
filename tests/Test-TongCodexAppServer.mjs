@@ -48,6 +48,8 @@ class SimulatedAppServerProcess extends EventEmitter {
       response({ project: { id: "created-desktop-project", roots: message.params.roots } });
     } else if (message.method === "thread/read") {
       response({ thread: { id: message.params.threadId, cwd: projectRoot, source: "appServer", status: { type: "notLoaded" } } });
+    } else if (message.method === "thread/name/set") {
+      response({});
     } else if (message.method === "thread/start" || message.method === "thread/resume") {
       if (message.params?.runtimeWorkspaceRoots && !this.experimentalApi) {
         this.send({ jsonrpc: "2.0", id: message.id, error: { code: -32600,
@@ -133,6 +135,10 @@ const first = await adapter.runTask({
 });
 
 assert.equal(first.threadId, "thread-simulated");
+assert.equal(processes[0].requests.some(r => r.method === "thread/name/set"
+  && r.params.threadId === "thread-simulated"), true, "new native session must receive a descriptive title");
+assert.ok(processes[0].requests.find(r => r.method === "thread/name/set").params.name.includes("create a file"));
+assert.ok(!processes[0].requests.find(r => r.method === "thread/name/set").params.name.includes("Work only in the authorized"));
 assert.equal(first.turnStatus, "completed");
 assert.ok(first.summary.includes("Synthetic completion."));
 assert.deepEqual(first.tests, [{ command: "node --test", exitCode: 0, status: "passed",
@@ -169,6 +175,8 @@ assert.equal(resumed.threadId, "thread-existing");
 assert.ok(resumedProcess.requests.some((request) => request.method === "thread/resume"
   && request.params.threadId === "thread-existing"));
 assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/start"));
+assert.ok(!resumedProcess.requests.some((request) => request.method === "thread/name/set"),
+  "continuing a native session must preserve its existing user-visible name");
 assert.ok(!resumedProcess.requests.some((request) => request.method.startsWith("project/")),
   "continuing an existing Desktop session must preserve its existing project assignment");
 

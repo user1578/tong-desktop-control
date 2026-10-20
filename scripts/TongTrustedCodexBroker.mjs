@@ -246,14 +246,20 @@ export class TongTrustedPolicy {
     if(expectedRoot !== undefined && !samePath(project.root,expectedRoot)) throw new Error('Project changed during confirmation');
     const contains = (root,path) => { const part=resolve(path).toLowerCase();const base=resolve(root).toLowerCase();return part===base || part.startsWith(base+'\\') || part.startsWith(base+'/'); };
     if ([this.policyPath,this.taskStatePath,this.auditPath].some(p => contains(project.root,p))) throw new Error('Authorization state must be outside the project');
-    if(originTrustGrantId!==undefined){
+    // Re-authorizing a project (for example to add git.push) must not turn a
+    // folder-inherited grant into an unrelated grant that survives untrustRoot.
+    const oldGrant=(await this.read()).developmentGrants?.find(g=>g.projectId===projectId && samePath(g.root,project.root));
+    const effectiveOrigin=originTrustGrantId??oldGrant?.originTrustGrantId;
+    if(effectiveOrigin!==undefined){
       const trust=await this.trustedRootFor(project.root);
-      if(!trust||trust.grantId!==originTrustGrantId)
+      if(!trust||trust.grantId!==effectiveOrigin)
         throw new Error('Folder trust does not authorize this project');
     }
-    const grant = {projectId,grantId:randomUUID(),root:project.root,capabilities:[...DEVELOPMENT_CAPABILITIES,...(gitCommit?['git.commit']:[]),...(gitPush?['git.push']:[])],issuedAt:new Date().toISOString(),...(originTrustGrantId?{originTrustGrantId}:{})};
+    const grant = {projectId,grantId:randomUUID(),root:project.root,capabilities:[...DEVELOPMENT_CAPABILITIES,...(gitCommit?['git.commit']:[]),...(gitPush?['git.push']:[])],issuedAt:new Date().toISOString(),...(effectiveOrigin?{originTrustGrantId:effectiveOrigin}:{})};
     await this.mutate('authorize-development',value => {
       if (!value.enabled || !value.projects.includes(projectId)) throw disabled();
+      if(effectiveOrigin!==undefined && !value.trustedRoots?.some(g=>g.grantId===effectiveOrigin && trustedRootContains(g.root,project.root)))
+        throw new Error('Folder trust was revoked during authorization');
       value.developmentGrants = [...(value.developmentGrants ?? []).filter(g => g.projectId !== projectId),grant];
       value.generation += 1;
     },grant);
