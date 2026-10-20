@@ -504,27 +504,18 @@ export class TongAgentTaskManager {
     // Do not steal focus for resumed sessions or sessions created by isolated workers.
     const openNewDesktopSession = task.executorMode === "trusted-windows"
       && !task.codexSessionId && !continuationMessage;
-    let desktopOpenPromise = null;
-    let desktopOpenSucceeded = false;
-    let desktopEarlyAttempted = false;
-    const tryOpenDesktop = async (phase) => {
+    // Opening a still-active app-server writer in Desktop is not supported
+    // reliably across Codex builds. Open only after the native turn exits.
+    const tryOpenDesktop = async () => {
       const sessionId = task.codexSessionId;
-      if (!openNewDesktopSession || desktopOpenSucceeded || !sessionId) return;
-      if (desktopOpenPromise) return desktopOpenPromise;
-      desktopOpenPromise = (async () => {
-        try {
-          if (await this.openDesktopThread(sessionId)) {
-            desktopOpenSucceeded = true;
-            await this.addLog(taskId, "status", phase === "running"
-              ? "Codex Desktop session deep link dispatched during active turn."
-              : "Codex Desktop session deep link dispatched after turn.");
-          }
-        } catch (error) {
-          await this.addLog(taskId, "desktop", `Codex Desktop auto-open unavailable: ${cleanText(error?.message ?? "unknown").slice(0, 300)}`).catch(() => {});
+      if (!openNewDesktopSession || !sessionId) return;
+      try {
+        if (await this.openDesktopThread(sessionId)) {
+          await this.addLog(taskId, "status", "Codex Desktop session deep link dispatched after turn.");
         }
-      })();
-      try { await desktopOpenPromise; }
-      finally { desktopOpenPromise = null; }
+      } catch (error) {
+        await this.addLog(taskId, "desktop", `Codex Desktop auto-open unavailable: ${cleanText(error?.message ?? "unknown").slice(0, 300)}`).catch(() => {});
+      }
     };
     const sendFinishNotice = async () => {
       if (!this.notifyOnCompletion || task.executorMode !== "trusted-windows") return;
@@ -596,12 +587,6 @@ export class TongAgentTaskManager {
           const writing = this.addLog(taskId, kind, message);
           pendingLogs.push(writing);
           void writing.catch(() => {});
-          // These events occur only after the first native turn has actually
-          // started. Dispatch without blocking Codex's notification stream.
-          if (openNewDesktopSession && !desktopEarlyAttempted && ["agent", "progress_event"].includes(kind)) {
-            desktopEarlyAttempted = true;
-            void writing.then(() => tryOpenDesktop("running")).catch(() => {});
-          }
           return writing;
         },
         onState: (state) => {
@@ -648,11 +633,10 @@ export class TongAgentTaskManager {
         record.pendingApproval = false;
         record.continuationMessage = null;
       });
-      // If an early read-only Desktop open did not dispatch, retry after the
-      // App Server turn and native writer have completed. Never fail the task.
+      // The successful production behavior: dispatch after the App Server
+      // releases its writer. The user's in-progress display uses Tong status.
       if (openNewDesktopSession && result?.threadId === current.codexSessionId) {
-        if (desktopOpenPromise) await desktopOpenPromise;
-        if (!desktopOpenSucceeded) await tryOpenDesktop("finished");
+        await tryOpenDesktop();
       }
       await sendFinishNotice();
     } catch (error) {

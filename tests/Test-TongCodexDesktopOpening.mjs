@@ -78,17 +78,18 @@ try {
     projectId: "travelguard", agent: "codex", task: "synthetic read only", scope: "no changes",
     idempotencyKey: "desktop-opening-test-new-001", sessionMode: "new",
   });
-  await until(() => opened.length === 1);
-  assert.equal((await manager.status(start.taskId)).status, "running",
-    "Desktop should open during an active native turn, not only after completion");
-  const logsDuring = await manager.logs({ taskId: start.taskId, limit: 100 });
   await until(() => releaseFirstTurn);
+  assert.equal((await manager.status(start.taskId)).status, "running");
+  assert.deepEqual(opened, [],
+    "an active native writer must not be handed to Desktop before completion");
   releaseFirstTurn();
   const fresh = await until(async () => {
     const status = await manager.status(start.taskId);
     return status.status === "success" ? status : null;
   });
-  assert.equal(logsDuring.entries.some(e => e.message.includes("deep link dispatched during active turn")), true);
+  await until(() => opened.length === 1);
+  const logsAfter = await manager.logs({ taskId: start.taskId, limit: 100 });
+  assert.equal(logsAfter.entries.some(e => e.message.includes("deep link dispatched after turn")), true);
   assert.equal(fresh.codexSessionId, ids[0]);
   assert.equal(fresh.progress.phase, "success");
   assert.match(fresh.progress.message, /SQLite/);
@@ -108,13 +109,13 @@ try {
   const failedOpen = await run("new", "desktop-opening-test-fallback-003");
   await until(() => opened.length >= 2);
   assert.equal(failedOpen.codexSessionId, ids[1]);
-  assert.ok(opened.length >= 2, "failed early dispatch may be retried after the native turn");
+  assert.equal(opened.length, 2, "each new session opens only once after completion");
   assert.equal((await manager.status(failedOpen.taskId)).status, "success",
     "a failed UI dispatch must not fail the Codex turn");
   await until(async () => (await manager.logs({ taskId: failedOpen.taskId, limit: 100 })).entries
     .some((entry) => entry.kind === "desktop" && entry.message.includes("auto-open unavailable")));
-  assert.deepEqual(opened, [ids[0], ids[1], ids[1]],
-    "failed early dispatch is retried exactly once after completion, not on every token");
+  assert.deepEqual(opened, [ids[0], ids[1]],
+    "failed Desktop dispatch must not be repeated for each streamed token");
   await until(() => notifications.length === 3);
   assert.equal(notifications[2].status, "success");
   console.log("Trusted Codex desktop auto-open manager tests passed.");
