@@ -414,8 +414,11 @@ export class TongAgentTaskManager {
     return { ...project, root: resolve(project.root) };
   }
 
-  async start(input) {
+  async start(input, { parentGoalId = null } = {}) {
     await this.ensureOpen();
+    // Internal parent linkage is not part of the public MCP request schema.
+    if (parentGoalId !== null && (typeof parentGoalId !== "string"
+      || !/^[0-9a-f-]{36}$/i.test(parentGoalId))) throw Error("Invalid supervised parent");
     const request = normalizeRequest(input);
     const project = await this.projectForExecution(request.projectId);
     const preflight = await this.workerBroker.preflight({ projectId: project.id, projectRoot: project.root,workType:request.workType,requiredCapabilities:request.requiredCapabilities });
@@ -446,7 +449,7 @@ export class TongAgentTaskManager {
       const createdAt = new Date(this.now()).toISOString();
       const timeoutMs = Math.min((request.timeoutSeconds ?? this.defaultTimeoutMs / 1_000) * 1_000, this.maxTaskRuntimeMs);
       const task = {
-        taskId: randomUUID(), idempotencyHash, requestHash,
+        taskId: randomUUID(), idempotencyHash, requestHash, parentGoalId,
         projectId: request.projectId, projectRoot: project.root, agent: request.agent,
         executorMode: preflight?.mode ?? "isolated", task: request.task, scope: request.scope,
         ...(request.workType !== undefined ? {workType:request.workType} : {}),
@@ -534,7 +537,8 @@ export class TongAgentTaskManager {
     if (!task) return;
     // A newly created trusted native session can be opened in the existing Desktop window.
     // Do not steal focus for resumed sessions or sessions created by isolated workers.
-    const openNewDesktopSession = task.executorMode === "trusted-windows"
+    const openNewDesktopSession = !task.parentGoalId
+      && task.executorMode === "trusted-windows"
       && !task.codexSessionId && !continuationMessage;
     // Opening a still-active app-server writer in Desktop is not supported
     // reliably across Codex builds. Open only after the native turn exits.
@@ -550,7 +554,10 @@ export class TongAgentTaskManager {
       }
     };
     const sendFinishNotice = async () => {
-      if (!this.notifyOnCompletion || task.executorMode !== "trusted-windows") return;
+      // A supervised goal may include many internal turns. Notify only when
+      // the aggregate goal reaches a terminal or blocked state.
+      if (!this.notifyOnCompletion || task.parentGoalId
+        || task.executorMode !== "trusted-windows") return;
       const last = this.document.tasks.find(record => record.taskId === taskId);
       const status = last?.status;
       if (!["success", "failed", "cancelled", "waiting_user_action"].includes(status)) return;

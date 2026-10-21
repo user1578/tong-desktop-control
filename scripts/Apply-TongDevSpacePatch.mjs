@@ -37,7 +37,8 @@ function extendRestrictedServer(source) {
   const agentDockToolSet = agentDockReadToolSet.replace('"tong_agentdock_search_text"]);', '"tong_agentdock_search_text", "tong_agentdock_file_edit", "tong_agentdock_command", "tong_agentdock_session_status", "tong_agentdock_session_cancel"]);');
   if (!source.includes(agentDockToolSet) && !source.includes('"tong_run_command"]);') &&
       !source.includes('"tong_windows_inspect"]);') && !source.includes('"tong_dev_environment"]);') &&
-      !source.includes('"tong_project_prepare"]);') && !source.includes('"tong_agent_wait"]);')) {
+      !source.includes('"tong_project_prepare"]);') && !source.includes('"tong_agent_wait"]);') &&
+      !source.includes('"tong_goal_cancel"]);') && !source.includes('"tong_goal_start"')) {
     const prior = source.includes(agentDockReadToolSet) ? agentDockReadToolSet : source.includes(agentToolSet) ? agentToolSet : source.includes(metadataToolSet) ? metadataToolSet : baseToolSet;
     source = replaceOnce(source, prior, agentDockToolSet, "AgentDock fixed tool registration guard");
   }
@@ -75,6 +76,16 @@ function extendRestrictedServer(source) {
   if (!source.includes('"tong_agent_wait"')) {
     source = replaceOnce(source, '"tong_project_prepare"]);', '"tong_project_prepare", "tong_agent_wait"]);',
       'bounded Codex progress wait tool registration guard');
+  }
+  if (!source.includes('"tong_goal_start"')) {
+    source = replaceOnce(source, '"tong_agent_wait"]);',
+      '"tong_agent_wait", "tong_goal_start", "tong_goal_status", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume"]);',
+      'durable goal supervisor tool registration guard');
+  }
+  if (!source.includes('"tong_goal_resume"')) {
+    source = replaceOnce(source, '"tong_goal_review"]);',
+      '"tong_goal_review", "tong_goal_resume"]);',
+      'resumable blocked goal tool guard');
   }
   return source;
 }
@@ -122,7 +133,9 @@ const files = [
     previousHash9: "e896e4de982bed8faab799d919f284bca9eaac63acc9d9fd06f31f6832390489",
     previousHash10: "756b28ced3b6838b9a223a2d6a1ff1bdbae37a38d7ab64f6d82f27e5122687a3",
     previousHash11: "3728cb946e8dc9f48bdb8d5adf4f878b537023543140df51d1aa2bc49d26f3ef",
-    patchedHash: "7670539d5b9b299d8d7fab05ff839243588670ede3a9eb0814db1d08e2fa16fd",
+    previousHash12: "7670539d5b9b299d8d7fab05ff839243588670ede3a9eb0814db1d08e2fa16fd",
+    previousHash13: "febb76d6df6cd5684f35f0612aeb35c4625311955cab1aed16202b96a2db6758",
+    patchedHash: "9175f38177e52dceea739457c7c41d1745c7bf561790f7decf62560687849bf0",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -177,7 +190,7 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7 && hash !== file.previousHash8 && hash !== file.previousHash9 && hash !== file.previousHash10 && hash !== file.previousHash11) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7 && hash !== file.previousHash8 && hash !== file.previousHash9 && hash !== file.previousHash10 && hash !== file.previousHash11 && hash !== file.previousHash12 && hash !== file.previousHash13) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}: ${sha256(patched)}`);
   await writeFile(target, patched, "utf8");

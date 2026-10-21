@@ -35,6 +35,13 @@ const toolsList = {
       { name: "tong_agent_result" },
       { name: "tong_agent_sessions" },
       { name: "tong_project_prepare" },
+      { name: "tong_goal_start" },
+      { name: "tong_goal_status" },
+      { name: "tong_goal_list" },
+      { name: "tong_goal_result" },
+      { name: "tong_goal_cancel" },
+      { name: "tong_goal_review" },
+      { name: "tong_goal_resume" },
       { name: "bash" },
       { name: "exec_command" },
       { name: "write_stdin" },
@@ -48,7 +55,8 @@ const filtered = filterAllowedTools(toolsList);
 assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
   ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_windows_inspect", "tong_dev_environment", "tong_scan_directory", "tong_list_projects",
-    "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare"],
+    "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare",
+    "tong_goal_start", "tong_goal_status", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -88,7 +96,34 @@ assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { nam
   arguments: { ...validTask, sessionMode: "existing", codexSessionId: "019a1234-1234-7123-8123-123456789abc" } } }), null);
 assert.equal(await validateAllowedToolCall({ method: "tools/call", params: { name: "tong_agent_sessions",
   arguments: { projectId: "project-one", limit: 10, searchTerm: "Acceptance" } } }), null);
+const validGoal = {
+  projectId:"p0-homework-111",agent:"codex",goal:"Check test project",scope:"Read-only test",
+  idempotencyKey:"goal-gateway-acceptance-001",
+  steps:[{id:"check",title:"Check",instruction:"Inspect list",
+    verification:{type:"read-only-turn"}}],
+};
+assert.equal(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_start",arguments:validGoal
+}}),null);
+for(const invalidGoal of [
+  {...validGoal,agent:"zcode"},
+  {...validGoal,maxRounds:999},
+  {...validGoal,steps:[{...validGoal.steps[0],verification:{type:"files-exist",paths:["..\\private"]}}]},
+  {...validGoal,execute:"powershell"},
+]) assert.ok(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_start",arguments:invalidGoal
+}}),"reject unregistered agents and unsafe goal steps");
+assert.equal(await validateAllowedToolCall({method:"tools/call",params:{name:"tong_goal_list",arguments:{}}}),null);
 const watchId = "123e4567-e89b-42d3-a456-426614174000";
+assert.equal(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_review",arguments:{goalId:watchId,accepted:true,evidence:"Verified the expected file and tested all required cases"}
+}}),null);
+assert.ok(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_review",arguments:{goalId:watchId,accepted:true,evidence:"short"}
+}}));
+assert.equal(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_status",arguments:{goalId:watchId}
+}}),null);
 assert.equal(await validateAllowedToolCall({ method:"tools/call", params:{
   name:"tong_agent_wait",arguments:{taskId:watchId,waitSeconds:10,afterUpdatedAt:"2026-10-21T01:30:00.000Z"}
 } }), null);

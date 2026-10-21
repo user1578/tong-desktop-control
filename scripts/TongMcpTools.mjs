@@ -1,5 +1,7 @@
 import { TongProjectAccess, configureTongWorkspaceState } from "./TongProjectAccess.mjs";
 import { TongAgentTaskManager } from "./TongAgentTasks.mjs";
+import { TongGoalSupervisor } from "./TongGoalSupervisor.mjs";
+import { notifyWindowsTask } from "./TongWindowsTaskNotice.mjs";
 import {TongTrustedPolicy} from './TongTrustedCodexBroker.mjs';
 import {prepareTrustedProject} from './TongQuickProject.mjs';
 import { TongAgentDockRouter, registerAgentDockTools } from "./TongAgentDockTools.mjs";
@@ -10,12 +12,13 @@ import { inspectDevEnvironment } from './TongDevEnvironment.mjs';
 import { isAbsolute, join } from "node:path";
 
 let defaultTaskManager;
+let defaultGoalSupervisor;
 let preservedState;
 // Called by the locally approved launcher before DevSpace registers tools.
 // Preserves the original registry/Codex paths while code comes from a candidate.
 export function configureTongMcpState({stateDir,demoRoot,scanRoots}={}) {
   if(!isAbsolute(stateDir??'')||!isAbsolute(demoRoot??'')||scanRoots!==undefined&&(!Array.isArray(scanRoots)||scanRoots.some(root=>!isAbsolute(root))))throw new Error('Preserved Tong state paths must be absolute');
-  if(defaultTaskManager||preservedState)throw new Error('Tong state is already configured');
+  if(defaultTaskManager||defaultGoalSupervisor||preservedState)throw new Error('Tong state is already configured');
   preservedState=Object.freeze({stateDir,demoRoot,...(scanRoots!==undefined?{scanRoots:[...scanRoots]}:{})});
   configureTongWorkspaceState(preservedState);
 }
@@ -23,7 +26,12 @@ const dockClosures = new Set();
 export async function closeTongMcpTools({ timeoutMs = 10000 } = {}) {
   let timer;
   const cleanup = (async () => {
-    const results = await Promise.allSettled([...dockClosures].map(close => close()).concat(defaultTaskManager ? [defaultTaskManager.close()] : []));
+    // Stop the goal scheduler before closing its underlying per-turn manager.
+    const results = await Promise.allSettled([
+      ...(defaultGoalSupervisor ? [defaultGoalSupervisor.close()] : []),
+      ...[...dockClosures].map(close => close()),
+    ]);
+    if(defaultTaskManager)results.push(...await Promise.allSettled([defaultTaskManager.close()]));
     results.push(...await Promise.allSettled([closeAgentDockSessionCoordinators(), closeTongWorkspaceTools()]));
     return results;
   })();
@@ -84,6 +92,24 @@ const AGENT_ERRORS = new Set([
   "Invalid log limit",
   "Task manager is closed",
   "Task state is invalid or unavailable",
+  "Invalid supervised goal",
+  "Invalid supervised goal step",
+  "Invalid supervised goal verification",
+  "Invalid supervised goal verification paths",
+  "Goal round budget is smaller than the plan",
+  "Goal idempotency conflict",
+  "A supervised goal is already active in this project",
+  "Goal not found",
+  "Goal supervisor is closed",
+  "Invalid independent goal review",
+  "Goal is not awaiting independent review",
+  "Review step mismatch",
+  "Review evidence missing",
+  "File existence is not final code acceptance",
+  "Goal cannot resume without a saved waiting Codex turn",
+  "Goal deadline expired; review a new scoped request",
+  "Saved Codex turn is not resumable",
+  "Goal state changed during recovery",
 ]);
 
 function safeAgent(handler) {
@@ -111,6 +137,13 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
       notifyOnCompletion: true,
       ...(stateDir ? { statePath: join(stateDir, "agent-tasks.json"), trustedPolicyPath: join(stateDir, "trusted-codex.json") } : {}) }))
     : new TongAgentTaskManager({ access });
+  const goals = useDefaultAccess
+    ? (defaultGoalSupervisor ??= new TongGoalSupervisor({
+      tasks,
+      statePath: stateDir ? join(stateDir,"goal-supervisor.json") : join(process.cwd(),"runtime","goal-supervisor.json"),
+      notifier: notifyWindowsTask,
+      openDesktopThread: tasks.openDesktopThread,
+    })) : null;
   if (agentDock || process.env.TONG_AGENTDOCK_ENABLED === "1") {
     const close = registerAgentDockTools(server, registerTool, z, agentDock ?? new TongAgentDockRouter({ access,
       policyPath: process.env.TONG_AGENTDOCK_POLICY_PATH }), () => dockClosures.delete(close));
@@ -283,4 +316,64 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     _meta: {},
     annotations: { readOnlyHint: true },
   }, safeAgent((input) => tasks.result(input.taskId)));
+
+  // Goal-level interface stays stable when new agents get their own adapters.
+  // Individual Codex turns remain internal and never trigger final reports.
+  registerTool(server,"tong_goal_start",{
+    title:"Start a supervised multi-turn goal",
+    description:"Start one persistent goal, with bounded ordered steps and explicit evidence checks. Intermediate Codex turns are not completion reports. Only goal completion or a blocker triggers a Windows notice. Use only on an authorized project; the agent provider for this phase is Codex.",
+    inputSchema:{
+      projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
+      agent:z.enum(["codex"]),
+      goal:z.string().min(1).max(4000),
+      scope:z.string().min(1).max(2000),
+      idempotencyKey:z.string().min(16).max(128),
+      steps:z.array(z.object({
+        id:z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+        title:z.string().min(1).max(120),
+        instruction:z.string().min(1).max(3000),
+        verification:z.object({
+          type:z.enum(["read-only-turn","files-exist","review-required"]),
+          paths:z.array(z.string().min(1).max(240)).max(15).optional(),
+        }),
+      })).min(1).max(12),
+      sessionMode:z.enum(["new","latest"]).optional(),
+      workType:z.enum(["development","high-impact"]).optional(),
+      requiredCapabilities:z.array(z.enum(["project.read","project.write","command.execute",
+        "dependency.install","codex.session","git.commit","git.push"])).min(1).max(7).optional(),
+      maxRounds:z.number().int().min(1).max(20).optional(),
+      maxAttemptsPerStep:z.number().int().min(1).max(3).optional(),
+      roundTimeoutSeconds:z.number().int().min(10).max(3600).optional(),
+      deadlineSeconds:z.number().int().min(60).max(14400).optional(),
+    },
+    annotations:{readOnlyHint:false,destructiveHint:false},_meta:{},
+  },safeAgent(input=>goals?.start(input)??Promise.reject(Error("Goal supervisor unavailable"))));
+
+  for(const [tool,description,action] of [
+    ["tong_goal_status","Read persistent progress of one supervised goal","status"],
+    ["tong_goal_result","Read overall completion evidence and all internal turns","result"],
+    ["tong_goal_cancel","Stop a supervised goal without deleting its native thread","cancel"],
+    ["tong_goal_resume","Resume the same saved Codex turn after a user-action blocker is resolved; never creates a replacement session","resume"],
+  ]) registerTool(server,tool,{
+    title:description,description,
+    inputSchema:{goalId:z.string().uuid()},
+    annotations:{readOnlyHint:action!=="cancel",destructiveHint:false},_meta:{},
+  },safeAgent(input=>goals?.[action](input.goalId)??Promise.reject(Error("Goal supervisor unavailable"))));
+
+  registerTool(server,"tong_goal_review",{
+    title:"Record independent step verification",
+    description:"Only ChatGPT after separately inspecting project evidence should submit a grounded acceptance or rejection. This is not user permission and cannot expand project capabilities; accepted steps continue automatically, otherwise the goal remains blocked or retries within its existing budget.",
+    inputSchema:{
+      goalId:z.string().uuid(),
+      accepted:z.boolean(),
+      evidence:z.string().min(8).max(2000),
+    },
+    annotations:{readOnlyHint:false,destructiveHint:false},_meta:{},
+  },safeAgent(input=>goals?.review(input)??Promise.reject(Error("Goal supervisor unavailable"))));
+
+  registerTool(server,"tong_goal_list",{
+    title:"List supervised goals",
+    description:"Read a bounded list of parent goals and their statuses without prompts or credentials.",
+    inputSchema:{},annotations:{readOnlyHint:true},_meta:{},
+  },safeAgent(()=>goals?.list()??Promise.reject(Error("Goal supervisor unavailable"))));
 }

@@ -2,6 +2,18 @@
 
 > **当前最新状态：2026-10-21 已部署 `7d11382`，生产健康且在 `111` 完成真实Codex任务验收。** 后文更早的版本、失败状态及“未部署”是历史时间点记录，不能代替最新现场。
 
+## 2026-10-21 中断恢复后的开发进度与多Agent接入约定（最新）
+
+- 已核对用户消息中断前的实际工作树。保留了半成品`scripts/TongGoalSupervisor.mjs`、`tests/Test-TongGoalSupervisor.mjs`以及任务管理器/网关/DevSpace allowlist的未提交改动，而不是另起一套；两份预存已修改文档和原有未跟踪文件不混入本轮提交。
+- **任务级Supervisor开发版**：新增`tong_goal_start/status/list/result/cancel/review/resume`统一MCP入口，默认Codex；总目标有持久化step/round/会话关联、总截止时间、每步重试上限、幂等重放、子任务结果审查、停止/取消。同一目标可以连续多回合，用`existing`保持原生线程；单回合结束不会打开Desktop或触发Windows完成通知，整体完成/无法恢复/取消才对外通知；中间`awaiting_review`是ChatGPT审核需求，不等同需要用户打断。待用户明确生产部署前绝不改生产。
+- 生产故障恢复：用户处理授权/Writer等阻塞后，`tong_goal_resume`只能通过原任务管理器授权校验，恢复仍为`waiting_user_action`且`resumeAvailable`的同一原生子任务，绝不绕过权限或自动换会话；因超期、代码验证失败等阻塞不会盲目重试。只读元数据基线在启动子任务**之前持久化**，取消若恰好发生在子任务启动过程中会对刚启动的子任务补发取消，不可冒充成功。
+- 验收真实性：`read-only-turn`核对项目目录元数据指纹（只能保证有界元数据未改变，不能单凭它证明业务正确）；`files-exist`只证明受控路径下存在普通文件，不能作为开发任务最终通过依据，必须有独立审核收尾；`review-required`必须由主管ChatGPT根据实际证据提交人工/自动检查结果，拒绝后按预算继续或阻塞。文件路径拒绝遍历、符号链接、设备名和控制字符；原有鉴权范围不扩大。
+- **注意尚存能力边界**：Supervisor现在仅有受控的本地确定性验证和需要ChatGPT的独立审核，不会魔法般审查任意业务代码，也不能向已经结束的ChatGPT消息追加回复。跨进程重启、授权失效、writer争用以及复杂变更审查需停止/等待可恢复路径，不能以模型说“完成”来代替验收。真正的后台自动代码复核可在未来接经审查的固定测试/代码审核适配器，**不自动运行不受限Shell命令**。
+- **多Agent延期，已有阶段保留**：`P3-MultiAgent-Core-StageB`已有隔离编排器和Codex/Claude两种桥接协议、合成契约测试；**未接生产MCP**。Claude Code **仅CLI**，已在用户交互PowerShell中实际验收新建及恢复同一原生Session，尚无生产Runner。DSH **已装Desktop + 内置`dsh.cmd`**，S0协议/权限审计、S1合成Runner及Windows Job/ACL验证做过；`DSH-S1-B1B`原生加载限制尚有阻塞，不能宣称其CLI会话在Desktop直接可见或已可生产调用。Zcode、Work Buddy等未来再做能力探测，不据名称臆造会话API。
+- **未来所有Agent统一Tong MCP入口，而非每加一个Agent就新增一排公开工具**：Tong作为唯一公开调度面，用户只需选择已安装的服务并授权对应项目，复用`goal_start/status/result/cancel`和任务级进度/最终报告语义；新增Agent在内部注册一个独立Provider适配器，声明`discover/health/capabilities/authorize/start-or-resume/status-or-events/cancel/result/nativeSessionLink?`，逐项绑定真实能力与凭据/工作区/会话隔离。适配器必须区分CLI可恢复与Desktop可见（后者无法证实时就标注不可用），不许模拟原生会话。
+- **新增平台接入体验**：自动发现已有安装和受支持CLI/API → 展示可信可执行文件、支持的会话能力及必要连接项 → 首次完成对应provider与项目的持久授权 → 之后统一从Tong发任务。配置失败可诊断，新增平台不用改ChatGPT工具名、无需改已有Codex授权、不复制敏感token进入统一日志。新Provider接入先合成契约、再在`D:\作业\111`获准做实际新建/恢复/取消和安全验证，独立升级生产。
+- 所有Agent遵守同一结果节奏：**用户交代目标→我监督执行、验证与必要多轮→Agent执行→只在整项目标达标或确需用户决定时报告**。不同Provider不得用“单轮success”代替总目标完成。
+
 ## 2026-10-21 用户确定的任务级监督规则（目标需求；尚未实现完整自治）
 
 - **用户要的是“整个任务完成后汇报”，不是“Codex每完成一轮就汇报”**。ChatGPT担任主管Agent：任务拆解、下发、跟进、审核、必要时追问/修复/重测；Codex是执行Agent。平时维护可查询进度，普通轮次结束不触发给用户的最终汇报或完成通知。

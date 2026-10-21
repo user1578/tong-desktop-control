@@ -19,6 +19,7 @@ const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong
 const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare",
+  "tong_goal_start", "tong_goal_status", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume",
 ]);
 const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...WORKSPACE_TOOLS, ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
 const MCP_METHODS = new Set([
@@ -392,6 +393,62 @@ function validateAgentToolArguments(name, args) {
           || typeof args.sessionSearch !== "string" || !args.sessionSearch.trim()
           || args.sessionSearch.length > 200 || /\0/.test(args.sessionSearch)))) return invalid;
     return null;
+  }
+  if (name === "tong_goal_start") {
+    if (!exact(["projectId","agent","goal","scope","steps","idempotencyKey","sessionMode",
+      "maxRounds","maxAttemptsPerStep","roundTimeoutSeconds","deadlineSeconds","workType","requiredCapabilities"],
+      ["projectId","agent","goal","scope","steps","idempotencyKey"])
+      || !projectId.test(args.projectId ?? "") || args.agent !== "codex"
+      || typeof args.goal !== "string" || args.goal.length < 1 || args.goal.length > 4000 || /\0/.test(args.goal)
+      || typeof args.scope !== "string" || args.scope.length < 1 || args.scope.length > 2000 || /\0/.test(args.scope)
+      || typeof args.idempotencyKey !== "string" || args.idempotencyKey.length < 16
+      || args.idempotencyKey.length > 128 || /\s/.test(args.idempotencyKey)
+      || !Array.isArray(args.steps) || args.steps.length < 1 || args.steps.length > 12
+      || (args.sessionMode !== undefined && !["latest","new"].includes(args.sessionMode))
+      || (args.workType !== undefined && !["development","high-impact"].includes(args.workType))
+      || (args.requiredCapabilities !== undefined && (
+        !Array.isArray(args.requiredCapabilities) || args.requiredCapabilities.length<1
+        || args.requiredCapabilities.length>7
+        || new Set(args.requiredCapabilities).size!==args.requiredCapabilities.length
+        || args.requiredCapabilities.some(cap=>!["project.read","project.write","command.execute",
+          "dependency.install","codex.session","git.commit","git.push"].includes(cap))))
+      || (args.maxRounds !== undefined && (!Number.isInteger(args.maxRounds) || args.maxRounds < 1 || args.maxRounds > 20))
+      || (args.maxAttemptsPerStep !== undefined && (!Number.isInteger(args.maxAttemptsPerStep)
+        || args.maxAttemptsPerStep < 1 || args.maxAttemptsPerStep > 3))
+      || (args.roundTimeoutSeconds !== undefined && (!Number.isInteger(args.roundTimeoutSeconds)
+        || args.roundTimeoutSeconds < 10 || args.roundTimeoutSeconds > 3600))
+      || (args.deadlineSeconds !== undefined && (!Number.isInteger(args.deadlineSeconds)
+        || args.deadlineSeconds < 60 || args.deadlineSeconds > 14400))) return invalid;
+    const ids = new Set();
+    for (const step of args.steps) {
+      if (!isObject(step) || Object.keys(step).some(k=>!["id","title","instruction","verification"].includes(k))
+        || !/^[a-z][a-z0-9-]{0,39}$/.test(step.id??"") || ids.has(step.id)
+        || typeof step.title !== "string" || !step.title || step.title.length > 120
+        || typeof step.instruction !== "string" || !step.instruction || step.instruction.length > 3000
+        || !isObject(step.verification)
+        || Object.keys(step.verification).some(k=>!["type","paths"].includes(k))
+        || !["read-only-turn","files-exist","review-required"].includes(step.verification.type)) return invalid;
+      ids.add(step.id);
+      if (step.verification.type === "files-exist") {
+        if (!Array.isArray(step.verification.paths) || !step.verification.paths.length
+          || step.verification.paths.length > 15
+          || step.verification.paths.some(p=>typeof p!=="string" || p.length < 1 || p.length > 240
+            || /[\0:]/.test(p) || /^[\\/]/.test(p) || p.split(/[\\/]/).some(x=>!x||x==="."||x===".."))) return invalid;
+      } else if(step.verification.paths !== undefined) return invalid;
+    }
+    return null;
+  }
+  if(name==="tong_goal_review") {
+    return exact(["goalId","accepted","evidence"],["goalId","accepted","evidence"])
+      && typeof args.goalId==="string" && uuid.test(args.goalId)
+      && typeof args.accepted==="boolean"
+      && typeof args.evidence==="string" && args.evidence.trim().length>=8
+      && args.evidence.length<=2000 && !/\0/.test(args.evidence) ? null : invalid;
+  }
+  if(name==="tong_goal_list") return exact([])?null:invalid;
+  if(["tong_goal_status","tong_goal_cancel","tong_goal_result","tong_goal_resume"].includes(name)) {
+    return exact(["goalId"],["goalId"]) && typeof args.goalId === "string" && uuid.test(args.goalId)
+      ? null : invalid;
   }
   if (name === "tong_agent_wait") {
     return exact(["taskId", "afterUpdatedAt", "waitSeconds"], ["taskId"])
