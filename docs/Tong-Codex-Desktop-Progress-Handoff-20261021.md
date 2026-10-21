@@ -1,6 +1,15 @@
-# Tong × Codex Desktop 会话可见性与进度回报交接（2026-10-21）
+# Tong × Codex Desktop 会话可见性与进度回报交接（更新至2026-10-22）
 
-> **当前最新状态：2026-10-21 已部署 `7d11382`，生产健康且在 `111` 完成真实Codex任务验收。** 后文更早的版本、失败状态及“未部署”是历史时间点记录，不能代替最新现场。
+> **当前最新状态（2026-10-22）：生产App和Manager已升级到 `4ebdbc343dc9bcec37cc0898920e05b395aebb4d`；`111`中的真实`tong_goal_start`两轮原生Codex任务已成功，Manager健康，ACL无异常。** 后文旧版本和“未部署”是历史记录，不代表当前状态。
+
+## 2026-10-22 生产版Goal Supervisor正式验收（最新）
+
+- **用户本机升级已确认**：`PRODUCTION-UPGRADE-OK`，runId `014a7413-16ea-4343-b4cf-e18e94375b9d`，App/Manager PIN均精确为 `4ebdbc343dc9bcec37cc0898920e05b395aebb4d`；受控回滚快照 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261021151038067-4e97265f`。独立检查Manager doctor `healthy=true`、`phase=ready`、认证MCP与未认证拒绝均通过，7676/7677/18765监听，保护区额外ACE为0。
+- 刷新ChatGPT后，`tong_goal_start/status/result/list/cancel/review/resume`正式出现在Tong工具列表，且实际调用成功；此前升级后老工作区句柄曾短暂报`Path is outside allowed roots`，重新`open_workspace`注册目录后恢复，无授权配置变更。
+- **唯一一条正式生产验收Goal**：`519094a3-08c6-440e-9773-71abd7973fac`，项目`p0-homework-111`，`sessionMode=new`，Codex真实原生Session `01a15f34-d495-7a92-9181-7ce5fa37bcb1`。第一步`cnhello`对应child `9f5fd8a0-3aec-4386-8398-2fd77fa43aae`及native Turn `01a15f34-e00b-7010-ac70-5ed310e88e4c`，回复`你好！`；第二步`enhello`对应child `15c29f01-8e54-4710-a316-115ede495fc2`及native Turn `01a15f35-0c9a-7e51-bae6-79166089de49`，回复`Hello!`。约21秒完成，`roundCount=2`、`stepIndex=2`、`status=completed`，每步`attempts=1`且`native-turn-completed`、`workspace-metadata-unchanged`验收证据真实存在。
+- **Writer冲突未重现**：整个Goal执行期间没有通过单轮接口去抢Desktop原生Thread；两轮属于同一Session、具有不同原生Turn，且一次完成，无重试和`CODEX_SESSION_ACTIVE_WRITER`。两条child日志均只包含内部执行及完成，没有`Windows desktop task notification dispatched`或`Codex Desktop session deep link dispatched after turn`；Goal终止后实际查到1个Tong Windows任务通知进程，Desktop窗口进程存在且目标原生Session可被查询。**窗口进程或指令派发不是用户目视证明**：新会话是否在Desktop正确自动显示两条消息、任务提示卡用户是否看到，仍需用户确认；当前不要把这两项写成“亲眼验收通过”。
+- **工作区与生产完整性**：真实任务只在`D:\作业\111`测试，文件列表仍只有原始`你好.txt`（8字节，修改时间戳不变），未提交Git或变更业务数据；`D:\Tong\runtime\temp`非预期ACL条目仍为0，Manager doctor保持`healthy=true`。运行日志仍有`exa` OAuth `invalid_grant`及Codex忽略旧`computer_use.windows.always_allowed_app_ids`提示，不影响此次成功，但可作为独立维护项处理。
+- 这次证明了**真实生产版本的原生多轮执行、同会话复用、独立验证和整项目标完成**，以及存在一个总任务通知进程；不代表已经实现向结束的ChatGPT消息后台主动推送，不代表对任意复杂代码可以无需独立审查。后续不为同一目的重复生成测试会话；多Agent仍暂缓。
 
 ## 2026-10-21 用户亲验“你好 / hello”双轮Desktop对话与Writer冲突修复（最新）
 
