@@ -2,7 +2,16 @@
 
 > **当前最新状态：2026-10-21 已部署 `7d11382`，生产健康且在 `111` 完成真实Codex任务验收。** 后文更早的版本、失败状态及“未部署”是历史时间点记录，不能代替最新现场。
 
-## 2026-10-21 Supervisor在111真实多轮验收与修复（最新；开发版，未部署）
+## 2026-10-21 用户亲验“你好 / hello”双轮Desktop对话与Writer冲突修复（最新）
+
+- 用户在`D:\作业\111`的Codex Desktop中**亲眼确认同一原生对话完整显示两轮**：`你好`→`你好！`（独立Task `276b112e-4636-4124-ad9d-6f8e170a8554`）、`hello`→`Hello!`（独立Task `3c6d8e66-fadc-447e-b9b1-d71e1afca1ee`），两轮Session ID均为`01a15ecd-c7e7-76d2-88f3-bef00176bf14`，原生Turn ID各不相同。独立复查文件`你好.txt`未变、生产`runtime\\temp`非预期ACE为0。
+- **生产暴露的Writer冲突**：生产`7d11382`单轮`tong_agent_start(sessionMode=new)`结束即深链接打开Codex Desktop并通知，第二轮用`existing`继续时被Desktop App Server占用原生Thread Writer，报`CODEX_SESSION_ACTIVE_WRITER`；用户完全退出Codex Desktop后，在**同一个Task和原生Session**上`tong_agent_resume`成功完成`hello`，无锁删除、无强杀进程，也未新建替代会话。此问题不应被描述成Codex续聊失败，而是**单轮接口不适合已知多轮工作**。
+- 开发版Supervisor已有`parentGoalId`：内部child会话不能逐轮抢Desktop焦点或发Windows通知。然而本次**真实任务管理器+目标监督器合成集成测试**查出另一遗漏：`publicGoal`没有暴露`sessionMode`，使`notify`判断`g.sessionMode===new`失败，整项完成后的Desktop自动打开没有实际派发。开发版修正公开状态包含`sessionMode`。
+- 新增`tests/Test-TongGoalDesktopHandoff.mjs`，用真正的`TongAgentTaskManager` + `TongGoalSupervisor`组合并注入合成Codex后端：第一轮中间阶段0次Desktop开启/0次用户通知，第二轮复用相同nativeSession，在**两轮均通过**后恰好1次Goal级Desktop深链接派发与1次Goal级Windows通知；所有child包含同一parentGoalId。保留现有独立任务一轮即通知/打开的语义，仅让多轮任务从统一`tong_goal_start`进入。
+- MCP工具说明已明确：`tong_agent_start/resume`是**单轮**接口，已知跨多轮的任务必须优先使用`tong_goal_start`，避免ChatGPT手工将单轮视为整体完成。用户不应为常规多轮操作频繁退出Desktop；无法回避的外部Writer占用仍不得删除锁、强杀Desktop或假造已续聊。
+- **发布状态**：开发代码尚未部署，当前生产App/Manager仍为`7d11382300b9635d60b598e54a40e1d5083f7bb0`；本轮通过合成回归不代表生产新`goal_*` MCP完成端到端部署验收。需要单独匹配候选、回滚快照和本机批准，升级后继续仅在`111`验证实际Desktop最后打开、单次通知以及ACL。
+
+## 2026-10-21 Supervisor在111真实多轮验收与修复（历史开发验收；开发版，未部署）
 
 - **实测通过**：在项目`D:\作业\111`使用开发版Supervisor、独立任务/审计/目标状态（`D:\Tong\state\goal-supervisor-live-acceptance-20261021-r2\test-state`），实际调用本机Codex两轮。总goal ID `16aa56d5-8d86-428d-aa20-f375dfe14678`，两个child任务 `53e998df-65b2-4622-bdbe-6c84c5c3ab99`、`c880d8ac-f0cd-4878-8cbc-154b6fec5c8b`，**共用同一原生Session** `01a15ebb-89a1-7801-9b23-01c1c4d5d543`，各自具有不同turn ID。第一轮只读列出`你好.txt`，文件数1；第二轮引用前一轮上下文，重新检查确认1。两轮都经目录元数据指纹核实无变化；目标最终`completed`，两步`completed`，通知回调仅在整体结束时调用一次（`success`），耗时约51秒。
 - **测试隔离**：验收器`tests/Manual-TongGoalLiveAcceptance-111.mjs`需要本机显式环境变量`TONG_GOAL_LIVE_ACCEPTANCE=YES`，不会被日常CI误触发；状态/锁/审计均写在独立`D:\Tong\state\goal-supervisor-live-acceptance-20261021-r2\test-state`。现有生产项目注册和Codex授权仅读取，生产任务数据库、PIN与Manager未变。成功后再次独立检查生产Manager doctor `healthy=true`、phase ready，`D:\Tong\runtime\temp`非预期ACE仍为0、生产App/Manager仍为`7d11382`、`111`只有原文件。

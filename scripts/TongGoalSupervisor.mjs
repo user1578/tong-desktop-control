@@ -148,6 +148,7 @@ const publicGoal = g => ({
   steps:g.steps.map((s,i)=>({id:s.id,title:s.title,status:s.status,
     evidence:s.evidence ?? [],attempts:s.attempts})),
   activeTaskId:g.activeTaskId,nativeSessionId:g.nativeSessionId,
+  sessionMode:g.sessionMode,
   blockedReason:g.blockedReason??null,needsUserAction:g.status==="blocked",
   needsSupervisorReview:g.status==="awaiting_review",
   reviewStepId:g.status==="awaiting_review"?g.reviewStepId:null,

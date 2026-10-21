@@ -217,7 +217,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_start", {
     title: "Start a Codex project task",
-    description: "Queue a Codex task. A persistent root-bound development grant starts normal work without task challenges; high-impact work waits for local confirmation. Declare requiredCapabilities before long work. Reuse the latest suitable project thread for a related follow-up; use new for an unrelated goal or when explicitly requested. Conversation lengths are not forced to a fixed turn count. Requires an idempotency key, scope and bounded timeout.",
+    description: "Start ONE standalone Codex turn. On completion a new native session may immediately open in Desktop and show a per-turn notification; Desktop can then own the writer, preventing direct follow-up. For any planned multi-turn task or task-level supervision, use tong_goal_start instead: it defers Desktop opening and user notification until the whole goal is done. Persistent development authorization and bounded per-turn scopes still apply.",
     inputSchema: {
       projectId: z.string().min(2).max(40).describe("Registered local project ID with an independent agent.execute grant."),
       agent: z.enum(["codex"]).describe("Agent to use. This phase supports Codex only."),
@@ -300,7 +300,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_resume", {
     title: "Resume a Codex session",
-    description: "Continue a saved native Codex session. Persistent development authorization is reused; high-impact or legacy tasks require a fresh local scoped confirmation. Never expands project permissions.",
+    description: "Resume a standalone saved native Codex task. A Desktop client holding the session writer can block this action; do not kill Desktop or delete locks. For a multi-step supervised goal use tong_goal_start/tong_goal_resume and let its scheduler manage all turns. Persistent development grants are reused; higher-impact actions require local confirmation.",
     inputSchema: {
       taskId: z.string().uuid(),
       message: z.string().min(1).max(2_000).optional(),
@@ -321,7 +321,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
   // Individual Codex turns remain internal and never trigger final reports.
   registerTool(server,"tong_goal_start",{
     title:"Start a supervised multi-turn goal",
-    description:"Start one persistent goal, with bounded ordered steps and explicit evidence checks. Intermediate Codex turns are not completion reports. Only goal completion or a blocker triggers a Windows notice. Use only on an authorized project; the agent provider for this phase is Codex.",
+    description:"Preferred interface for a task requiring multiple Codex turns. Persist one parent goal and bounded, independently verified steps; reuse one native Codex thread. Child turns do not open Desktop or send per-turn notices; only whole-goal completion opens the new native session and sends a completion notice, or an unrecoverable blocker prompts attention. Requires a project grant. Codex is the available provider in this phase.",
     inputSchema:{
       projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
       agent:z.enum(["codex"]),
