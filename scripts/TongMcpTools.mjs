@@ -184,7 +184,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_start", {
     title: "Start a Codex project task",
-    description: "Queue a Codex task. A persistent root-bound development grant starts normal work without task challenges; high-impact work waits for local confirmation. Declare requiredCapabilities before long work. Defaults to the latest suitable project session. Requires an idempotency key, scope and bounded timeout.",
+    description: "Queue a Codex task. A persistent root-bound development grant starts normal work without task challenges; high-impact work waits for local confirmation. Declare requiredCapabilities before long work. Reuse the latest suitable project thread for a related follow-up; use new for an unrelated goal or when explicitly requested. Conversation lengths are not forced to a fixed turn count. Requires an idempotency key, scope and bounded timeout.",
     inputSchema: {
       projectId: z.string().min(2).max(40).describe("Registered local project ID with an independent agent.execute grant."),
       agent: z.enum(["codex"]).describe("Agent to use. This phase supports Codex only."),
@@ -194,7 +194,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
       requiredCapabilities: z.array(z.enum(['project.read','project.write','command.execute','dependency.install','codex.session','git.commit','git.push'])).min(1).max(7).optional().describe('Declare all development capabilities needed for the workflow before starting. Missing Git authorization is rejected before queueing.'),
       idempotencyKey: z.string().min(16).max(128).describe("Client-generated retry key; reusing it cannot start a duplicate task."),
       timeoutSeconds: z.number().int().min(1).max(3_600).optional().describe("Maximum task runtime in seconds; defaults to the local configured limit."),
-      sessionMode: z.enum(["latest", "new", "existing"]).optional().describe("Trusted Windows session selection. Defaults to latest suitable project session, or creates one if none exists."),
+      sessionMode: z.enum(["latest", "new", "existing"]).optional().describe("Defaults to latest reusable native project session; use new for a distinct goal, or existing for a specified native thread. Do not start a fresh conversation solely to reach a round quota."),
       codexSessionId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/).optional().describe("Required only for existing; obtained from native discovery or a previous task."),
       sessionSearch: z.string().min(1).max(200).optional().describe("Optional case-sensitive title filter for latest session selection."),
     },
@@ -216,7 +216,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_status", {
     title: "Get Codex task status",
-    description: "Read the persisted lifecycle state and runtime for a task ID.",
+    description: "Read persisted task lifecycle, verified four-step checklist and current activity for a task ID. A checked step only means its recorded checkpoint completed, not that every domain-specific test passed.",
     inputSchema: { taskId: z.string().uuid() },
     _meta: {},
     annotations: { readOnlyHint: true },
@@ -224,7 +224,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   registerTool(server, "tong_agent_wait", {
     title: "Wait for Codex task progress",
-    description: "Bounded read-only wait (up to 15 seconds) for a task update or completion. Useful only while the ChatGPT turn remains active; does not push chat messages after a turn ends.",
+    description: "Bounded read-only wait (up to 15 seconds) for a task update or completion, including its verified lifecycle checklist. Useful only while the ChatGPT turn remains active; does not push chat messages after a turn ends.",
     inputSchema: {
       taskId: z.string().uuid(),
       afterUpdatedAt: z.string().datetime().optional(),

@@ -65,6 +65,37 @@ function taskProgress(task) {
   return { phase, message, activity, lastActivityAt, terminal: TERMINAL_STATES.has(task.status) };
 }
 
+// A trustworthy lifecycle checklist, not an invented percentage of Codex's
+// actual code changes. Only persisted task events can mark steps completed.
+function taskChecklist(task) {
+  const terminal = TERMINAL_STATES.has(task.status);
+  const allowed = task.authorization?.mode === "project-development"
+    || Boolean(task.startedAt && !task.pendingApproval);
+  // Previously persisted completed tasks predate these checkpoint timestamps.
+  const connected = Boolean(task.sessionConnectedAt || task.codexTurnId);
+  const finishedTurn = task.turnStatus === "completed";
+  const completed = task.status === "success" && Boolean(task.resultCollectedAt || task.result);
+  const steps = [
+    { id: "authorization", label: "检查任务与授权",
+      state: allowed ? "completed" : task.status === "waiting_user_action" ? "waiting"
+        : terminal ? "failed" : "active" },
+    { id: "session", label: "连接Codex原生会话",
+      state: connected ? "completed" : terminal ? "failed"
+        : allowed && task.status === "running" ? "active" : "pending" },
+    { id: "execution", label: "执行Codex任务",
+      state: finishedTurn && completed ? "completed"
+        : terminal && connected ? "failed"
+        : connected && task.status === "running" ? "active"
+        : task.status === "waiting_user_action" && connected ? "waiting" : "pending" },
+    { id: "result", label: "收集结果并准备汇报",
+      state: completed ? "completed" : terminal && finishedTurn ? "failed"
+        : task.resultCollectedAt ? "active" : "pending" },
+  ];
+  return { kind: "verified-lifecycle", steps,
+    completedCount: steps.filter(step => step.state === "completed").length,
+    totalCount: steps.length };
+}
+
 function publicTask(task, now = Date.now()) {
   const runtimeMs = task.startedAt
     ? Math.max(0, (task.finishedAt ? Date.parse(task.finishedAt) : now) - Date.parse(task.startedAt))
@@ -80,7 +111,7 @@ function publicTask(task, now = Date.now()) {
     updatedAt: task.updatedAt,
     finishedAt: task.finishedAt,
     runtimeMs,
-    progress: taskProgress(task),
+    progress: { ...taskProgress(task), checklist: taskChecklist(task) },
     codexSessionId: task.codexSessionId,
     codexTurnId: task.codexTurnId ?? null,
     pendingApproval: Boolean(task.pendingApproval),
@@ -422,7 +453,8 @@ export class TongAgentTaskManager {
         ...(request.requiredCapabilities !== undefined ? {requiredCapabilities:request.requiredCapabilities} : {}),
         authorization:preflight?.authorization ?? null,
         timeoutMs, status: "queued", createdAt, startedAt: null, updatedAt: createdAt, finishedAt: null,
-        codexSessionId, sessionMode, codexTurnId: null, pendingApproval: false, resumeCount: 0, summary: null, result: null, error: null,
+        codexSessionId, sessionMode, codexTurnId: null, sessionConnectedAt: null,
+        resultCollectedAt: null, pendingApproval: false, resumeCount: 0, summary: null, result: null, error: null,
         baselineFiles: [], logs: [], logBytes: 0, logsTruncated: false,
       };
       this.document.tasks.push(task);
@@ -580,7 +612,10 @@ export class TongAgentTaskManager {
         signal: controller.signal,
         onSessionId: async (id) => {
           if (typeof id === "string" && id.length <= 200) {
-            await this.updateTask(taskId, (record) => { record.codexSessionId = id; });
+            await this.updateTask(taskId, (record) => {
+              record.codexSessionId = id;
+              record.sessionConnectedAt = new Date(this.now()).toISOString();
+            });
           }
         },
         onLog: (message, kind = "output") => {
@@ -609,6 +644,7 @@ export class TongAgentTaskManager {
         record.summary = typeof result?.summary === "string" ? cleanText(result.summary).slice(0, 16_000) : null;
         record.codexTurnId = result?.turnId ?? null;
         record.result = { ...(gitResult ?? {}), tests: Array.isArray(result?.tests) ? result.tests.slice(0, 100) : [] };
+        record.resultCollectedAt = new Date(this.now()).toISOString();
         record.turnStatus = result?.turnStatus ?? null;
         record.finishedAt = finishedAt;
         if (execution?.timedOut) {
@@ -793,6 +829,8 @@ export class TongAgentTaskManager {
       record.summary = null;
       record.result = null;
       record.codexTurnId = null;
+      record.sessionConnectedAt = null;
+      record.resultCollectedAt = null;
       record.turnStatus = null;
       record.resumeCount += 1;
       record.error = null;

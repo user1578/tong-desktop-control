@@ -28,7 +28,8 @@ const manager = new TongAgentTaskManager({
       mode: "trusted-windows",
       authorization: { mode: "project-development", capabilities: ["codex.session"] },
     }),
-    selectSession: async ({ codexSessionId }) => codexSessionId,
+    selectSession: async ({ sessionMode, codexSessionId }) =>
+      codexSessionId ?? (sessionMode === "latest" && next > 0 ? ids[next - 1] : null),
     runTask: async (spec, { onSessionId, onLog }) => {
       const threadId = spec.threadId ?? ids[next++];
       await onSessionId(threadId);
@@ -79,7 +80,11 @@ try {
     idempotencyKey: "desktop-opening-test-new-001", sessionMode: "new",
   });
   await until(() => releaseFirstTurn);
-  assert.equal((await manager.status(start.taskId)).status, "running");
+  const during = await manager.status(start.taskId);
+  assert.equal(during.status, "running");
+  assert.deepEqual(during.progress.checklist.steps.map(step => step.state),
+    ["completed", "completed", "active", "pending"],
+    "checklist must reflect verified events, not guessed completion");
   assert.deepEqual(opened, [],
     "an active native writer must not be handed to Desktop before completion");
   releaseFirstTurn();
@@ -92,6 +97,10 @@ try {
   assert.equal(logsAfter.entries.some(e => e.message.includes("deep link dispatched after turn")), true);
   assert.equal(fresh.codexSessionId, ids[0]);
   assert.equal(fresh.progress.phase, "success");
+  assert.equal(fresh.progress.checklist.kind, "verified-lifecycle");
+  assert.equal(fresh.progress.checklist.completedCount, 4);
+  assert.deepEqual(fresh.progress.checklist.steps.map(step => step.state),
+    ["completed", "completed", "completed", "completed"]);
   assert.match(fresh.progress.message, /SQLite/);
   assert.deepEqual({kind:fresh.progress.activity.kind,state:fresh.progress.activity.state},
     {kind:"commandExecution",state:"started"});
@@ -112,13 +121,21 @@ try {
   assert.equal(opened.length, 2, "each new session opens only once after completion");
   assert.equal((await manager.status(failedOpen.taskId)).status, "success",
     "a failed UI dispatch must not fail the Codex turn");
+  assert.equal((await manager.status(failedOpen.taskId)).progress.checklist.completedCount, 4,
+    "a failed optional Desktop launch cannot mark Codex task as failed");
   await until(async () => (await manager.logs({ taskId: failedOpen.taskId, limit: 100 })).entries
     .some((entry) => entry.kind === "desktop" && entry.message.includes("auto-open unavailable")));
   assert.deepEqual(opened, [ids[0], ids[1]],
     "failed Desktop dispatch must not be repeated for each streamed token");
   await until(() => notifications.length === 3);
   assert.equal(notifications[2].status, "success");
-  console.log("Trusted Codex desktop auto-open manager tests passed.");
+  const latest = await run("latest", "desktop-opening-test-reuse-004");
+  assert.equal(latest.codexSessionId, ids[1],
+    "latest must reuse an existing native thread instead of creating one per task");
+  assert.deepEqual(opened, [ids[0], ids[1]],
+    "reused native sessions must not force Desktop to steal focus");
+  assert.equal(latest.progress.checklist.completedCount, 4);
+  console.log("Trusted Codex desktop auto-open, lifecycle checklist and session reuse tests passed.");
 } finally {
   await manager.close();
   await rm(root, { recursive: true, force: true });
