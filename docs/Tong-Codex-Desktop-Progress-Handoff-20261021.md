@@ -1,6 +1,19 @@
 # Tong × Codex Desktop 会话可见性与进度回报交接（2026-10-21）
 
-> **当前最新状态：已部署到生产（2026-10-21）。** 下方早期“尚未部署”“正在运行”等条目是历史记录，以此节和实时检查为准。
+> **当前最新状态：2026-10-21 已部署 `7d11382`，生产健康且在 `111` 完成真实Codex任务验收。** 后文更早的版本、失败状态及“未部署”是历史时间点记录，不能代替最新现场。
+
+## 2026-10-21 生产升级与111项目验收（当前最新）
+
+- 用户在本机PowerShell 7完成受控升级：`PRODUCTION-UPGRADE-OK`。App/Manager精确提交均为 `7d11382300b9635d60b598e54a40e1d5083f7bb0`，运行ID `02278c79-c0dc-4d76-94eb-cdd06838111d`；生产Manager `doctor.healthy=true`、`phase=ready`、受保护路径ACL检查全部通过；7676、7677、18765三个监听端口存在，最后复查登录监控为Running。
+- **发布回滚快照**：`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261020190433769-1aa422e5`。原生产 `376a328` 的App/Manager各275项源码快照已验证，新候选 `7d11382` 的278项源码及23项原生文件、补丁和SQLite native均校验通过。之后如需回滚应先复核当前运行与该快照的绑定关系，勿直接覆盖生产目录。
+- 用户明确：**所有后续Tong/Codex功能测试默认只用 `D:\作业\111`（项目ID `p0-homework-111`），禁止继续在TravelGuard业务项目里反复创建验收会话。** `111`已由既有`D:\作业`根目录信任自动获得开发授权，但无git.push；它不是Git仓库，不应该为了测试而初始化Git。
+- 真实E2E任务 `f97d8524-fee8-4cbb-8039-edecc5e1c502`，新原生会话 `01a15caf-bca4-7a53-98c8-e2adc0aef6f0`，`success`，约22.8秒。Codex只读列出 `111` 顶层目录，报告 `你好.txt` 一项（文件数=1）。任务Result的`changedFiles=[]`，随后独立查看`111`仍只有原文件，无修改。
+- `tong_agent_sessions`确认会话标题已设置；`tong_agent_status.progress`实际返回执行中消息、commandExecution的started/completed及完成状态。日志有`Codex Desktop session deep link dispatched after turn.`与`Windows desktop task notification dispatched.`。**日志仅证明派发，最终Desktop自动打开和新提示卡是否由用户实际看到，仍等用户截图/口头确认；不得当作已通过UI验收。**
+- **ACL根因修复有真实证据**：新版本Codex App Server使用独立的 `D:\Tong\state\codex-sandbox-temp`，该路径有沙盒SID访问记录；执行完整Codex任务前后，生产`D:\Tong\runtime\temp`的非预期ACE均为 **0**。任务完成后再次调用Manager doctor仍是`healthy=true`，生产ACL未再次受Codex沙盒污染。此结论为一次真实任务的验收，不表示未来所有Windows或Codex更新均不会改变沙盒行为。
+- 用户之前已确认过新版开发测试的 `Tong · travelguard` 提示卡**独立测试可见**。本次生产`111`完成提示卡已派发，仍需要用户确认是否真的显示。该提示卡是Windows本地窗体，不是ChatGPT主动发新消息。
+- Codex执行日志中的被忽略旧配置项和exa OAuth失败仍可能出现，但这次任务成功；若需要清理应作为独立事项，不能将其误认为本次生产验收失败。
+- **功能边界维持不变**：运行中强行打开同一Codex原生会话可能受到Active Writer/跨进程加载限制，生产采用完成后自动打开；ChatGPT轮次结束后没有普通MCP可持续向该轮主动追加聊天回复。本地提示卡与有界进度轮询可部分改善体验。
+
 
 ## 2026-10-21 临时目录ACL再发生：必须在下次生产升级中解决（最新）
 
