@@ -37,6 +37,7 @@ const toolsList = {
       { name: "tong_project_prepare" },
       { name: "tong_goal_start" },
       { name: "tong_goal_status" },
+      { name: "tong_goal_wait" },
       { name: "tong_goal_list" },
       { name: "tong_goal_result" },
       { name: "tong_goal_cancel" },
@@ -56,7 +57,7 @@ assert.deepEqual(
   filtered.result.tools.map((tool) => tool.name),
   ["open_workspace", "read", "write", "edit", "tong_list_drives", "tong_windows_inspect", "tong_dev_environment", "tong_scan_directory", "tong_list_projects",
     "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare",
-    "tong_goal_start", "tong_goal_status", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume"],
+    "tong_goal_start", "tong_goal_status", "tong_goal_wait", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume"],
 );
 assert.equal(filtered.result.nextCursor, "cursor-1");
 
@@ -124,6 +125,17 @@ assert.ok(await validateAllowedToolCall({method:"tools/call",params:{
 assert.equal(await validateAllowedToolCall({method:"tools/call",params:{
   name:"tong_goal_status",arguments:{goalId:watchId}
 }}),null);
+assert.equal(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_wait",arguments:{goalId:watchId,afterCursor:"a".repeat(64),waitSeconds:10}
+}}),null);
+for(const badWatch of [
+  {goalId:watchId,waitSeconds:16},
+  {goalId:watchId,afterCursor:"../../../private"},
+  {goalId:watchId,afterCursor:"g".repeat(64)},
+  {goalId:watchId,unknown:"ignored"},
+]) assert.ok(await validateAllowedToolCall({method:"tools/call",params:{
+  name:"tong_goal_wait",arguments:badWatch
+}}));
 assert.equal(await validateAllowedToolCall({ method:"tools/call", params:{
   name:"tong_agent_wait",arguments:{taskId:watchId,waitSeconds:10,afterUpdatedAt:"2026-10-21T01:30:00.000Z"}
 } }), null);

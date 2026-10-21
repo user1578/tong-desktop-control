@@ -350,7 +350,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
   },safeAgent(input=>goals?.start(input)??Promise.reject(Error("Goal supervisor unavailable"))));
 
   for(const [tool,description,action] of [
-    ["tong_goal_status","Read persistent progress of one supervised goal","status"],
+    ["tong_goal_status","Read evidence-backed step checklist and active Codex turn phase for one supervised goal; only verified steps are checked","status"],
     ["tong_goal_result","Read overall completion evidence and all internal turns","result"],
     ["tong_goal_cancel","Stop a supervised goal without deleting its native thread","cancel"],
     ["tong_goal_resume","Resume the same saved Codex turn after a user-action blocker is resolved; never creates a replacement session","resume"],
@@ -359,6 +359,19 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     inputSchema:{goalId:z.string().uuid()},
     annotations:{readOnlyHint:action!=="cancel",destructiveHint:false},_meta:{},
   },safeAgent(input=>goals?.[action](input.goalId)??Promise.reject(Error("Goal supervisor unavailable"))));
+
+  // Bounded long-poll intended for an active ChatGPT reply. It cannot update
+  // an already-sent chat card or send an unsolicited ChatGPT message.
+  registerTool(server,"tong_goal_wait",{
+    title:"Watch verified goal steps",
+    description:"Wait up to 15 seconds for a changed evidence-backed goal progress cursor or a terminal/review checkpoint. Shows active Codex turn phase separately from verified functional milestones. Use repeatedly while the ChatGPT turn remains active; does not push updates to an already-sent card.",
+    inputSchema:{
+      goalId:z.string().uuid(),
+      afterCursor:z.string().regex(/^[a-f0-9]{64}$/).optional(),
+      waitSeconds:z.number().int().min(1).max(15).optional(),
+    },
+    annotations:{readOnlyHint:true},_meta:{},
+  },safeAgent(input=>goals?.wait(input)??Promise.reject(Error("Goal supervisor unavailable"))));
 
   registerTool(server,"tong_goal_review",{
     title:"Record independent step verification",

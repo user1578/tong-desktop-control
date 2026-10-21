@@ -87,6 +87,11 @@ function extendRestrictedServer(source) {
       '"tong_goal_review", "tong_goal_resume"]);',
       'resumable blocked goal tool guard');
   }
+  if (!source.includes('"tong_goal_wait"')) {
+    source = replaceOnce(source, '"tong_goal_resume"]);',
+      '"tong_goal_resume", "tong_goal_wait"]);',
+      'bounded verified goal progress watch registration guard');
+  }
   return source;
 }
 
@@ -135,7 +140,8 @@ const files = [
     previousHash11: "3728cb946e8dc9f48bdb8d5adf4f878b537023543140df51d1aa2bc49d26f3ef",
     previousHash12: "7670539d5b9b299d8d7fab05ff839243588670ede3a9eb0814db1d08e2fa16fd",
     previousHash13: "febb76d6df6cd5684f35f0612aeb35c4625311955cab1aed16202b96a2db6758",
-    patchedHash: "9175f38177e52dceea739457c7c41d1745c7bf561790f7decf62560687849bf0",
+    previousHash14: "9175f38177e52dceea739457c7c41d1745c7bf561790f7decf62560687849bf0",
+    patchedHash: "827e80e15951835c6b1a8ead93a25d30727ae41dd22a156be0aedcc0229eb019",
     upgrade: extendRestrictedServer,
     transform(source) {
       source = replaceOnce(source,
@@ -190,7 +196,7 @@ for (const file of files) {
   const hash = sha256(source);
   if (hash === file.patchedHash) continue;
   if (checkOnly) throw new Error(`DevSpace security patch missing or changed: ${file.name}`);
-  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7 && hash !== file.previousHash8 && hash !== file.previousHash9 && hash !== file.previousHash10 && hash !== file.previousHash11 && hash !== file.previousHash12 && hash !== file.previousHash13) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
+  if (hash !== file.originalHash && hash !== file.previousHash && hash !== file.previousHash2 && hash !== file.previousHash3 && hash !== file.previousHash4 && hash !== file.previousHash5 && hash !== file.previousHash6 && hash !== file.previousHash7 && hash !== file.previousHash8 && hash !== file.previousHash9 && hash !== file.previousHash10 && hash !== file.previousHash11 && hash !== file.previousHash12 && hash !== file.previousHash13 && hash !== file.previousHash14) throw new Error(`Unexpected DevSpace 1.0.8 file; refusing to patch: ${file.name}`);
   const patched = hash === file.originalHash ? file.transform(source) : file.upgrade(source);
   if (file.patchedHash && sha256(patched) !== file.patchedHash) throw new Error(`DevSpace security patch output changed: ${file.name}: ${sha256(patched)}`);
   await writeFile(target, patched, "utf8");

@@ -19,7 +19,7 @@ const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong
 const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare",
-  "tong_goal_start", "tong_goal_status", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume",
+  "tong_goal_start", "tong_goal_status", "tong_goal_wait", "tong_goal_list", "tong_goal_result", "tong_goal_cancel", "tong_goal_review", "tong_goal_resume",
 ]);
 const ALLOWED_TOOLS = new Set(["open_workspace", "read", "write", "edit", ...WORKSPACE_TOOLS, ...METADATA_TOOLS, ...AGENT_TOOLS, ...AGENTDOCK_PUBLIC_TOOLS]);
 const MCP_METHODS = new Set([
@@ -444,6 +444,14 @@ function validateAgentToolArguments(name, args) {
       && typeof args.accepted==="boolean"
       && typeof args.evidence==="string" && args.evidence.trim().length>=8
       && args.evidence.length<=2000 && !/\0/.test(args.evidence) ? null : invalid;
+  }
+  if(name==="tong_goal_wait") {
+    return exact(["goalId","afterCursor","waitSeconds"],["goalId"])
+      && typeof args.goalId==="string" && uuid.test(args.goalId)
+      && (args.afterCursor===undefined || typeof args.afterCursor==="string"
+        && /^[a-f0-9]{64}$/.test(args.afterCursor))
+      && (args.waitSeconds===undefined || Number.isInteger(args.waitSeconds)
+        && args.waitSeconds>=1 && args.waitSeconds<=15) ? null : invalid;
   }
   if(name==="tong_goal_list") return exact([])?null:invalid;
   if(["tong_goal_status","tong_goal_cancel","tong_goal_result","tong_goal_resume"].includes(name)) {

@@ -2,7 +2,16 @@
 
 > **当前最新状态（2026-10-22）：生产App和Manager已升级到 `4ebdbc343dc9bcec37cc0898920e05b395aebb4d`；`111`中的真实`tong_goal_start`两轮原生Codex任务已成功，Manager健康，ACL无异常。** 后文旧版本和“未部署”是历史记录，不代表当前状态。
 
-## 2026-10-22 生产版Goal Supervisor正式验收（最新）
+## 2026-10-22 执行中可核验步骤进度（开发版；尚未部署）
+
+- 用户需要的是Codex正在工作时，**ChatGPT在当前仍活跃的回复里展示带证据的业务步骤进度卡**：哪个功能真实通过验收才打勾，未验收不打勾；总任务完成/确需用户处理才弹Windows任务提示卡。用户不希望只是等所有工作完毕后再看到一张汇总清单。
+- 在现有`TongGoalSupervisor`上直接增加`progress`快照，不另建监督器：`kind=evidence-backed-steps`、`completedCount/totalCount`、逐项`state`（pending/active/awaiting-review/completed/blocked/cancelled）、`proofLevel`和受限的实际证据、当前child的`phase/message/updatedAt`及另行标示的**Codex生命周期清单**、`cursor`。仅持久化验收后的`completed + evidence`可被勾选，Agent执行中的活动信息与Codex自述不得冒充功能验收。证据分级明确：`workspace-metadata`仅表示指定只读回合未改变工作区元数据，`file-presence-only`仅表示文件存在，`independent-review`表示已独立复核；绝不将文件存在标成完整代码质量验收。
+- `tong_goal_status`现在能返回执行中的child阶段与带证据的父任务清单；新增`tong_goal_wait(goalId,afterCursor?,waitSeconds? <=15)`最长15秒有界轮询，进度快照变化或进入需复核/终态即返回`{goal,changed}`。父任务进度无需依靠猜测百分比，客户端可只更新有证据变化的步骤。
+- ChatGPT能力边界：**现在实现的是后端实时状态查询/有界等待，并不是已发出的聊天进度卡自动定时刷新**。在ChatGPT本轮仍运行时可以多次查询后更新展示；一旦回复已结束，普通MCP无法继续写回这条回复，ChatGPT也不能通过该接口后台主动回消息。真正自动常驻刷新的同一张卡，需要另行集成支持订阅/自动刷新的宿主UI或经过鉴权的独立前端，不能将静态DIL示例误称实时。
+- 新工具从`TongMcpTools`注册、DevSpace受限工具白名单、Gateway精确参数验证统一暴露，不开放Shell/无授权项目，也不动生产通知边界；现有`tong_goal_start/status`兼容。验证包括`Test-TongGoalVerifiedProgress`执行期不提前打勾、动态cursor变更、已验收/待审核分离、故障参数拒绝；原有Goal持久化、TaskManager、Desktop交接、Gateway及DevSpace注册等回归通过。
+- **发布状态**：仅开发分支，生产App/Manager仍为`4ebdbc3`；没有改生产PIN、Windows服务、ACL、ngrok或任何业务项目。下一轮若批准生产升级，仍须匹配候选、独立回滚与`111`实际进度查询验收，不能仅凭合成测试声称已在ChatGPT实现常驻自动刷新。多Agent依旧排在本阶段之后。
+
+## 2026-10-22 生产版Goal Supervisor正式验收（历史已验收）
 
 - **用户本机升级已确认**：`PRODUCTION-UPGRADE-OK`，runId `014a7413-16ea-4343-b4cf-e18e94375b9d`，App/Manager PIN均精确为 `4ebdbc343dc9bcec37cc0898920e05b395aebb4d`；受控回滚快照 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261021151038067-4e97265f`。独立检查Manager doctor `healthy=true`、`phase=ready`、认证MCP与未认证拒绝均通过，7676/7677/18765监听，保护区额外ACE为0。
 - 刷新ChatGPT后，`tong_goal_start/status/result/list/cancel/review/resume`正式出现在Tong工具列表，且实际调用成功；此前升级后老工作区句柄曾短暂报`Path is outside allowed roots`，重新`open_workspace`注册目录后恢复，无授权配置变更。

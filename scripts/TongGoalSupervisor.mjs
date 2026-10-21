@@ -141,6 +141,49 @@ async function metadataFingerprint(root) {
   return createHash("sha256").update(JSON.stringify(records)).digest("hex");
 }
 
+// Progress is derived from persisted verification evidence, never from
+// Codex's natural-language claims. Active-turn telemetry is deliberately
+// separate from the checked business milestones.
+function goalProgress(g, child = null, telemetryUnavailable = false) {
+  const steps = g.steps.map((s,i) => {
+    const evidence = Array.isArray(s.evidence) ? s.evidence : [];
+    const completed = s.status === "completed" && evidence.length > 0;
+    const state = completed ? "completed"
+      : g.status === "blocked" && i === g.stepIndex ? "blocked"
+      : g.status === "cancelled" && i === g.stepIndex ? "cancelled"
+      : g.status === "awaiting_review" && i === g.stepIndex ? "awaiting-review"
+      : s.status === "running" ? "active"
+      : "pending";
+    const proofLevel = completed ? ({
+      "read-only-turn":"workspace-metadata",
+      "files-exist":"file-presence-only",
+      "review-required":"independent-review"
+    }[s.verification?.type] ?? "unspecified") : null;
+    return {id:s.id,title:s.title,state,proofLevel,
+      evidence:completed?evidence.slice(0,15).map(v=>clamp(v,2000)):[],
+      attempts:s.attempts ?? 0};
+  });
+  const current = g.activeTaskId && child
+    ? {taskId:g.activeTaskId,status:clamp(child.status,40),
+      phase:clamp(child.progress?.phase ?? child.status,80),
+      message:clamp(child.progress?.message,320) || null,
+      updatedAt:typeof child.updatedAt==="string" ? child.updatedAt : null,
+      lifecycle:child.progress?.checklist?.kind==="verified-lifecycle"
+        ? {completedCount:child.progress.checklist.completedCount,
+          totalCount:child.progress.checklist.totalCount} : null}
+    : null;
+  const summary = {kind:"evidence-backed-steps",status:g.status,
+    completedCount:steps.filter(s=>s.state==="completed").length,
+    totalCount:steps.length,steps,activeTurn:current,
+    telemetryUnavailable:Boolean(g.activeTaskId && telemetryUnavailable),
+    needsSupervisorReview:g.status==="awaiting_review",
+    needsUserAction:g.status==="blocked"};
+  // Hash only the bounded visible state. A change to an active native turn's
+  // phase/message produces a new cursor even without a parent-state mutation.
+  return {...summary,cursor:createHash("sha256")
+    .update(JSON.stringify(summary)).digest("hex")};
+}
+
 const publicGoal = g => ({
   goalId:g.goalId,projectId:g.projectId,agent:g.agent,goal:g.goal,
   status:g.status,createdAt:g.createdAt,updatedAt:g.updatedAt,finishedAt:g.finishedAt,
@@ -152,7 +195,8 @@ const publicGoal = g => ({
   blockedReason:g.blockedReason??null,needsUserAction:g.status==="blocked",
   needsSupervisorReview:g.status==="awaiting_review",
   reviewStepId:g.status==="awaiting_review"?g.reviewStepId:null,
-  finalReport:g.status==="completed"?g.report:null
+  finalReport:g.status==="completed"?g.report:null,
+  progress:goalProgress(g)
 });
 
 /** Sequential, durable goal-level scheduler. Only the final goal produces a notification.
@@ -413,7 +457,31 @@ export class TongGoalSupervisor {
     await this.ready;await this.lock;
     const g=this.goals.find(g=>g.goalId===id);
     if(!g)throw Error("Goal not found");
-    return publicGoal(g);
+    // Snapshot both the goal and its current child ID before the next
+    // asynchronous task-status lookup to prevent mixed-step progress cards.
+    const record=structuredClone(g);
+    const snapshot=publicGoal(record);
+    let child=null,telemetryUnavailable=false;
+    if(record.activeTaskId && typeof this.tasks.status==="function") {
+      try {child=await this.tasks.status(record.activeTaskId);}
+      catch {telemetryUnavailable=true;}
+    }
+    return {...snapshot,progress:goalProgress(record,child,telemetryUnavailable)};
+  }
+  async wait({goalId,afterCursor,waitSeconds=15}={}) {
+    if(typeof goalId!=="string" || !/^[a-f0-9-]{36}$/i.test(goalId)
+      || (afterCursor!==undefined && (typeof afterCursor!=="string"
+        || !/^[a-f0-9]{64}$/.test(afterCursor)))
+      || !Number.isInteger(waitSeconds) || waitSeconds<1 || waitSeconds>15)
+      throw Error("Invalid goal progress watch");
+    const until=this.now()+waitSeconds*1000;
+    while(true) {
+      const goal=await this.status(goalId);
+      const changed=!afterCursor || goal.progress.cursor!==afterCursor;
+      if(changed || TERMINAL.has(goal.status) || goal.status==="awaiting_review"
+        || this.now()>=until || this.closed) return {goal,changed};
+      await delay(Math.min(350,Math.max(1,until-this.now())));
+    }
   }
   async list() {
     await this.ready;await this.lock;

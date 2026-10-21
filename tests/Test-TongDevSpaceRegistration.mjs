@@ -46,7 +46,7 @@ try {
     "tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_project_prepare",
     "tong_agent_start", "tong_agent_sessions", "tong_agent_status", "tong_agent_wait", "tong_agent_list",
     "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
-    "tong_goal_start", "tong_goal_status", "tong_goal_result", "tong_goal_cancel", "tong_goal_resume", "tong_goal_review", "tong_goal_list"]);
+    "tong_goal_start", "tong_goal_status", "tong_goal_result", "tong_goal_cancel", "tong_goal_resume", "tong_goal_wait", "tong_goal_review", "tong_goal_list"]);
   const goalList=await client.callTool({name:"tong_goal_list",arguments:{}});
   assert.equal(goalList.isError,undefined,"authorized MCP can inspect its empty goal registry");
   assert.deepEqual(goalList.structuredContent.goals,[]);
