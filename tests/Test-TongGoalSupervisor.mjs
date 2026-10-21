@@ -227,6 +227,41 @@ try {
   assert.equal(notifications.length,beforeLateNotify+1);
   await lateSupervisor.close();
 
+  let capacityStarts=0;
+  const providerCapacityTasks={
+    projectForExecution:async id=>({id,root:project}),
+    async start(req) {
+      capacityStarts++;
+      const status=capacityStarts===1?"failed":"success";
+      return {taskId:"capacity-"+capacityStarts,status,
+        codexSessionId:"native-capacity-session",codexTurnId:"capacity-turn-"+capacityStarts,
+        agentSummary:status==="success"?"Verified read-only status":null,
+        error:status==="failed"?{message:"Selected model is at capacity. Please try a different model."}:null};
+    },
+    async status(id) {
+      const n=Number(id.slice(-1)),status=n===1?"failed":"success";
+      return {taskId:id,status,codexSessionId:"native-capacity-session",
+        codexTurnId:"capacity-turn-"+n,
+        agentSummary:status==="success"?"Verified read-only status":null,
+        error:status==="failed"?{message:"Selected model is at capacity. Please try a different model."}:null};
+    },
+    async result(id){return this.status(id);},
+    async cancel(id){return {taskId:id,status:"cancelled"};}
+  };
+  const beforeCapacityNotices=notifications.length;
+  const capacitySupervisor=new TongGoalSupervisor({
+    tasks:providerCapacityTasks,statePath:join(root,"capacity.json"),pollMs:100,
+    notifier:async notice=>{notifications.push(notice);return true}});
+  const cap=await capacitySupervisor.start({...spec("goal-retry-known-capacity-only",[readStep("retry")]),
+    maxRounds:2,maxAttemptsPerStep:2});
+  const capDone=await until(async()=>{const s=await capacitySupervisor.status(cap.goalId);return s.status==="completed"?s:null},9500);
+  assert.equal(capDone.roundCount,2);
+  assert.equal(capacityStarts,2);
+  assert.equal((await capacitySupervisor.result(cap.goalId)).rounds[0].status,"transient-capacity-retry");
+  assert.equal(notifications.length,beforeCapacityNotices+1,
+    "transient failure must not notify until the entire goal is completed");
+  await capacitySupervisor.close();
+
   for (const path of ["../escape","..\\private","C:/abs","CON","nested/../escape","nested//file","trailing.","bad\u0000name"]) {
     await assert.rejects(supervisor.start({
       ...spec("unsafe-goal-relative-"+Buffer.from(path).toString("hex"),[

@@ -258,7 +258,6 @@ export class TongGoalSupervisor {
       const g=this.goals.find(r=>r.goalId===id);
       if(!g||TERMINAL.has(g.status)||g.status==="awaiting_review")return;
       if(this.now()>=Date.parse(g.deadlineAt)) {await this.block(id,"goal-deadline-exceeded");return;}
-      if(g.rounds.length>=g.maxRounds && !g.activeTaskId) {await this.block(id,"round-budget-exhausted");return;}
       const step=g.steps[g.stepIndex];
       if(!step) {
         let final;
@@ -268,6 +267,11 @@ export class TongGoalSupervisor {
             completedSteps:r.steps.map(x=>({id:x.id,title:x.title,evidence:x.evidence})),
             nativeSessionId:r.nativeSessionId,verified:true};
         });final=await this.status(id);await this.notify(final,"success");return;
+      }
+      // A goal that used its last allowed round but verified its final step is
+      // complete, not exhausted. Enforce the budget only before new work.
+      if(g.rounds.length>=g.maxRounds && !g.activeTaskId) {
+        await this.block(id,"round-budget-exhausted");return;
       }
       if(!g.activeTaskId) {
         const attempt=step.attempts+1;
@@ -316,6 +320,35 @@ export class TongGoalSupervisor {
         continue;
       }
       if(task.status!=="success") {
+        // A known, external provider-capacity failure can be retried once
+        // within the existing step/round budget. Never retry an unknown
+        // failure, a local permission denial or a possibly modified tree.
+        const capacity = task.status==="failed"
+          && /^Selected model is at capacity\. Please try a different model\.?$/i
+            .test(task.error?.message?.trim()??"");
+        if(capacity && step.attempts<g.maxAttemptsPerStep
+            && g.rounds.length<g.maxRounds) {
+          const baseline=g.rounds.at(-1)?.metadataBaseline;
+          const unchanged=step.verification.type==="read-only-turn"
+            && typeof baseline==="string"
+            && baseline===await metadataFingerprint((await this.tasks.projectForExecution(g.projectId)).root);
+          if(unchanged) {
+            await this.mutate(id,rec=>{
+              if(TERMINAL.has(rec.status))return;
+              const round=rec.rounds.at(-1);
+              round.status="transient-capacity-retry";
+              round.error="model-capacity";
+              round.nativeSessionId=task.codexSessionId??null;
+              rec.activeTaskId=null;
+              rec.steps[rec.stepIndex].status="pending";
+              if(task.codexSessionId)rec.nativeSessionId=task.codexSessionId;
+            });
+            // Controlled delay for a capacity spike; task budget and global
+            // goal deadline remain in force, no model or permissions change.
+            await delay(Math.min(3500,Math.max(0,Date.parse(g.deadlineAt)-this.now())));
+            continue;
+          }
+        }
         await this.block(id,`child-task-${task.status}:${task.taskId}`);return;
       }
       const result=await this.tasks.result(g.activeTaskId);

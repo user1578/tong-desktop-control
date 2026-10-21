@@ -2,7 +2,16 @@
 
 > **当前最新状态：2026-10-21 已部署 `7d11382`，生产健康且在 `111` 完成真实Codex任务验收。** 后文更早的版本、失败状态及“未部署”是历史时间点记录，不能代替最新现场。
 
-## 2026-10-21 中断恢复后的开发进度与多Agent接入约定（最新）
+## 2026-10-21 Supervisor在111真实多轮验收与修复（最新；开发版，未部署）
+
+- **实测通过**：在项目`D:\作业\111`使用开发版Supervisor、独立任务/审计/目标状态（`D:\Tong\state\goal-supervisor-live-acceptance-20261021-r2\test-state`），实际调用本机Codex两轮。总goal ID `16aa56d5-8d86-428d-aa20-f375dfe14678`，两个child任务 `53e998df-65b2-4622-bdbe-6c84c5c3ab99`、`c880d8ac-f0cd-4878-8cbc-154b6fec5c8b`，**共用同一原生Session** `01a15ebb-89a1-7801-9b23-01c1c4d5d543`，各自具有不同turn ID。第一轮只读列出`你好.txt`，文件数1；第二轮引用前一轮上下文，重新检查确认1。两轮都经目录元数据指纹核实无变化；目标最终`completed`，两步`completed`，通知回调仅在整体结束时调用一次（`success`），耗时约51秒。
+- **测试隔离**：验收器`tests/Manual-TongGoalLiveAcceptance-111.mjs`需要本机显式环境变量`TONG_GOAL_LIVE_ACCEPTANCE=YES`，不会被日常CI误触发；状态/锁/审计均写在独立`D:\Tong\state\goal-supervisor-live-acceptance-20261021-r2\test-state`。现有生产项目注册和Codex授权仅读取，生产任务数据库、PIN与Manager未变。成功后再次独立检查生产Manager doctor `healthy=true`、phase ready，`D:\Tong\runtime\temp`非预期ACE仍为0、生产App/Manager仍为`7d11382`、`111`只有原文件。
+- **第一次真实尝试未过且有证据**：测试最初将`demoRoot`误设为`111`，导致同根目录重复保护返回`Invalid registry`，只是验收脚本错误，已调整；之后真实Codex创建Session并列出文件，但模型服务返回`Selected model is at capacity`，Supervisor将父目标正确阻塞，未错误地宣布成功，`111`无变化。原失败状态保留在`D:\Tong\state\goal-supervisor-live-acceptance-20261021\test-state`，不擅自清理。
+- **修复1：模型容量短暂不足**。只对精确匹配的容量错误、只读元数据经再次验证未改变、剩余步数重试与总轮数预算充足时进行有界重试；允许沿用已经建立的原生Session，延迟后重试，不自动换模型、增授权、无限重试或对未知错误盲目重跑。增加失败后同一总任务只在最终成功时通知的合成用例。
+- **修复2：最后一轮成功边界**。原代码先检查`rounds>=maxRounds`再判断全部步骤完成，恰好用完预算的成功任务可能误报为`round-budget-exhausted`。调整为先核验全部完成，再限制新一轮发起；添加恰好用满轮数的回归。
+- **结论边界**：本次真实验收证明Codex多轮、原生Session复用、两步只读完成证据和**一次Goal级通知回调**。并不证明复杂业务代码可无人参与地自动验收，也未在本次隔离验收中调用Windows真实弹窗（仅记录通知回调）；真正的ChatGPT主动向已结束聊天发消息仍取决于宿主能力。需要单独授权生产发布，不把开发测试说成已上线。
+
+## 2026-10-21 中断恢复后的开发进度与多Agent接入约定（历史开发阶段）
 
 - 已核对用户消息中断前的实际工作树。保留了半成品`scripts/TongGoalSupervisor.mjs`、`tests/Test-TongGoalSupervisor.mjs`以及任务管理器/网关/DevSpace allowlist的未提交改动，而不是另起一套；两份预存已修改文档和原有未跟踪文件不混入本轮提交。
 - **任务级Supervisor开发版**：新增`tong_goal_start/status/list/result/cancel/review/resume`统一MCP入口，默认Codex；总目标有持久化step/round/会话关联、总截止时间、每步重试上限、幂等重放、子任务结果审查、停止/取消。同一目标可以连续多回合，用`existing`保持原生线程；单回合结束不会打开Desktop或触发Windows完成通知，整体完成/无法恢复/取消才对外通知；中间`awaiting_review`是ChatGPT审核需求，不等同需要用户打断。待用户明确生产部署前绝不改生产。
