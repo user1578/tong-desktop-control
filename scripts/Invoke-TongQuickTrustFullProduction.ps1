@@ -224,6 +224,21 @@ function New-LoginLifecycleMutex(){
   $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
   return [Threading.Mutex]::new($false,('Local\TongLoginRuntime-'+$sid))
 }
+function Open-LoginProcessHandle([int]$ProcessId){
+  return [Diagnostics.Process]::GetProcessById($ProcessId)
+}
+function Stop-ExactLoginRunner($Identity){
+  # Pin a native handle before validating birth time. Killing through this
+  # handle cannot target a replacement that reuses the numeric PID afterward.
+  try{$process=Open-LoginProcessHandle $Identity.ProcessId}catch [ArgumentException]{return}
+  try{
+    $null=$process.Handle
+    if($process.WaitForExit(0)){return}
+    $ticks=$process.StartTime.ToUniversalTime().Ticks
+    if(($ticks-($ticks%10)) -ne $Identity.CreationDate.ToUniversalTime().Ticks -or $process.MainModule.FileName -ine $Identity.ExecutablePath){throw 'Monitor runner identity changed'}
+    $process.Kill()
+  }finally{$process.Dispose()}
+}
 function Stop-Login([bool]$AllowAbsent=$false){
   $scheduler=New-Object -ComObject Schedule.Service
   $scheduler.Connect()
@@ -231,8 +246,11 @@ function Stop-Login([bool]$AllowAbsent=$false){
   $instances=@($definition.GetInstances(0))
   $expectedHost=Join-Path $root 'login-management\TongLoginHost.exe'
   $expectedRunner='"C:\Windows\system32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -File "D:\Tong\runtime\login-management\TongLoginRuntime.ps1" -Mode run'
-  $managerCommand='(?:^|\s)"?'+[regex]::Escape($manager)+'"?\s+(?:status|doctor|start|stop-run|reconcile-stale|preflight-login)(?:\s|$)'
-  $runtimeArgument='(?:^|\s)--root\s+"?'+[regex]::Escape($root)+'"?(?:\s|$)'
+  $expectedRunnerExe='C:\Windows\system32\WindowsPowerShell\v1.0\powershell.exe'
+  $expectedConsole=Join-Path ([Environment]::SystemDirectory) 'conhost.exe'
+  $consoleCommand='^"?(?:'+[regex]::Escape('\??\')+')?'+[regex]::Escape($expectedConsole)+'"?\s+0x[0-9a-f]+(?:\s+-ForceV1)?$'
+  $managerCommand='(?:^|\s)"?'+[regex]::Escape($manager)+'"?\s+"?(?:status|doctor|start|stop-run|reconcile-stale|preflight-login)"?(?:\s|$)'
+  $runtimeArgument='(?:^|\s)"?--root"?\s+"?'+[regex]::Escape($root)+'"?(?:\s|$)'
   $assertUnclaimedAbsent={
     $unclaimed=@(Get-CimInstance Win32_Process | Where-Object {
       ($_.Name -ieq 'TongLoginHost.exe' -and $_.ExecutablePath -ieq $expectedHost) -or
@@ -251,12 +269,61 @@ function Stop-Login([bool]$AllowAbsent=$false){
     return
   }
   if($instances.Count -ne 1){throw 'Expected exactly one live login monitor instance'}
+  if([string](Get-ScheduledTask -TaskName $taskName).State -ne 'Running'){throw 'Login task state mismatch'}
   $engineProcessId=[int]$instances[0].EnginePID
   $hostProcess=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
-  if($null -eq $hostProcess -or $hostProcess.Name -ine 'TongLoginHost.exe' -or $hostProcess.ExecutablePath -ine $expectedHost){throw 'Login host identity mismatch'}
-  $runners=@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$engineProcessId) | Where-Object { $_.Name -ieq 'powershell.exe' -and $_.CommandLine -ieq $expectedRunner })
+  if($null -eq $hostProcess -or $hostProcess.Name -ine 'TongLoginHost.exe' -or $hostProcess.ExecutablePath -ine $expectedHost -or $hostProcess.CreationDate -isnot [DateTime] -or $null -eq $hostProcess.SessionId){throw 'Login host identity mismatch'}
+  $runners=@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$engineProcessId) | Where-Object { $_.Name -ieq 'powershell.exe' -and $_.ExecutablePath -ieq $expectedRunnerExe -and $_.CommandLine -ieq $expectedRunner })
   if($runners.Count -ne 1){throw 'Unable to identify the single original monitor runner'}
   $runner=$runners[0]
+  if($runner.CreationDate -isnot [DateTime] -or $runner.CreationDate -lt $hostProcess.CreationDate -or $null -eq $runner.SessionId -or $runner.SessionId -ne $hostProcess.SessionId){throw 'Monitor runner identity mismatch'}
+  # Remember observed descendants across the mutex wait, even if their parent
+  # exits meanwhile. Parent PID queries alone would lose those orphaned children.
+  $tracked=@{}
+  $readChildren={
+    $snapshot=@(Get-CimInstance Win32_Process)
+    $queue=[Collections.Generic.Queue[object]]::new()
+    $queue.Enqueue($hostProcess);$queue.Enqueue($runner)
+    foreach($identity in @($tracked.Values)){$queue.Enqueue($identity)}
+    $visited=@{}
+    while($queue.Count){
+      $parent=$queue.Dequeue()
+      if($visited.ContainsKey([int]$parent.ProcessId)){continue}
+      $visited[[int]$parent.ProcessId]=$true
+      foreach($child in @($snapshot|Where-Object ParentProcessId -eq $parent.ProcessId)){
+        if($child.ProcessId -eq $runner.ProcessId){continue}
+        $childId=[int]$child.ProcessId
+        if($tracked.ContainsKey($childId)){
+          $previous=$tracked[$childId]
+          foreach($field in @('CreationDate','ParentProcessId','Name','ExecutablePath','CommandLine','SessionId')){
+            if($child.$field -ne $previous.$field){throw 'Login descendant identity changed'}
+          }
+        }else{$tracked[$childId]=$child.PSObject.Copy()}
+        $queue.Enqueue($child)
+      }
+    }
+    # A reused PID can move outside the original tree: still refuse it.
+    foreach($child in $snapshot){
+      if(-not $tracked.ContainsKey([int]$child.ProcessId)){continue}
+      $previous=$tracked[[int]$child.ProcessId]
+      foreach($field in @('CreationDate','ParentProcessId','Name','ExecutablePath','CommandLine','SessionId')){
+        if($child.$field -ne $previous.$field){throw 'Login descendant identity changed'}
+      }
+      $child
+    }
+  }
+  $isConsole={param($child)
+    return ($child.Name -ieq 'conhost.exe' -and $child.ExecutablePath -ieq $expectedConsole -and
+      $child.ParentProcessId -eq $runner.ProcessId -and $child.SessionId -eq $runner.SessionId -and
+      $child.CreationDate -is [DateTime] -and $child.CreationDate -ge $runner.CreationDate -and
+      $child.CommandLine -imatch $consoleCommand)
+  }
+  $assertChildrenSafe={param($children)
+    if(@($children|Where-Object {-not (& $isConsole $_)}).Count -or $children.Count -gt 1){
+      throw 'Login runner still has live child processes; do not continue to runtime stop'
+    }
+  }
+  $null=& $readChildren
   Disable-ScheduledTask -TaskName $taskName | Out-Null
   $script:taskDisabled=$true
   # TongLoginRuntime holds this mutex across every synchronous Manager command.
@@ -269,19 +336,32 @@ function Stop-Login([bool]$AllowAbsent=$false){
     try{$locked=$mutex.WaitOne(180000)}catch [Threading.AbandonedMutexException]{$locked=$true}
     if(-not $locked){throw 'Login lifecycle command did not finish; do not continue to runtime stop'}
     $currentHost=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
-    if($currentHost -and ($currentHost.CreationDate -ne $hostProcess.CreationDate -or $currentHost.Name -ine 'TongLoginHost.exe' -or $currentHost.ExecutablePath -ine $expectedHost)){throw 'Login host identity changed'}
+    if($currentHost -and ($currentHost.CreationDate -ne $hostProcess.CreationDate -or $currentHost.Name -ine 'TongLoginHost.exe' -or $currentHost.ExecutablePath -ine $expectedHost -or $currentHost.SessionId -ne $hostProcess.SessionId)){throw 'Login host identity changed'}
     $current=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
-    if($current -and ($null -eq $currentHost -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.Name -ine 'powershell.exe' -or $current.CommandLine -ine $expectedRunner)){throw 'Monitor runner identity changed'}
+    if($current -and ($null -eq $currentHost -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.Name -ine 'powershell.exe' -or $current.ExecutablePath -ine $expectedRunnerExe -or $current.SessionId -ne $runner.SessionId -or $current.CommandLine -ine $expectedRunner)){throw 'Monitor runner identity changed'}
+    $activeInstances=@($definition.GetInstances(0))
+    if($activeInstances.Count -gt 1 -or ($activeInstances.Count -eq 1 -and [int]$activeInstances[0].EnginePID -ne $engineProcessId) -or ($activeInstances.Count -eq 0 -and ($currentHost -or $current))){throw 'Login task instance changed'}
     # An abandoned mutex alone is not evidence that an orphaned command exited.
-    if(@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$runner.ProcessId)).Count){throw 'Login runner still has live child processes; do not continue to runtime stop'}
-    if($current){Stop-Process -Id $runner.ProcessId -Force -ErrorAction Stop}
+    # Only the exact Windows console host may outlive the synchronous command;
+    # its descendants get the same checks and it must exit after the runner.
+    $children=@(& $readChildren)
+    & $assertChildrenSafe $children
+    $managerClients=@(Get-CimInstance Win32_Process | Where-Object {
+      $_.Name -ieq 'node.exe' -and $_.ExecutablePath -ieq $node -and $_.CommandLine -imatch $managerCommand -and $_.CommandLine -imatch $runtimeArgument
+    })
+    if($managerClients.Count){throw 'Monitor still has a live Manager client; do not continue to runtime stop'}
+    if($current){Stop-ExactLoginRunner $runner}
     $limit=(Get-Date).AddSeconds(30)
     while($true){
       $remainingHost=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
       $remainingRunner=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
-      if($remainingHost -and ($remainingHost.CreationDate -ne $hostProcess.CreationDate -or $remainingHost.ExecutablePath -ine $expectedHost)){throw 'Login host identity changed'}
-      if($remainingRunner -and ($remainingRunner.CreationDate -ne $runner.CreationDate -or $remainingRunner.ParentProcessId -ne $engineProcessId -or $remainingRunner.CommandLine -ine $expectedRunner)){throw 'Monitor runner identity changed'}
-      if(@($definition.GetInstances(0)).Count -eq 0 -and -not $remainingHost -and -not $remainingRunner){
+      if($remainingHost -and ($remainingHost.CreationDate -ne $hostProcess.CreationDate -or $remainingHost.Name -ine 'TongLoginHost.exe' -or $remainingHost.ExecutablePath -ine $expectedHost -or $remainingHost.SessionId -ne $hostProcess.SessionId)){throw 'Login host identity changed'}
+      if($remainingRunner -and ($remainingRunner.CreationDate -ne $runner.CreationDate -or $remainingRunner.ParentProcessId -ne $engineProcessId -or $remainingRunner.Name -ine 'powershell.exe' -or $remainingRunner.ExecutablePath -ine $expectedRunnerExe -or $remainingRunner.SessionId -ne $runner.SessionId -or $remainingRunner.CommandLine -ine $expectedRunner)){throw 'Monitor runner identity changed'}
+      $children=@(& $readChildren)
+      & $assertChildrenSafe $children
+      $activeInstances=@($definition.GetInstances(0))
+      if($activeInstances.Count -gt 1 -or ($activeInstances.Count -eq 1 -and [int]$activeInstances[0].EnginePID -ne $engineProcessId)){throw 'Login task instance changed'}
+      if($activeInstances.Count -eq 0 -and [string](Get-ScheduledTask -TaskName $taskName).State -ne 'Running' -and -not $remainingHost -and -not $remainingRunner -and -not $children.Count){
         & $assertUnclaimedAbsent
         return
       }

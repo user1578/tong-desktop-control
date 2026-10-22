@@ -11,23 +11,76 @@ function Write-RuntimeEvent([string]$Event,$Status,[string]$Reason,$Details) {
     if($Details){foreach($key in $Details.Keys){$entry[$key]=$Details[$key]}}
     [IO.File]::AppendAllText((Join-Path $runtime 'logs\login-management.jsonl'),(($entry|ConvertTo-Json -Compress)+"`n"),[Text.UTF8Encoding]::new($false))
 }
+function New-LoginManagerProcess([string[]]$Arguments) {
+    # PS5.1 has no ArgumentList. These fixed paths/arguments cannot contain a
+    # quote, newline or trailing backslash that would escape a closing quote.
+    foreach($argument in $Arguments){if($argument -match '["\r\n]' -or $argument.EndsWith('\')){throw 'Invalid Manager argument'}}
+    $process=[Diagnostics.Process]::new()
+    $process.StartInfo=[Diagnostics.ProcessStartInfo]::new()
+    $process.StartInfo.FileName=$node
+    $process.StartInfo.Arguments=($Arguments|ForEach-Object {'"'+$_+'"'}) -join ' '
+    $process.StartInfo.WorkingDirectory=$runtime
+    $process.StartInfo.UseShellExecute=$false;$process.StartInfo.CreateNoWindow=$true
+    $process.StartInfo.RedirectStandardInput=$true
+    $process.StartInfo.RedirectStandardOutput=$true;$process.StartInfo.RedirectStandardError=$true
+    $process.StartInfo.StandardOutputEncoding=[Text.UTF8Encoding]::new($false)
+    $process.StartInfo.StandardErrorEncoding=[Text.UTF8Encoding]::new($false)
+    return $process
+}
 function Runtime([string]$Action,[string]$ExpectedRunId) {
     # Standalone status uses the manager's existing ACL-checked readonly path.
     # Lifecycle queries still require the recovery grant before any side effect.
-    if($Action -ceq 'status' -and $Mode -eq 'status'){$raw=& $node $manager $Action --root $runtime --error-json}
-    elseif($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId --login-recovery --error-json}else{$raw=& $node $manager $Action --root $runtime --login-recovery --error-json}
-    $nativeExitCode=$LASTEXITCODE
-    if($nativeExitCode -ne 0){
-        $reason='REFUSED';$outputKind=if([string]::IsNullOrWhiteSpace(($raw -join "`n"))){'empty'}else{'unstructured'}
-        try{$failure=$raw|ConvertFrom-Json;if($failure.error -cmatch '^[A-Z_]{1,64}$'){$reason=$failure.error;$outputKind='error_json'}}catch{}
-        # REFUSED alone cannot distinguish authorization denial from a native
-        # Node exit. Retain bounded metadata, never arbitrary stdout/stderr.
-        Write-RuntimeEvent 'manager_command_failed' $null $reason @{managerAction=$Action;nativeExitCode=$nativeExitCode;exitHex=('0x{0:X8}' -f ([long]$nativeExitCode -band 0xffffffffL));outputKind=$outputKind}
+    $arguments=@($manager,$Action,'--root',$runtime)
+    if($Action -ceq 'stop-run'){$arguments+=@('--run-id',$ExpectedRunId)}
+    if(-not ($Action -ceq 'status' -and $Mode -eq 'status')){$arguments+='--login-recovery'}
+    $arguments+='--error-json'
+    $process=$null;$reason='MANAGER_START_FAILED'
+    $details=@{managerAction=$Action;managerPid=$null;managerStartTicks=$null;exitObserved=$false;nativeExitCode=$null;exitHex=$null;outputKind='unread'}
+    $clock=[Diagnostics.Stopwatch]::StartNew()
+    try {
+        $process=New-LoginManagerProcess $arguments
+        if(-not $process.Start()){throw 'Manager did not start'}
+        # Retain the actual process handle: pipe EOF and PID-only observations
+        # cannot prove that this particular native process has exited.
+        $null=$process.Handle
+        $details.managerPid=$process.Id;$details.managerStartTicks=$process.StartTime.ToUniversalTime().Ticks.ToString()
+        $process.StandardInput.Close()
+        $stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()
+        if($Mode -ne 'status'){Write-RuntimeEvent 'manager_command_started' $null '' $details}
+        $reason='MANAGER_EXIT_TIMEOUT'
+        # Existing maximum startup (120s) plus abort cleanup (30s), within the
+        # maintenance mutex's unchanged 180s limit. Never kill an unresolved CLI.
+        if(-not $process.WaitForExit(150000)){throw 'Manager exit unproven'}
+        $details.exitObserved=$true;$details.nativeExitCode=$process.ExitCode
+        $global:LASTEXITCODE=$details.nativeExitCode
+        $details.exitHex=('0x{0:X8}' -f ([long]$details.nativeExitCode -band 0xffffffffL))
+        $details.durationMs=$clock.ElapsedMilliseconds
+        if($Mode -ne 'status'){Write-RuntimeEvent 'manager_command_exited' $null '' $details}
+        $reason='MANAGER_OUTPUT_INCOMPLETE'
+        # Read both streams concurrently. A descendant can retain a pipe after
+        # Manager exit; distinguish that failure from an actual process timeout.
+        if(-not [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout,$stderr),2000)){throw 'Manager output incomplete'}
+        $raw=$stdout.GetAwaiter().GetResult()
+        $details.outputKind=if([string]::IsNullOrWhiteSpace($raw)){'empty'}else{'unstructured'}
+        if($details.nativeExitCode -ne 0){
+            $reason='REFUSED'
+            try{$failure=$raw|ConvertFrom-Json;if($failure.error -cmatch '^[A-Z_]{1,64}$'){$reason=$failure.error;$details.outputKind='error_json'}}catch{}
+            throw 'Manager refused command'
+        }
+        $reason='MANAGER_OUTPUT_INVALID'
+        $result=$raw|ConvertFrom-Json -ErrorAction Stop
+        if($null -eq $result){throw 'Manager output missing'}
+        return $result
+    }catch{
+        # Bounded metadata only, never arbitrary stdout/stderr or exception text.
+        # Do not add Manager log events to standalone status.
+        if($Mode -ne 'status'){Write-RuntimeEvent 'manager_command_failed' $null $reason $details}
         $failureException=[InvalidOperationException]::new(('Tong manager refused '+$Action+': '+$reason))
         $failureException.Data['managerAction']=$Action;$failureException.Data['managerCode']=$reason
         throw $failureException
+    }finally{
+        if($process){$process.Dispose()}
     }
-    return ($raw|ConvertFrom-Json)
 }
 function Enter-RuntimeLock($Mutex) {
     $locked=$false
