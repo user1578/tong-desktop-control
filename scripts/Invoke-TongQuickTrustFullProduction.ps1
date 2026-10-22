@@ -193,16 +193,25 @@ function Get-LoginFailure(){
 }
 function Await-Healthy(){
   $limit=(Get-Date).AddMinutes(4)
-  do {
+  while($true){
     $status=CurrentStatus
     $failure=Get-LoginFailure
     if($failure){throw ('Login monitor exited: '+$failure)}
     if($status.phase -eq 'ready' -and $status.supervisorAlive -and $status.guardianAlive){
       $healthy=Native 'production doctor' @($manager,'doctor','--root',$root)
-      if($healthy.healthy){return $status}
+      if($healthy.healthy){
+        $confirmed=CurrentStatus
+        $failure=Get-LoginFailure
+        if($failure){throw ('Login monitor exited: '+$failure)}
+        if($confirmed.runId -ceq $status.runId -and $confirmed.phase -eq 'ready' -and $confirmed.supervisorAlive -and $confirmed.guardianAlive){return $confirmed}
+        $status=$confirmed
+      }
     }
+    # Probe once more after the final sleep. The cached starting snapshot may
+    # already be obsolete when the deadline is reached.
+    if((Get-Date) -ge $limit){break}
     Start-Sleep -Seconds 3
-  }while((Get-Date) -lt $limit)
+  }
   throw ('Production failed the ready/doctor acceptance; phase='+$status.phase+'; supervisorAlive='+$status.supervisorAlive+'; guardianAlive='+$status.guardianAlive)
 }
 function Enable-Login(){
@@ -211,6 +220,10 @@ function Enable-Login(){
   $script:monitorWindowStart=[DateTime]::UtcNow
   Start-ScheduledTask -TaskName $taskName
 }
+function New-LoginLifecycleMutex(){
+  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+  return [Threading.Mutex]::new($false,('Local\TongLoginRuntime-'+$sid))
+}
 function Stop-Login([bool]$AllowAbsent=$false){
   $scheduler=New-Object -ComObject Schedule.Service
   $scheduler.Connect()
@@ -218,15 +231,18 @@ function Stop-Login([bool]$AllowAbsent=$false){
   $instances=@($definition.GetInstances(0))
   $expectedHost=Join-Path $root 'login-management\TongLoginHost.exe'
   $expectedRunner='"C:\Windows\system32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -File "D:\Tong\runtime\login-management\TongLoginRuntime.ps1" -Mode run'
+  $managerCommand='(?:^|\s)"?'+[regex]::Escape($manager)+'"?\s+(?:status|doctor|start|stop-run|reconcile-stale|preflight-login)(?:\s|$)'
+  $runtimeArgument='(?:^|\s)--root\s+"?'+[regex]::Escape($root)+'"?(?:\s|$)'
+  $assertUnclaimedAbsent={
+    $unclaimed=@(Get-CimInstance Win32_Process | Where-Object {
+      ($_.Name -ieq 'TongLoginHost.exe' -and $_.ExecutablePath -ieq $expectedHost) -or
+      ($_.Name -ieq 'powershell.exe' -and $_.CommandLine -ieq $expectedRunner) -or
+      ($_.Name -ieq 'node.exe' -and $_.ExecutablePath -ieq $node -and $_.CommandLine -imatch $managerCommand -and $_.CommandLine -imatch $runtimeArgument)
+    })
+    if($unclaimed.Count){throw 'Monitor has an unclaimed live process; rollback refused'}
+  }
   if($instances.Count -eq 0 -and $AllowAbsent){
     if([string](Get-ScheduledTask -TaskName $taskName).State -eq 'Running'){throw 'Scheduler still reports a running monitor'}
-    $assertUnclaimedAbsent={
-      $unclaimed=@(Get-CimInstance Win32_Process | Where-Object {
-        ($_.Name -ieq 'TongLoginHost.exe' -and $_.ExecutablePath -ieq $expectedHost) -or
-        ($_.Name -ieq 'powershell.exe' -and $_.CommandLine -ieq $expectedRunner)
-      })
-      if($unclaimed.Count){throw 'Monitor has an unclaimed live process; rollback refused'}
-    }
     & $assertUnclaimedAbsent
     Disable-ScheduledTask -TaskName $taskName | Out-Null
     $script:taskDisabled=$true
@@ -243,17 +259,40 @@ function Stop-Login([bool]$AllowAbsent=$false){
   $runner=$runners[0]
   Disable-ScheduledTask -TaskName $taskName | Out-Null
   $script:taskDisabled=$true
-  $current=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
-  if($null -eq $current -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.CommandLine -ine $expectedRunner){throw 'Monitor runner identity changed'}
-  # Terminate only the exact login runner. The GUI host waits for it and exits;
-  # Supervisor and Guardian are independent and must remain untouched.
-  Stop-Process -Id $runner.ProcessId -Force -ErrorAction Stop
-  $limit=(Get-Date).AddSeconds(30)
-  while((Get-Date) -lt $limit){
-    if(@($definition.GetInstances(0)).Count -eq 0 -and -not (Get-Process -Id $runner.ProcessId -ErrorAction SilentlyContinue)){return}
-    Start-Sleep -Seconds 1
+  # TongLoginRuntime holds this mutex across every synchronous Manager command.
+  # Do not orphan an in-flight start or its inherited Host output handles. Allow
+  # the Manager's 120s startup and 30s abort cleanup, plus 30s to settle, before
+  # refusing. Keep the lock until the monitor is proven gone.
+  $mutex=New-LoginLifecycleMutex
+  $locked=$false
+  try{
+    try{$locked=$mutex.WaitOne(180000)}catch [Threading.AbandonedMutexException]{$locked=$true}
+    if(-not $locked){throw 'Login lifecycle command did not finish; do not continue to runtime stop'}
+    $currentHost=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
+    if($currentHost -and ($currentHost.CreationDate -ne $hostProcess.CreationDate -or $currentHost.Name -ine 'TongLoginHost.exe' -or $currentHost.ExecutablePath -ine $expectedHost)){throw 'Login host identity changed'}
+    $current=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
+    if($current -and ($null -eq $currentHost -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.Name -ine 'powershell.exe' -or $current.CommandLine -ine $expectedRunner)){throw 'Monitor runner identity changed'}
+    # An abandoned mutex alone is not evidence that an orphaned command exited.
+    if(@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$runner.ProcessId)).Count){throw 'Login runner still has live child processes; do not continue to runtime stop'}
+    if($current){Stop-Process -Id $runner.ProcessId -Force -ErrorAction Stop}
+    $limit=(Get-Date).AddSeconds(30)
+    while($true){
+      $remainingHost=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
+      $remainingRunner=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
+      if($remainingHost -and ($remainingHost.CreationDate -ne $hostProcess.CreationDate -or $remainingHost.ExecutablePath -ine $expectedHost)){throw 'Login host identity changed'}
+      if($remainingRunner -and ($remainingRunner.CreationDate -ne $runner.CreationDate -or $remainingRunner.ParentProcessId -ne $engineProcessId -or $remainingRunner.CommandLine -ine $expectedRunner)){throw 'Monitor runner identity changed'}
+      if(@($definition.GetInstances(0)).Count -eq 0 -and -not $remainingHost -and -not $remainingRunner){
+        & $assertUnclaimedAbsent
+        return
+      }
+      if((Get-Date) -ge $limit){break}
+      Start-Sleep -Seconds 1
+    }
+    throw 'Login monitor did not fully exit; do not continue to runtime stop'
+  }finally{
+    if($locked){$mutex.ReleaseMutex()}
+    $mutex.Dispose()
   }
-  throw 'Login monitor did not fully exit; do not continue to runtime stop'
 }
 function Stop-ExactRun([bool]$TryRecovery){
   $s=CurrentStatus
@@ -296,7 +335,8 @@ console.log(JSON.stringify({pinsUpdated:true,commit:data.commit}));
 function Restore-Old(){
   if(-not $snapshot){throw 'No exact restore snapshot available'}
   Write-Warning ('Initiating bounded source rollback from '+$snapshot)
-  if(-not $taskDisabled){Stop-Login $true}
+  # Disabling future task triggers does not prove existing monitor/client exit.
+  Stop-Login $true
   $s=CurrentStatus
   if($s.supervisorAlive){$null=Stop-ExactRun $recoverySigned}
   $null=Await-Stopped
