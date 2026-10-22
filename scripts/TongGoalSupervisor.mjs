@@ -7,6 +7,11 @@ const TERMINAL = new Set(["completed","blocked","cancelled"]);
 const ID = /^[a-z][a-z0-9-]{1,39}$/;
 const STEP_ID = /^[a-z][a-z0-9-]{0,39}$/;
 const clamp = (v,n) => String(v ?? "").slice(0,n);
+// A completed native turn is NOT a completed request. Explicit denial or
+// incomplete-work disclosures are strong negative evidence and must veto
+// automatic acceptance. Positive prose is never sufficient evidence.
+const reportedIncomplete = summary => /(?:未完成|未能完成|无法核实|无法访问|无法读取|无法检查|访问被拒绝|查询被拒绝|调用被拒绝|被拒绝|不能标记完成|cannot (?:verify|access|read|complete|inspect)|unable to (?:verify|access|read|complete|inspect)|could not (?:verify|access|read|complete|inspect)|access denied|permission denied|not completed|blocked by policy)/i
+  .test(clamp(summary,1600));
 const taskKey = (id,index,attempt) => createHash("sha256")
   .update(`goal:${id}:${index}:${attempt}`).digest("hex");
 
@@ -147,20 +152,23 @@ async function metadataFingerprint(root) {
 function goalProgress(g, child = null, telemetryUnavailable = false) {
   const steps = g.steps.map((s,i) => {
     const evidence = Array.isArray(s.evidence) ? s.evidence : [];
-    const completed = s.status === "completed" && evidence.length > 0;
-    const state = completed ? "completed"
+    const evidenceVerified = s.status === "completed" && evidence.length > 0;
+    const businessAccepted = evidenceVerified && s.verification?.type === "review-required";
+    const state = businessAccepted ? "completed"
+      : evidenceVerified ? "technical-only"
       : g.status === "blocked" && i === g.stepIndex ? "blocked"
       : g.status === "cancelled" && i === g.stepIndex ? "cancelled"
       : g.status === "awaiting_review" && i === g.stepIndex ? "awaiting-review"
       : s.status === "running" ? "active"
       : "pending";
-    const proofLevel = completed ? ({
+    const proofLevel = evidenceVerified ? ({
       "read-only-turn":"workspace-metadata",
       "files-exist":"file-presence-only",
       "review-required":"independent-review"
     }[s.verification?.type] ?? "unspecified") : null;
     return {id:s.id,title:s.title,state,proofLevel,
-      evidence:completed?evidence.slice(0,15).map(v=>clamp(v,2000)):[],
+      evidenceVerified,businessAccepted,
+      evidence:evidenceVerified?evidence.slice(0,15).map(v=>clamp(v,2000)):[],
       attempts:s.attempts ?? 0};
   });
   const current = g.activeTaskId && child
@@ -173,8 +181,13 @@ function goalProgress(g, child = null, telemetryUnavailable = false) {
           totalCount:child.progress.checklist.totalCount} : null}
     : null;
   const summary = {kind:"evidence-backed-steps",status:g.status,
-    completedCount:steps.filter(s=>s.state==="completed").length,
-    totalCount:steps.length,steps,activeTurn:current,
+    completedCount:steps.filter(s=>s.businessAccepted).length,
+    technicalCheckCount:steps.filter(s=>s.evidenceVerified).length,
+    totalCount:steps.length,
+    businessComplete:g.status==="completed" && steps.every(s=>s.businessAccepted),
+    acceptanceScope:steps.every(s=>s.businessAccepted)
+      ? "independently-reviewed" : "technical-only-or-pending-review",
+    steps,activeTurn:current,
     telemetryUnavailable:Boolean(g.activeTaskId && telemetryUnavailable),
     needsSupervisorReview:g.status==="awaiting_review",
     needsUserAction:g.status==="blocked"};
@@ -310,7 +323,9 @@ export class TongGoalSupervisor {
           r.status="completed";r.finishedAt=new Date(this.now()).toISOString();
           r.report={goal:r.goal,rounds:r.rounds.map(x=>({...x})),
             completedSteps:r.steps.map(x=>({id:x.id,title:x.title,evidence:x.evidence})),
-            nativeSessionId:r.nativeSessionId,verified:true};
+            nativeSessionId:r.nativeSessionId,verified:true,
+            verificationScope:r.steps.every(x=>x.verification.type==="review-required")
+              ? "independent-acceptance" : "mixed-or-technical-only"};
         });final=await this.status(id);await this.notify(final,"success");return;
       }
       // A goal that used its last allowed round but verified its final step is
@@ -402,6 +417,28 @@ export class TongGoalSupervisor {
       }
       if(g.nativeSessionId && g.nativeSessionId!==result.codexSessionId) {
         await this.block(id,"unexpected-native-session-switch");return;
+      }
+      // A tool-denial event is objective negative evidence even when Codex's
+      // natural-language summary claims success. Restrict inspection to a
+      // bounded redacted log page; failures do not expand any permissions.
+      let policyDenied=false;
+      if(typeof this.tasks.logs==="function") {
+        const recent=await this.tasks.logs({taskId:g.activeTaskId,limit:100});
+        policyDenied=Array.isArray(recent?.entries) && recent.entries.some(
+          e=>e.kind==="policy" && /(?:denied|declined|rejected) by policy/i.test(e.message??""));
+      }
+      if(policyDenied || reportedIncomplete(result.agentSummary)) {
+        await this.mutate(id,rec=>{
+          const round=rec.rounds.at(-1);
+          round.status="reported-incomplete";
+          round.nativeSessionId=result.codexSessionId;
+          round.summary=clamp(result.agentSummary,800);
+          round.evidence=[policyDenied?"policy-denied":"agent-reported-incomplete"];
+          rec.nativeSessionId=result.codexSessionId;
+          rec.steps[rec.stepIndex].status="pending";
+        });
+        await this.block(id,policyDenied?"child-policy-denied":"child-reported-incomplete");
+        return;
       }
       let proof;
       if(step.verification.type==="read-only-turn") {

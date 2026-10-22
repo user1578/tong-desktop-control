@@ -82,8 +82,10 @@ try {
     const s=await sup.status(g.goalId);
     return s.stepIndex===1 && s.activeTaskId?s:null;
   });
-  assert.deepEqual(halfway.progress.steps.map(x=>x.state),["completed","active"]);
-  assert.equal(halfway.progress.completedCount,1);
+  assert.deepEqual(halfway.progress.steps.map(x=>x.state),["technical-only","active"]);
+  assert.equal(halfway.progress.completedCount,0,
+    "A finished read-only Codex turn is not business acceptance");
+  assert.equal(halfway.progress.technicalCheckCount,1);
   assert.equal(halfway.progress.steps[0].proofLevel,"workspace-metadata");
   assert.match(halfway.progress.steps[0].evidence.join(" "),/workspace-metadata-unchanged/);
   assert.equal(halfway.progress.steps[1].evidence.length,0);
@@ -93,8 +95,11 @@ try {
     const s=await sup.status(g.goalId);
     return s.status==="completed"?s:null;
   });
-  assert.equal(completed.progress.completedCount,2);
-  assert.deepEqual(completed.progress.steps.map(x=>x.state),["completed","completed"]);
+  assert.equal(completed.progress.completedCount,0);
+  assert.equal(completed.progress.technicalCheckCount,2);
+  assert.equal(completed.progress.businessComplete,false);
+  assert.equal(completed.progress.acceptanceScope,"technical-only-or-pending-review");
+  assert.deepEqual(completed.progress.steps.map(x=>x.state),["technical-only","technical-only"]);
   assert.equal(completed.progress.activeTurn,null);
   assert.deepEqual((await sup.wait({goalId:g.goalId,afterCursor:completed.progress.cursor,
     waitSeconds:1})).changed,false);
@@ -127,6 +132,8 @@ try {
     const s=await sup.status(review.goalId);return s.status==="completed"?s:null;
   });
   assert.equal(approved.progress.completedCount,1);
+  assert.equal(approved.progress.businessComplete,true);
+  assert.equal(approved.progress.acceptanceScope,"independently-reviewed");
   assert.equal(approved.progress.steps[0].proofLevel,"independent-review");
 
   // File presence can be checked, but is never displayed as a verified
@@ -147,7 +154,9 @@ try {
     const s=await sup.status(presence.goalId);
     return s.stepIndex===1 && s.activeTaskId?s:null;
   });
-  assert.equal(presenceChecked.progress.completedCount,1);
+  assert.equal(presenceChecked.progress.completedCount,0);
+  assert.equal(presenceChecked.progress.technicalCheckCount,1);
+  assert.equal(presenceChecked.progress.steps[0].state,"technical-only");
   assert.equal(presenceChecked.progress.steps[0].proofLevel,"file-presence-only");
   assert.equal(presenceChecked.progress.steps[1].state,"active");
   assert.equal(presenceChecked.progress.steps[1].proofLevel,null);
@@ -156,9 +165,58 @@ try {
     const s=await sup.status(presence.goalId);
     return s.status==="awaiting_review"?s:null;
   });
-  assert.equal(awaitingAcceptance.progress.completedCount,1,
+  assert.equal(awaitingAcceptance.progress.completedCount,0,
     "A file existing is not functional acceptance");
   assert.equal(awaitingAcceptance.progress.steps[1].state,"awaiting-review");
+  await sup.review({goalId:presence.goalId,accepted:true,
+    evidence:"Independently verified the bounded fixture and expected outcomes"});
+  await until(async()=> (await sup.status(presence.goalId)).status==="completed");
+
+  // This is the actual production regression: Codex says it was unable to
+  // check the directory, but the native turn itself terminated successfully.
+  const refused=await sup.start(spec("progress-rejects-noncompletion-004",[
+    {id:"inventory",title:"Directory contents",instruction:"Try read-only inventory",
+      verification:{type:"read-only-turn"}},
+    {id:"later",title:"Do not start",instruction:"Should never run",
+      verification:{type:"read-only-turn"}}
+  ]));
+  const refusedActive=await until(async()=>{
+    const s=await sup.status(refused.goalId);return s.activeTaskId?s:null;
+  });
+  resolveTurn(refusedActive.activeTaskId,6);
+  state.get(refusedActive.activeTaskId).agentSummary=
+    "第1/2步目录清点未完成：只读元数据工具被拒绝，无法核实文件名。";
+  const refusedBlocked=await until(async()=>{
+    const s=await sup.status(refused.goalId);return s.status==="blocked"?s:null;
+  });
+  assert.equal(refusedBlocked.blockedReason,"child-reported-incomplete");
+  assert.equal(refusedBlocked.progress.completedCount,0);
+  assert.equal(refusedBlocked.progress.technicalCheckCount,0);
+  assert.equal(refusedBlocked.progress.steps[0].state,"blocked");
+  assert.equal(starts.some(x=>x.request.task?.includes("Do not start")),false);
+  assert.equal((await sup.result(refused.goalId)).rounds[0].status,"reported-incomplete");
+
+  // A real policy-denial event also vetoes success even if agent prose omits it.
+  const denied=await sup.start(spec("progress-policy-denial-veto-005",[
+    {id:"denial",title:"Permission check",instruction:"Synthetic policy denial",
+      verification:{type:"read-only-turn"}}
+  ]));
+  const deniedActive=await until(async()=>{
+    const s=await sup.status(denied.goalId);return s.activeTaskId?s:null;
+  });
+  tasks.logs=async ({taskId,limit})=>{
+    assert.equal(limit,100);
+    return {entries:taskId===deniedActive.activeTaskId
+      ? [{kind:"policy",message:"Approval request declined by policy: mcpServer/elicitation/request"}]
+      : []};
+  };
+  resolveTurn(deniedActive.activeTaskId,7);
+  const deniedBlocked=await until(async()=>{
+    const s=await sup.status(denied.goalId);return s.status==="blocked"?s:null;
+  });
+  assert.equal(deniedBlocked.blockedReason,"child-policy-denied");
+  assert.equal(deniedBlocked.progress.completedCount,0);
+  assert.equal(deniedBlocked.progress.technicalCheckCount,0);
 
   await assert.rejects(sup.wait({goalId:g.goalId,afterCursor:"../secret"}),/Invalid goal progress watch/);
   await assert.rejects(sup.wait({goalId:g.goalId,waitSeconds:16}),/Invalid goal progress watch/);

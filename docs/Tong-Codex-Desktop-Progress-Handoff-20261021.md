@@ -1,6 +1,14 @@
 # Tong × Codex Desktop 会话可见性与进度回报交接（更新至2026-10-22）
 
-> **当前最新状态（2026-10-22）：生产App和Manager已升级到 `4ebdbc343dc9bcec37cc0898920e05b395aebb4d`；`111`中的真实`tong_goal_start`两轮原生Codex任务已成功，Manager健康，ACL无异常。** 后文旧版本和“未部署”是历史记录，不代表当前状态。
+> **当前最新状态（2026-10-22）：生产App/Manager已升级到 `1a78e48edded61783fbe76b151ea157999f91e92`，健康且ACL正常。但`111`的四步真实进度验收发现**技术检查被错误当成业务步骤完成**的缺陷；开发修复尚未重新部署。后文早期版本和旧“最新”标记均属历史记录。
+
+## 2026-10-22 四步生产真实验收暴露的进度误判与修复（最新）
+
+- **生产实测**：通过真正的`tong_goal_start`在`D:\作业\111`新建四步只读目标`1f5b8659-9b00-45e1-b4f5-7ed8cd03c1c7`，Codex原生Session `01a161b4-b754-73c1-a383-d108b47bc288`。执行期实际多次调用`tong_goal_status`，观察到`completedCount`按`0→1→2→3→4`变化，四个子回合复用同一原生Session，技术层的进度快照、`cursor`与活动阶段均能实时读出。聊天当前连接仍未显示新`tong_goal_wait`工具，但生产程序确认其代码存在；不要声称本次通过实际`goal_wait`调用验收。
+- **严重验收误判**：四个Codex答复其实分别表示“只读元数据查询被拒绝”“未完成”“无法核实文件”，子任务日志记录`Approval request declined by policy: mcpServer/elicitation/request`和`Unsupported App Server request`。原Supervisor的`read-only-turn`只证明原生Turn结束和工作区元数据未变化，仍错误将每个业务名称标为`completed`并使Goal报告`verified:true`。本次不得记为四项目录业务检查成功，目录文件实况是ChatGPT经独立Tong工作区只读命令确认原文件仅1个、8字节、修改时间未变化，并非Codex成功完成。
+- **开发版修复**：在原Supervisor中，如果Codex回合摘要明确披露“未完成/无法/权限或工具拒绝”，或TaskManager有实际`kind=policy`拒绝日志，则**停止并阻塞父目标**，保留子步骤未验收和故障证据，不自动重试、不扩大授权、不先启动下一回合。日志检查仅限受控脱敏记录页。分离`progress.technicalCheckCount`（原生只读或文件存在等技术证据）与`progress.completedCount`（必须有`review-required`通过独立审核的业务步骤），普通只读回合与文件存在标记为`technical-only`，只独立审核通过才是`completed`及`businessAccepted=true`；新增`progress.businessComplete`和`acceptanceScope`标明整项业务是否已得到独立验收。既有生产Goal持久化记录不擅自改写。
+- **验证范围**：`Test-TongGoalVerifiedProgress.mjs`增加“原生成功但Codex明确说未完成”“真实格式策略拒绝即使回复称成功”“文件存在不算业务验收”“技术与独立审核计数分离”，以及已有进度轮询、会话复用和最终通知回归通过。源代码尚未生产切换；不能把开发测试结果写成生产已修复。
+- **下一步**：按当前生产`1a78e48`建立热修复候选及精确匹配的回滚快照，经本机PowerShell 7批准升级；真实验证策略拒绝不会再假成功。若希望测试实际的功能完成打勾，必须让Codex拥有合法只读访问并由ChatGPT独立复核，不能绕过策略弹窗或把元数据指纹当业务证明。
 
 ## 2026-10-22 执行中可核验步骤进度（开发版；尚未部署）
 
