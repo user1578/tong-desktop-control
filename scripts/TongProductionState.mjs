@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { PRODUCTION_ROOT, getApprovedProductionProfile, validateProductionProfile, verifyRuntimeApproval, productionProfileDigest } from './TongProductionProfile.mjs';
 import { assertProtectedPaths, processIdentity, sameProcess } from './TongRuntimeSecurity.mjs';
 import {revokeRestoredTrustedAuthorization} from './TongRestoredAuthorization.mjs';
+import {acquireRuntimeFreeze,releaseRuntimeFreeze,maintenanceFreeze} from './TongLifecycleFreeze.mjs';
 
 const helper=fileURLToPath(new URL('TongProductionState.ps1',import.meta.url));
 const fail=code=>new Error(code),sha=value=>createHash('sha256').update(value).digest('hex');
@@ -57,7 +58,7 @@ async function stopped(profile,action='backup') {
   for(const identity of [guardian,record.supervisor,...(record.children??[]),...(record.descendants??[])].filter(Boolean)) if(identity.pid&&sameProcess(await processIdentity(identity.pid),identity))throw fail('STATE_RUNTIME_NOT_STOPPED');
   return {runId:record.runId,phase:record.phase,jobActiveAfterCleanup:guardian.jobActiveAfterCleanup,finishedAt:guardian.finishedAt};
 }
-async function lock(profile) {try {const handle=await open(join(profile.root,'run','backup.freeze'),'wx');await handle.writeFile(JSON.stringify({operation:'production-state',id:randomUUID(),at:new Date().toISOString()}));return handle;}catch{throw fail('STATE_BUSY');}}
+async function lock(profile) {try {const handle=await acquireRuntimeFreeze(profile.root);if(!maintenanceFreeze(profile.root))await handle.writeFile(JSON.stringify({operation:'production-state',id:randomUUID(),at:new Date().toISOString()}));return handle;}catch{throw fail('STATE_BUSY');}}
 async function native(mode,input) {
   const keys=new Set(['SYSTEMROOT','WINDIR','COMSPEC','SYSTEMDRIVE','PROGRAMDATA','PATH','PATHEXT','TEMP','TMP','USERPROFILE','APPDATA','LOCALAPPDATA','NUMBER_OF_PROCESSORS','PROCESSOR_ARCHITECTURE','OS']);
   const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>keys.has(key.toUpperCase())));
@@ -88,7 +89,7 @@ export async function createProductionStateBackup(input,options) {
     const after=await sourceFiles(profile);if(JSON.stringify(files)!==JSON.stringify(after))throw fail('STATE_SOURCE_CHANGED');
     const manifest={schemaVersion:1,scope:'CurrentUser',encrypted:true,mode:profile.mode,sourceRoot:profile.root,profileDigest:productionProfileDigest(profile),sourceDigest:profile.sourceDigest,releaseDigest:profile.releaseDigest,createdAt:new Date().toISOString(),lifecycle,files:encrypted.files};
     await writeFile(join(backupRoot,'state-manifest.json'),JSON.stringify(manifest,null,2)+'\n',{flag:'wx'});await ordinary(join(backupRoot,'state-manifest.json'));return manifest;
-  } finally {await held.close();await unlink(join(profile.root,'run','backup.freeze'));}
+  } finally {await releaseRuntimeFreeze(profile.root,held);}
 }
 function assertEncryptedFiles(encrypted,source) {
   if(!Array.isArray(encrypted)||encrypted.length!==source.length)throw fail('STATE_MANIFEST_DENIED');
@@ -174,7 +175,7 @@ export async function restoreProductionStateBackup(input,options) {
     const check=await sourceFiles(profile);if(JSON.stringify(latest)!==JSON.stringify(check))throw fail('STATE_SOURCE_CHANGED');await stopped(profile,'restore');
     const evidence={schemaVersion:1,sourceRoot:profile.root,backupRoot,restoreRoot,encryptedBackup:true,restoredAt:new Date().toISOString(),executionDisabled:true,autoDispatch:false,latestJournalRecords:journal.length,oauthDisposition:'preserve-latest-compatible',oauthSqlite,runtimeDir:join(restoreRoot,'runtime'),configDir:join(restoreRoot,'config'),tongConfigDir:join(restoreRoot,'tong-config'),oauthStateDir:join(restoreRoot,'oauth'),policyDir:join(restoreRoot,'policy')};
     await writeFile(join(restoreRoot,'restore-evidence.json'),JSON.stringify(evidence,null,2)+'\n',{flag:'wx'});await ordinary(restoreRoot);return evidence;
-  } finally {await held.close();await unlink(join(profile.root,'run','backup.freeze'));}
+  } finally {await releaseRuntimeFreeze(profile.root,held);}
 }
 
 export async function applyRestoredProductionState(input,{restoreRoot}) {
@@ -218,7 +219,7 @@ export async function applyRestoredProductionState(input,{restoreRoot}) {
     await stopped(profile,'restore');
     const result={schemaVersion:1,sourceRoot:profile.root,restoreRoot,appliedAt:new Date().toISOString(),executionDisabled:true,autoDispatch:false,oauthDisposition:'unchanged-latest',journalDisposition:'append-only'};
     await writeFile(join(profile.root,'logs','state-restore.jsonl'),JSON.stringify(result)+'\n',{flag:'a'});return result;
-  } finally {await held.close();await unlink(join(profile.root,'run','backup.freeze'));}
+  } finally {await releaseRuntimeFreeze(profile.root,held);}
 }
 
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {

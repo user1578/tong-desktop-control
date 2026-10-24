@@ -763,9 +763,13 @@ function validateStateTargets(profile, backupRoot, restoreRoot) {
   if (resolve(backupRoot).toLowerCase() === resolve(restoreRoot).toLowerCase() || inside(backupRoot, restoreRoot) || inside(restoreRoot, backupRoot)) fail('STATE_PATH_DENIED');
 }
 
-export async function executeRecovery(profile, { backupRoot, releaseRoot, restoreRoot, transactionId, deps = {} } = {}) {
+export async function executeRecovery(profile, { backupRoot, releaseRoot, restoreRoot, transactionId, candidateProfile, candidateCommit, onCheckpoint, deps = {} } = {}) {
   const valid = validateProductionProfile(profile);
   denyProductionExecution(valid);
+  if(candidateProfile) {
+    const {runMaintenanceTransaction}=await import('./TongMaintenanceTransaction.mjs');
+    return runMaintenanceTransaction({baselineProfile:valid,candidateProfile,candidateCommit,releaseRoot,transactionId},{onCheckpoint});
+  }
   for (const [flag, value] of [['backup', backupRoot], ['release', releaseRoot], ['restore', restoreRoot]]) if (typeof value !== 'string' || !isAbsolute(value)) fail('MAINTENANCE_' + flag.toUpperCase() + '_ROOT_REQUIRED');
   validateStateTargets(valid, backupRoot, restoreRoot);
   await rootPolicy(valid).guard();
@@ -850,6 +854,11 @@ export async function executeRecovery(profile, { backupRoot, releaseRoot, restor
 export async function executeRollback(profile, { transactionId, deps = {} } = {}) {
   const valid = validateProductionProfile(profile);
   denyProductionExecution(valid);
+  const persisted=await readTransaction(valid.root);
+  if(persisted?.kind==='tong-version-maintenance-v1') {
+    const {resumeMaintenanceTransaction}=await import('./TongMaintenanceTransaction.mjs');
+    return resumeMaintenanceTransaction(valid,{transactionId,action:'rollback'});
+  }
   await rootPolicy(valid).guard();
   const txn = await readTransaction(valid.root);
   if (!txn) fail('MAINTENANCE_TRANSACTION_MISSING');

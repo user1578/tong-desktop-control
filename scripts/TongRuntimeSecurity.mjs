@@ -83,6 +83,7 @@ export async function processIdentity(pid, marker = '',{signal}={}) {
 }
 export async function runtimeJobState(runId) { return run('runtime-job', { runId }); }
 export async function startupJobsState(runId,{signal}={}) { return run('startup-jobs', { runId },undefined,signal); }
+export async function runtimeProcessInventory({roots,runIds=[],pids=[]}) { return run('inventory', {roots,runIds,pids}); }
 export function sameProcess(actual, expected) { return !!actual && actual.pid === expected?.pid && actual.exe?.toLowerCase() === expected.exe?.toLowerCase() && actual.startTicks === expected.startTicks; }
 export async function processDescendants(pid) { const result = await run('descendants', { pid }); return Array.isArray(result) ? result : result ? [result] : []; }
 export async function terminateOwnedProcess(identity) { return run('terminate', identity); }

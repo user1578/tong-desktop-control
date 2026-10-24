@@ -1,4 +1,4 @@
-param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job','startup-jobs')][string]$Mode)
+param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job','startup-jobs','inventory')][string]$Mode)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
@@ -77,14 +77,34 @@ public static class TongRuntimeJobProbe {
                 $active=[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId))
                 [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
             }
+        } elseif ($Mode -eq 'inventory') {
+            $all=@(Get-CimInstance Win32_Process -ErrorAction Stop)
+            $matches=@();$identities=@()
+            foreach($p in $all) {
+                if([int]$p.ProcessId -in @($inputData.pids)) {
+                    if(-not $p.ExecutablePath -or -not $p.CreationDate){throw 'identity unavailable'}
+                    $identities+=Process-Info $p
+                }
+                if([int]$p.ProcessId -eq $PID){continue}
+                $command=[string]$p.CommandLine;$match=$false
+                foreach($root in @($inputData.roots)) {if($command.IndexOf([string]$root,[StringComparison]::OrdinalIgnoreCase) -ge 0){$match=$true}}
+                foreach($runId in @($inputData.runIds)) {if($command.IndexOf([string]$runId,[StringComparison]::OrdinalIgnoreCase) -ge 0){$match=$true}}
+                if($match){if(-not $p.ExecutablePath -or -not $p.CreationDate){throw 'inventory unavailable'};$matches+=Process-Info $p}
+            }
+            @{complete=$true;checkedAt=[DateTime]::UtcNow.ToString('o');identities=$identities;matchingProcesses=$matches}|ConvertTo-Json -Depth 5 -Compress
         } elseif ($Mode -eq 'descendants') {
             $all = @(Get-CimInstance Win32_Process)
             $byId = @{}; foreach ($p in $all) { $byId[[int]$p.ProcessId]=$p }
             $ids = [Collections.Generic.HashSet[int]]::new(); $null = $ids.Add([int]$inputData.pid)
             # Historical ParentProcessId alone is not ownership: reject recycled ancestry.
             do { $added = $false; foreach ($p in $all) { $parent=$byId[[int]$p.ParentProcessId]; if ($null -ne $parent -and $p.CreationDate -ge $parent.CreationDate -and $ids.Contains([int]$p.ParentProcessId) -and $ids.Add([int]$p.ProcessId)) { $added = $true } } } while ($added)
-            # Omit our short-lived metadata probes, not backend command processes.
-            @($all | Where-Object { $_.ProcessId -ne [int]$inputData.pid -and $ids.Contains([int]$_.ProcessId) -and $_.CommandLine -notlike '*TongRuntimeSecurity.ps1*' } | ForEach-Object { Process-Info $_ }) | ConvertTo-Json -Depth 3 -Compress
+            # Our observer's console is also transient. Filtering the helper's
+            # command line alone retained its conhost and could later turn a
+            # recycled observer PID into a false lost-Guardian ownership block.
+            # Exclude only this exact observer subtree; keep other backends.
+            $observerIds=[Collections.Generic.HashSet[int]]::new();$null=$observerIds.Add($PID)
+            do {$added=$false;foreach($p in $all){$parent=$byId[[int]$p.ParentProcessId];if($null -ne $parent -and $p.CreationDate -ge $parent.CreationDate -and $observerIds.Contains([int]$p.ParentProcessId) -and $observerIds.Add([int]$p.ProcessId)){$added=$true}}}while($added)
+            @($all | Where-Object { $_.ProcessId -ne [int]$inputData.pid -and $ids.Contains([int]$_.ProcessId) -and -not $observerIds.Contains([int]$_.ProcessId) } | ForEach-Object { Process-Info $_ }) | ConvertTo-Json -Depth 3 -Compress
         } else {
             $p = Get-CimInstance Win32_Process -Filter ('ProcessId = ' + [int]$inputData.pid)
             if ($Mode -eq 'identity') {

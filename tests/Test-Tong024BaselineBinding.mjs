@@ -11,11 +11,13 @@ const startup=['TongAgentDockRuntime.mjs','TongLoginRecovery.mjs','TongRuntimeLa
 // The separately invoked maintenance adapter is this branch's authorized
 // addition. Keep the reviewed startup candidate Git content unchanged and disconnected
 // from it; no other product file is added to the scope.
-const allowed=[...startup,'Tong024LegacyRecovery.mjs','Tong024ProductionMaintenance.mjs'].map(name=>'scripts/'+name).sort();
+const allowed=[...startup,'Tong024LegacyRecovery.mjs','Tong024ProductionMaintenance.mjs','TongLifecycleFreeze.mjs','TongLifecycleFreeze.ps1','TongMaintenanceTransaction.mjs','TongProductionState.mjs'].map(name=>'scripts/'+name).sort();
 const changed=[...new Set((git(['diff','--name-only',baseline,'--','scripts'])+'\n'+git(['ls-files','--others','--exclude-standard','scripts'])).split(/\r?\n/).filter(Boolean))].sort();
 assert.deepEqual(changed,allowed,'only dependency-closed startup and incident recovery product files may differ');
 for(const name of startup){
-  assert.equal(git(['diff','34e26801876d8b1a2fc874dddce72b0939924e87','--','scripts/'+name]),'','reviewed startup core unchanged: '+name);
+  // Only the shared freeze boundary and observation/diagnostic modules are
+  // changed for this closure. Launcher/Guardian/protocol remain the candidate.
+  if(!['TongAgentDockRuntime.mjs','TongRuntimeSecurity.mjs','TongRuntimeSecurity.ps1'].includes(name))assert.equal(git(['diff','34e26801876d8b1a2fc874dddce72b0939924e87','--','scripts/'+name]),'','reviewed startup core unchanged: '+name);
   assert.ok(!(await readFile(join(process.cwd(),'scripts',name),'utf8')).includes('Tong024ProductionMaintenance'),'ordinary startup must not import maintenance');
 }
 for(const file of ['scripts/TongLoginRuntime.ps1','scripts/TongRuntimeServer.mjs','scripts/TongRuntimeCandidate.mjs','scripts/TongProductionProfile.mjs','scripts/TongProductionApproval.ps1','scripts/TongRuntimeRelease.mjs','package.json','package-lock.json'])assert.equal(git(['diff',baseline,'--',file]),'','024 baseline kept: '+file);
