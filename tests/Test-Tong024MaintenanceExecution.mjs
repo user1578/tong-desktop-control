@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { maintenance, observeProductionSite, assessMaintenanceSite, describeMaintenance, productionMaintenanceEntry, runProductionRecovery, rollbackProductionRecovery } from '../scripts/Tong024ProductionMaintenance.mjs';
+import { maintenance, observeProductionSite, assessMaintenanceSite, describeMaintenance, productionMaintenanceEntry, runProductionRecovery, executeRollback } from '../scripts/Tong024ProductionMaintenance.mjs';
 import { createProductionProfile } from '../scripts/TongProductionProfile.mjs';
 import { maintenanceFixture, legacyRuntime, legacyGuardian, legacyRequest, legacyAbort } from './fixtures/Tong024MaintenanceFixture.mjs';
 
@@ -94,7 +94,7 @@ const evidence = () => ({ baselineCommit: maintenance.baselineCommit, runtime: l
   await assert.rejects(runProductionRecovery(prod, {}), /MAINTENANCE_BACKUP_ROOT_REQUIRED/);
   await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b' }), /MAINTENANCE_RELEASE_ROOT_REQUIRED/);
   await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b', releaseRoot: 'D:\\Tong\\state\\r' }), /MAINTENANCE_RESTORE_ROOT_REQUIRED/);
-  await assert.rejects(rollbackProductionRecovery(prod, {}), /MAINTENANCE_BACKUP_ROOT_REQUIRED/);
+  await assert.rejects(executeRollback(fx.profile, {}), /MAINTENANCE_TRANSACTION_MISSING/);
 }
 
 console.log(JSON.stringify({ passed: true, observerQuiescentAccepted: true, liveProcessRefused: true, busyJobRefused: true, busyPortRefused: true, presentReceiptRecorded: true, planBound: true, productionEntryFailClosed: true, completeEntryFailClosed: true, productionExecutionAllowed: false }));
