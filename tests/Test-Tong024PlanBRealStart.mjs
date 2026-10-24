@@ -4,14 +4,22 @@ import {readFile, writeFile, mkdir, copyFile, cp} from 'node:fs/promises';
 import {join, dirname} from 'node:path';
 import {randomBytes} from 'node:crypto';
 import {loginFixture, sha} from './fixtures/TongLoginRecoveryFixture.mjs';
-import {issueSimulationLoginRecovery, revokeSimulationLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
-import {startRuntime, runtimeDoctor, stopRuntime} from '../scripts/TongAgentDockRuntime.mjs';
+import {issueSimulationLoginRecovery, revokeSimulationLoginRecovery, withLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
+import {verifyRelease} from '../scripts/TongRuntimeRelease.mjs';
+import {verifyRuntimeCandidate} from '../scripts/TongRuntimeCandidate.mjs';
 import {protectSecret, safeEnvironment} from '../scripts/TongRuntimeSecurity.mjs';
 
+const commit='34e26801876d8b1a2fc874dddce72b0939924e87';
 const releaseRoot='D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\planb-release-34e2680';
-const manifest=JSON.parse(await readFile(join(releaseRoot,'release-manifest.json'),'utf8'));
+// Re-verify the exact release inside the test (manifest integrity + archive hashes + commit).
+const verified=await verifyRelease({releaseRoot});
+assert.equal(verified.commit,commit,'release commit must be exactly 34e2680');
+assert.equal(verified.sourceFiles.length,299);
+assert.equal(verified.native.length,23);
+const manifest=verified;
 const sourceDigest='d38ee4d6141f430666088d08638f7d5022961e21097f153b915b990cd53b66d9';
 const releaseDigest='160e33da2fbb2d9ba598e31897e83ea1d47073d2ad3844055edb962d23ef9062';
+assert.equal(manifest.files.find(f=>f.path==='code/source.tar').sha256,sourceDigest);
 
 async function materialize(target){
   // Real 299-file source tree (scripts, docs, tests, package.json, ...).
@@ -41,6 +49,11 @@ await writeFile(join(profile.configDir,'config.json'),JSON.stringify({host:'127.
 await writeFile(join(profile.configDir,'auth.json'),'{}');await mkdir(join(profile.codeRoot,'config'),{recursive:true});
 await writeFile(join(profile.codeRoot,'config','tong.config.json'),JSON.stringify({publicOrigin:profile.publicOrigin,workspacePath:profile.demoRoot,port:profile.gatewayPort,scanRoots:[]}));
 await issueSimulationLoginRecovery(profile);
+// Explicit dual-component binding: App and Manager each independently verified.
+await withLoginRecovery(root,'start',async()=>{
+  assert.equal((await verifyRuntimeCandidate(profile)).commit,commit,'App candidate binding');
+  assert.equal((await verifyRuntimeCandidate(profile,{manager:true})).commit,commit,'Manager candidate binding');
+});
 
 const manager=join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs');
 async function command(action,args=[]){
