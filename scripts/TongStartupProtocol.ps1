@@ -92,11 +92,12 @@ public sealed class TongStartupPreflight : IDisposable {
    using(var ready=EventWaitHandle.OpenExisting(name+"-adopted")){guardianLease=lease;lease=IntPtr.Zero;ready.Set();}
   }finally{if(lease!=IntPtr.Zero)CloseHandle(lease);}
  }
- public static uint StartGuardian(string name,string exe,string args,string cwd,int timeoutMs) {
+ public static uint StartGuardian(string name,string exe,string args,string cwd,int timeoutMs) {return StartGuardian(name,exe,args,cwd,timeoutMs,false);}
+ public static uint StartGuardian(string name,string exe,string args,string cwd,int timeoutMs,bool retainOuterJob) {
   IntPtr owner=IntPtr.Zero;ProcessInfo info=new ProcessInfo();
   bool created;using(var ready=new EventWaitHandle(false,EventResetMode.ManualReset,name+"-adopted",out created)){
   if(!created)throw new Exception("GUARDIAN_EVENT_EXISTS");
-  try{owner=NewJob(name);info=Spawn(owner,exe,args,cwd,IntPtr.Zero,IntPtr.Zero,0x01000010);
+  try{owner=NewJob(name);info=Spawn(owner,exe,args,cwd,IntPtr.Zero,IntPtr.Zero,retainOuterJob?0x10u:0x01000010u);
    long createdAt,ended,kernel,user;Check(GetProcessTimes(info.process,out createdAt,out ended,out kernel,out user),"GUARDIAN_IDENTITY_FAILED");GuardianStartTicks=(DateTime.FromFileTimeUtc(createdAt).Ticks/10*10).ToString();
    var watch=Stopwatch.StartNew();
    while(!ready.WaitOne(50)){if(Wait(info.process,0)==0)throw new Exception("GUARDIAN_EXIT_BEFORE_ADOPTION");if(watch.ElapsedMilliseconds>=timeoutMs)throw new Exception("GUARDIAN_ADOPTION_TIMEOUT");}
@@ -125,7 +126,11 @@ public sealed class TongStartupPreflight : IDisposable {
   var handle=CreateJobObject(IntPtr.Zero,name);int error=Marshal.GetLastWin32Error();if(handle==IntPtr.Zero)throw new Win32Exception(error,"JOB_CREATE_FAILED");
   try{if(error==183)throw new Win32Exception(error,"JOB_ALREADY_EXISTS");var data=new Extended();data.basic.flags=0x2000;int size=Marshal.SizeOf(data);var p=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,p,false);Check(SetInformationJobObject(handle,9,p,(uint)size),"JOB_CONFIG_FAILED");}finally{Marshal.FreeHGlobal(p);}return handle;}catch{CloseHandle(handle);throw;}
  }
- public TongStartupPreflight(string name,string exe,string args,string cwd) {
+ IntPtr pendingThread;
+ public int Pid {get;private set;}
+ public string StartTicks {get;private set;}
+ public TongStartupPreflight(string name,string exe,string args,string cwd):this(name,exe,args,cwd,false){}
+ public TongStartupPreflight(string name,string exe,string args,string cwd,bool suspended) {
   IntPtr nul=IntPtr.Zero; ProcessInfo info=new ProcessInfo();
   try {
    job=NewJob(name);
@@ -133,16 +138,25 @@ public sealed class TongStartupPreflight : IDisposable {
    Check(nul!=new IntPtr(-1),"PREFLIGHT_IO_FAILED");Check(SetHandleInformation(nul,1,1),"PREFLIGHT_IO_FAILED");
    info=Spawn(job,exe,args,cwd,IntPtr.Zero,nul,0x08000004);
    process=info.process;
-   Check(ResumeThread(info.thread)!=0xffffffff,"PREFLIGHT_RESUME_FAILED");
+   Pid=(int)info.pid;long a,b,c,d;Check(GetProcessTimes(process,out a,out b,out c,out d),"PREFLIGHT_IDENTITY_FAILED");StartTicks=(DateTime.FromFileTimeUtc(a).Ticks/10*10).ToString();
+   if(suspended){pendingThread=info.thread;info.thread=IntPtr.Zero;}else Check(ResumeThread(info.thread)!=0xffffffff,"PREFLIGHT_RESUME_FAILED");
   }catch{if(process!=IntPtr.Zero){TerminateProcess(process,1);WaitForSingleObject(process,10000);}Dispose();throw;}
   finally{if(info.thread!=IntPtr.Zero)CloseHandle(info.thread);if(nul!=IntPtr.Zero&&nul!=new IntPtr(-1))CloseHandle(nul);}
  }
+ public void Resume(){Check(pendingThread!=IntPtr.Zero,"PREFLIGHT_NOT_SUSPENDED");Check(ResumeThread(pendingThread)!=0xffffffff,"PREFLIGHT_RESUME_FAILED");CloseHandle(pendingThread);pendingThread=IntPtr.Zero;}
+ public void StartNext(string exe,string args,string cwd){
+  if(!Exited)throw new Exception("PREFLIGHT_STILL_RUNNING");CloseHandle(process);process=IntPtr.Zero;
+  IntPtr nul=IntPtr.Zero;ProcessInfo info=new ProcessInfo();
+  try{nul=CreateFile("NUL",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero);Check(nul!=new IntPtr(-1),"PREFLIGHT_IO_FAILED");Check(SetHandleInformation(nul,1,1),"PREFLIGHT_IO_FAILED");info=Spawn(job,exe,args,cwd,IntPtr.Zero,nul,0x08000004);process=info.process;pendingThread=info.thread;info.thread=IntPtr.Zero;Pid=(int)info.pid;long a,b,c,d;Check(GetProcessTimes(process,out a,out b,out c,out d),"PREFLIGHT_IDENTITY_FAILED");StartTicks=(DateTime.FromFileTimeUtc(a).Ticks/10*10).ToString();}
+  finally{if(info.thread!=IntPtr.Zero)CloseHandle(info.thread);if(nul!=IntPtr.Zero&&nul!=new IntPtr(-1))CloseHandle(nul);}
+ }
+ public void ReleaseSurvivors(){var data=new Extended();int size=Marshal.SizeOf(data);var p=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,p,false);Check(SetInformationJobObject(job,9,p,(uint)size),"JOB_RELEASE_FAILED");}finally{Marshal.FreeHGlobal(p);}}
  static uint Wait(IntPtr handle,uint timeout){uint status=WaitForSingleObject(handle,timeout);if(status==0xffffffff)throw new Win32Exception(Marshal.GetLastWin32Error(),"PROCESS_WAIT_FAILED");return status;}
  public bool Exited { get{return Wait(process,0)==0;} }
  public uint ExitCode { get{uint code;Check(GetExitCodeProcess(process,out code),"PREFLIGHT_STATUS_FAILED");return code;} }
  public int Active { get{var p=Marshal.AllocHGlobal(48);try{Check(QueryInformationJobObject(job,1,p,48,IntPtr.Zero),"PREFLIGHT_JOB_FAILED");return Marshal.ReadInt32(p,40);}finally{Marshal.FreeHGlobal(p);}} }
  public void Cancel(){Check(TerminateJobObject(job,1),"PREFLIGHT_CANCEL_FAILED");}
- public void Dispose(){if(job!=IntPtr.Zero){CloseHandle(job);job=IntPtr.Zero;}if(process!=IntPtr.Zero){CloseHandle(process);process=IntPtr.Zero;}}
+ public void Dispose(){if(pendingThread!=IntPtr.Zero){CloseHandle(pendingThread);pendingThread=IntPtr.Zero;}if(job!=IntPtr.Zero){CloseHandle(job);job=IntPtr.Zero;}if(process!=IntPtr.Zero){CloseHandle(process);process=IntPtr.Zero;}}
 }
 '@
 function Get-TongStartupIdentity([int]$ProcessId) {

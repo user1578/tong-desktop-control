@@ -10,10 +10,11 @@ import { Transform } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import { TongAgentDockClient } from './TongAgentDockClient.mjs';
 import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic, runtimeJobState, startupJobsState } from './TongRuntimeSecurity.mjs';
-import {PRODUCTION_ROOT,validateProductionProfile,loadApprovedProfile,verifyRuntimeApproval,initializeProductionRoot,recordApprovedEnabledState,readApprovedEnabledState} from './TongProductionProfile.mjs';
+import {PRODUCTION_ROOT,validateProductionProfile,productionProfileDigest,loadApprovedProfile,verifyRuntimeApproval,initializeProductionRoot,recordApprovedEnabledState,readApprovedEnabledState} from './TongProductionProfile.mjs';
 import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.mjs';
 import {withLoginRecovery,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
 import {acquireRuntimeFreeze,releaseRuntimeFreeze} from './TongLifecycleFreeze.mjs';
+import {borrow024Handoff,is024Borrowed} from './Tong024Handoff.mjs';
 export const AGENTDOCK_EXE='D:\\Tong\\runtime\\agentdock\\agentdock.exe';
 export const AGENTDOCK_SHA256='bc1a7a35f1985e9f7827142577fc31bd4ca536e27252b08fc28c5ed636cf5e8d';
 const self=fileURLToPath(import.meta.url), guardianScript=fileURLToPath(new URL('TongRuntimeLaunch.ps1',import.meta.url)), childScript=fileURLToPath(new URL('TongRuntimeServer.mjs',import.meta.url));
@@ -124,8 +125,8 @@ export async function updateRuntimeProfile(profile,{releaseRoot}={}){
   }finally{await releaseFreeze(profile.root,held);}
 }
 async function unused(port){await new Promise((ok,reject)=>{const socket=createConnection({host:'127.0.0.1',port});const timer=setTimeout(()=>{socket.destroy();reject(fail('PORT_CHECK_FAILED'));},1000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy();reject(fail('PORT_OCCUPIED'));});socket.once('error',error=>{clearTimeout(timer);socket.destroy();error.code==='ECONNREFUSED'?ok():reject(fail('PORT_CHECK_FAILED'));});});}
-async function freeze(root){try{return await acquireRuntimeFreeze(root);}catch{throw fail('RUNTIME_BUSY');}}
-async function releaseFreeze(root,handle){await releaseRuntimeFreeze(root,handle);}
+async function freeze(root,{handoffId,profile,action}={}){if(handoffId!==undefined)return borrow024Handoff(root,{sessionId:handoffId,profile,action});try{return await acquireRuntimeFreeze(root);}catch{throw fail('RUNTIME_BUSY');}}
+async function releaseFreeze(root,handle){if(is024Borrowed(handle))return handle.close();await releaseRuntimeFreeze(root,handle);}
 export async function initializeRuntime({root,tongRoot,withTong=false,gatewayPort=17876,upstreamPort=17877}) {
   if(loginRecoveryGrantId())throw fail('APPROVAL_DENIED');
   root=absoluteRoot(root);if(root===PRODUCTION_ROOT)throw fail('INVALID_ROOT');if(guardedRoot(root))throw fail('APPROVAL_DENIED');await assertProtectedPaths([dirname(root)]);await mkdir(root,{recursive:true});await assertProtectedPaths([root]);
@@ -242,7 +243,7 @@ async function guardianComplete(root,runId) {
   if(record?.runId!==runId||guardian.nodePid!==record.supervisor?.pid)return false;
   try{await oldRuntimeGone(root,record,guardian,{completed:true});return true;}catch{return false;}
 }
-export async function startRuntime(root,{startupTimeoutMs,onRequest}={}) {
+export async function startRuntime(root,{startupTimeoutMs,onRequest,handoffId}={}) {
   if(onRequest!==undefined&&typeof onRequest!=='function')throw fail('INVALID_REQUEST_OBSERVER');
   if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
   root=absoluteRoot(root);const approved=guardedRoot(root)?await loadApprovedProfile(root,'start'):null;
@@ -250,7 +251,7 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest}={}) {
   const maxStartupMs=preserved(profile)?120000:30000;
   startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
-  const held=await freeze(root);
+  const held=await freeze(root,{handoffId,profile,action:'start'});
   let runId,child,launchedIdentity,deadline,release=true,stage='previous_cleanup';
   const diagnosticId=randomUUID();
   const checkpoint=async name=>{stage=name;await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_checkpoint',diagnosticId,role:'manager',stage:name})+'\n',{flag:'a'});};
@@ -317,7 +318,7 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest}={}) {
     if(dockEnabled(profile))await readSecret(root,'agentdock');if(preserved(profile)?profile.mode==='production-simulation':profile.withTong)await readSecret(root,'oauth-owner');
     await checkpoint('request');
     deadline=Date.now()+startupTimeoutMs;
-    runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),startupDeadline:deadline,...(recoveryGrantId?{recoveryGrantId}:{})});
+    runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),startupDeadline:deadline,...(recoveryGrantId?{recoveryGrantId}:{}),...(handoffId?{handoff:{sessionId:handoffId,profileDigest:productionProfileDigest(profile)}}:{})});
     // Maintenance persists this identity before the launcher can create a tree.
     if(onRequest)await onRequest({runId});
     stage='launcher_start';
@@ -430,7 +431,7 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest}={}) {
 export async function stopRuntime(root,options={}) {
   root=absoluteRoot(root);const profile=await layout(root);
   if(preserved(profile))await verifyRuntimeApproval(profile,'stop');
-  const held=await freeze(root);let release=true;
+  const held=await freeze(root,{handoffId:options.handoffId,profile,action:'stop-run'});let release=true;
   try{return await stopRuntimeLocked(root,options);}catch(error){if(['STOP_TIMEOUT','CLEANUP_REQUIRED'].includes(error.message))release=false;throw error;}
   finally{if(release)await releaseFreeze(root,held);else await held.close();}
 }
@@ -488,7 +489,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     if(command==='reconcile-stale')return reconcileStaleRuntime(root);
     if(command==='stop-run'){
       const expectedRunId=option('--run-id');if(!expectedRunId)throw fail('INVALID_RUN');
-      return stopRuntime(root,{expectedRunId});
+      return stopRuntime(root,{expectedRunId,handoffId:option('--handoff-id')});
     }
     if(command==='supervise'){
       const diagnosticRoot=absoluteRoot(root);await assertProtectedPaths([diagnosticRoot,join(diagnosticRoot,'logs')]);
@@ -499,7 +500,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
       process.on('exit',code=>{try{appendFileSync(join(diagnosticRoot,'logs','supervisor.jsonl'),JSON.stringify({at:new Date().toISOString(),runId:option('--run-id'),pid:process.pid,event:'supervisor_exit',exitCode:code})+'\n');}catch{}});
       try{await supervise(root,option('--run-id'));}catch(error){fatal('supervisor_start_failed',error);throw error;}return;
     }
-    const result=command==='init'?await initializeRuntime({root,tongRoot:option('--tong-root'),withTong:args.includes('--with-tong')}):command==='start'?await startRuntime(root):command==='stop'?await stopRuntime(root):command==='status'?await runtimeStatus(root):command==='doctor'?await runtimeDoctor(root):null;
+    const result=command==='init'?await initializeRuntime({root,tongRoot:option('--tong-root'),withTong:args.includes('--with-tong')}):command==='start'?await startRuntime(root,{handoffId:option('--handoff-id')}):command==='stop'?await stopRuntime(root):command==='status'?await runtimeStatus(root):command==='doctor'?await runtimeDoctor(root):null;
     if(!result)throw fail('INVALID_COMMAND');return result;
   }
   try{

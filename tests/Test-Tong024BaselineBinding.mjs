@@ -8,16 +8,16 @@ const require=createRequire(import.meta.url),sha=value=>createHash('sha256').upd
 const baseline='024d5b0920d9ad8f1a2baf2e55640a5666ad4739';
 const git=args=>{const r=spawnSync('git',args,{encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
 const startup=['TongAgentDockRuntime.mjs','TongLoginRecovery.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongRuntimeSecurity.mjs','TongRuntimeSecurity.ps1','TongStartupProtocol.ps1'];
-// The separately invoked maintenance adapter is this branch's authorized
-// addition. Keep the reviewed startup candidate Git content unchanged and disconnected
-// from it; no other product file is added to the scope.
-const allowed=[...startup,'Tong024LegacyRecovery.mjs','Tong024ProductionMaintenance.mjs','TongLifecycleFreeze.mjs','TongLifecycleFreeze.ps1','TongMaintenanceTransaction.mjs','TongProductionState.mjs'].map(name=>'scripts/'+name).sort();
+// The new exact candidate authorizes only the five-file native handoff delta.
+// Existing branch-specific maintenance changes retain their prior narrow scope.
+const handoffCandidate='90e3bc872989e63a6efe5bcef214e0489d54e052';
+assert.deepEqual(git(['diff','--name-only','34e26801876d8b1a2fc874dddce72b0939924e87',handoffCandidate,'--','scripts']).split(/\r?\n/).sort(),['Tong024Handoff.mjs','Tong024Handoff.ps1','TongAgentDockRuntime.mjs','TongRuntimeLaunch.ps1','TongStartupProtocol.ps1'].map(name=>'scripts/'+name).sort());
+const allowed=[...startup,'Tong024Handoff.mjs','Tong024Handoff.ps1','Tong024LegacyRecovery.mjs','Tong024ProductionMaintenance.mjs','TongLifecycleFreeze.mjs','TongLifecycleFreeze.ps1','TongMaintenanceTransaction.mjs','TongProductionState.mjs'].map(name=>'scripts/'+name).sort();
 const changed=[...new Set((git(['diff','--name-only',baseline,'--','scripts'])+'\n'+git(['ls-files','--others','--exclude-standard','scripts'])).split(/\r?\n/).filter(Boolean))].sort();
 assert.deepEqual(changed,allowed,'only dependency-closed startup and incident recovery product files may differ');
 for(const name of startup){
-  // Only the shared freeze boundary and observation/diagnostic modules are
-  // changed for this closure. Launcher/Guardian/protocol remain the candidate.
-  if(!['TongAgentDockRuntime.mjs','TongRuntimeSecurity.mjs','TongRuntimeSecurity.ps1'].includes(name))assert.equal(git(['diff','34e26801876d8b1a2fc874dddce72b0939924e87','--','scripts/'+name]),'','reviewed startup core unchanged: '+name);
+  const reviewed=['TongRuntimeLaunch.ps1','TongStartupProtocol.ps1'].includes(name)?handoffCandidate:'34e26801876d8b1a2fc874dddce72b0939924e87';
+  if(!['TongAgentDockRuntime.mjs','TongRuntimeSecurity.mjs','TongRuntimeSecurity.ps1'].includes(name))assert.equal(git(['diff',reviewed,'--','scripts/'+name]),'','exact reviewed startup core: '+name);
   assert.ok(!(await readFile(join(process.cwd(),'scripts',name),'utf8')).includes('Tong024ProductionMaintenance'),'ordinary startup must not import maintenance');
 }
 for(const file of ['scripts/TongLoginRuntime.ps1','scripts/TongRuntimeServer.mjs','scripts/TongRuntimeCandidate.mjs','scripts/TongProductionProfile.mjs','scripts/TongProductionApproval.ps1','scripts/TongRuntimeRelease.mjs','package.json','package-lock.json'])assert.equal(git(['diff',baseline,'--',file]),'','024 baseline kept: '+file);

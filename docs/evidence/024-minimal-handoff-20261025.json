@@ -1,0 +1,700 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-25",
+  "timezone": "Asia/Tokyo",
+  "reviewBase": "898d39673099d45779734c1c5f272bd82884c49e",
+  "baselineCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "minimalCandidateParent": "34e26801876d8b1a2fc874dddce72b0939924e87",
+  "readiness": "NOT READY",
+  "nativeHandoffAcceptance": "PASSED",
+  "productionExecutionAllowed": false,
+  "release": {
+    "candidate": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+    "releaseRoot": "D:\\Tong\\state\\b23-login-8e32da332608430bb4971bc668ef4ace\\handoff-release-90e3bc8",
+    "releaseDigest": "0fdfe34e0685db76486e094d74369455f58857d5ff74db29c524037775b61af1",
+    "sourceDigest": "b3b2e7c7d2d601a94b9e1b5f5b78192e3c0fded6927d9efbb7cdd372b1c192a4",
+    "sourceFiles": 301,
+    "native": 23
+  },
+  "candidateDelta": {
+    "productFiles": 5,
+    "insertions": 334,
+    "deletions": 15
+  },
+  "captures": [
+    {
+      "label": "handoff-v2-red-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T16:43:18.045Z",
+      "durationMs": 68,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "2ea91b57fb8519bc98c52dae246a7d846398644af1a716a9cc5d14393ac201da",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-red-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-red-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-red-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-native-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:46:10.528Z",
+      "durationMs": 8969,
+      "stdoutSha256": "0f5fc9cd5d43a7f64b0198aa29f66374b59dadfa2812bcf6592ef4a0a89cbb55",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-native-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-native-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-native-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-crash-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:50:56.164Z",
+      "durationMs": 32284,
+      "stdoutSha256": "f8ea51d625659f9501b5669b3e6e5905da6871f3708fc3188b7513807a327e76",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-crash-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-crash-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-crash-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-gate-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:53:54.895Z",
+      "durationMs": 34329,
+      "stdoutSha256": "d76432b05a1c17e6598331565f87fedba9b5e5f10552ca87e2c714f6492d671b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-gate-final-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-gate-final-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-gate-final-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-release-build-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts\\024-native-review\\build-handoff-release.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:01:43.373Z",
+      "durationMs": 8434,
+      "stdoutSha256": "ab946f29652acb5e40f8540d63c558aa4db31e7a5d7090460e0163fccc5825c7",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-build-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-build-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-build-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-real-release-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024HandoffRelease.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T17:04:43.468Z",
+      "durationMs": 75849,
+      "stdoutSha256": "6a5e3040baad631e7e8fbd94c6ee5a5af630948f5b27dfd579cd08e1580da764",
+      "stderrSha256": "8585b3529647e994ec658713fe299fb1de6338928319dfeabe4e59abebdfae4d",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-release-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-release-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-release-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-peer-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:12:37.783Z",
+      "durationMs": 38927,
+      "stdoutSha256": "e9962b444c019081e485450c7317f7210a3875b5dba60c9ac6da192a9a5ebd20",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-peer-final-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-peer-final-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-peer-final-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-release-r5-build-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/build-handoff-release.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:13:54.100Z",
+      "durationMs": 6781,
+      "stdoutSha256": "ff8f6733d8e443ed2f0501a229da50f24e6ee53fdc78cd5379e2d5e0a1f93551",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r5-build-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r5-build-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r5-build-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-real-r5-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffRelease.mjs",
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+        "artifacts/024-native-review/handoff-v2-release-r5.json"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:14:08.187Z",
+      "durationMs": 345534,
+      "stdoutSha256": "61ba60a5669ff205fc914d501b2073c4309a3a769f1fbab96ad98f6b64e02c80",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r5-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r5-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r5-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-oauth-r5-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffGateway.mjs",
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+        "1f425e2ef327942267dca41a7fe57f55ea25f0da"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:16:54.982Z",
+      "durationMs": 4423,
+      "stdoutSha256": "1c64bb582b8143b98b983d208b238e77db96284fc761afa6973d259eb6b5e430",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-oauth-r5-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-oauth-r5-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-oauth-r5-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-024-install-rollback-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffInstallRollback.mjs",
+        "run",
+        "artifacts/024-native-review/handoff-v2-release-r5.json"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:21:49.338Z",
+      "durationMs": 761290,
+      "stdoutSha256": "30993c13f92add1d76b6058f1bcaa5eb1fa546f9163233c52d38ab5f128de462",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-install-rollback-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-install-rollback-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-install-rollback-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-recovery-peer-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:24:22.735Z",
+      "durationMs": 45974,
+      "stdoutSha256": "4b5623d6835c556696a15baacd1191396566289ddc309e8107d8a0900f2f955d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-recovery-peer-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-recovery-peer-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-recovery-peer-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-recovery-resume-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:29:02.762Z",
+      "durationMs": 49758,
+      "stdoutSha256": "8332954f7c74f27066e4b0ca343e3e14abf490f4efe9d3873b4c1a61302ab118",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-recovery-resume-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-recovery-resume-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-recovery-resume-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-release-r6-build-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/build-handoff-release.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:30:15.392Z",
+      "durationMs": 9290,
+      "stdoutSha256": "e7e7c4b5170c616b1bd64e78e852272533f191c589652983804f6cf53dfd8e0f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r6-build-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r6-build-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r6-build-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-native-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:30:15.426Z",
+      "durationMs": 50462,
+      "stdoutSha256": "68f5c357ae57530a9faeab4df4b8735cfcb716cfbc58b211ac7e46a3483ede01",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-native-final-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-native-final-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-native-final-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-real-r6-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffRelease.mjs",
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+        "artifacts/024-native-review/handoff-v2-release-r6.json",
+        "1f425e2ef327942267dca41a7fe57f55ea25f0da"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:31:53.835Z",
+      "durationMs": 353656,
+      "stdoutSha256": "2a067e7e79a4dedae115ea20b33626b942b4a87272c7ac5b29f0ef146dd16165",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r6-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r6-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r6-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-024-native-crash-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffCrashRollback.mjs",
+        "run",
+        "from-env",
+        "artifacts/024-native-review/handoff-v2-release-r6.json"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T17:35:22.009Z",
+      "durationMs": 11080,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "9abed1bb531edd0844051b09ac0baf06378509b8209531a410b2363a6be8fe80",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-crash-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-crash-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-crash-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-024-native-crash-fixed-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffCrashRollback.mjs",
+        "run",
+        "from-env",
+        "artifacts/024-native-review/handoff-v2-release-r6.json"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T17:37:00.837Z",
+      "durationMs": 87310,
+      "stdoutSha256": "7d5db768be4ab59435db55183fe5d6275532995c09efbed76a7973c687cf6803",
+      "stderrSha256": "6da36926788464e854076a3a75b72fe2427ea30f4dea76e0765b684b167b14d1",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-crash-fixed-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-crash-fixed-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-crash-fixed-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-path-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024NativeHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:39:17.627Z",
+      "durationMs": 54978,
+      "stdoutSha256": "c94e18c988c37589337294cb5b4594b6ea20ed5ac7506f9d298550c3aaede7dc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-path-final-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-path-final-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-path-final-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-024-prestart-restore-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffRecoverPrestart.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:41:11.652Z",
+      "durationMs": 27509,
+      "stdoutSha256": "a27a8a33319aa2011791fb2311f5f69fbba16b0468115944a4517ef6c5eb81a2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-prestart-restore-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-prestart-restore-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-prestart-restore-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-release-r7-build-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/build-handoff-release.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:41:55.787Z",
+      "durationMs": 8175,
+      "stdoutSha256": "8af0ae9dbd446e23153686dd55fc138012ef521ec20b7856011693b42aa82109",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r7-build-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r7-build-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-release-r7-build-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-real-r7-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffRelease.mjs",
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+        "artifacts/024-native-review/handoff-v2-release-r7.json",
+        "cabb762d39afdf9c917280f898b6cc812f606922"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:42:17.444Z",
+      "durationMs": 366479,
+      "stdoutSha256": "94bfcddf38ad839508831623229a62edea156992e181ad46949f5eaed9dc89b6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r7-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r7-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-real-r7-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-024-native-r7-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffCrashRollback.mjs",
+        "run",
+        "from-env",
+        "artifacts/024-native-review/handoff-v2-release-r7.json"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:42:35.520Z",
+      "durationMs": 378071,
+      "stdoutSha256": "4d03843be02b122c8d03b2fb41d1938c2441a3815f84d72103bfa345894ce14c",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-r7-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-r7-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-024-native-r7-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-final-binding-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/verify-handoff-final.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:48:12.853Z",
+      "durationMs": 4073,
+      "stdoutSha256": "21617646b67246d24f39cff32fc5c8af267a411b31ac45a081836c665f9367cc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-final-binding-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-final-binding-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-final-binding-20261025\\stderr.log"
+    },
+    {
+      "label": "handoff-v2-baseline-binding-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024BaselineBinding.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T17:49:21.716Z",
+      "durationMs": 1045,
+      "stdoutSha256": "fb50e19589529aedfbd38259809bc7e368a9ab534d2c4a90748c3f51aa423139",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-baseline-binding-20261025",
+      "stdoutPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-baseline-binding-20261025\\stdout.log",
+      "stderrPath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\handoff-v2-baseline-binding-20261025\\stderr.log"
+    }
+  ],
+  "installedAcceptance": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+    "folder": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\024-handoff\\48ed0329-d208-4af2-bbc1-cfc6da5a18d8",
+    "candidate": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+    "releaseDigest": "0fdfe34e0685db76486e094d74369455f58857d5ff74db29c524037775b61af1",
+    "sourceDigest": "b3b2e7c7d2d601a94b9e1b5f5b78192e3c0fded6927d9efbb7cdd372b1c192a4",
+    "unrelatedAndForgedStartDenied": true,
+    "heldAcrossAllCopies": true,
+    "nestedGuardianAndSupervisorVerified": true,
+    "monitorInitialAndPeriodicHealth": true,
+    "monitorCode": 0,
+    "normalStopRestart": true,
+    "noResidualFreeze": true,
+    "firstRunId": "3b1ecfe9-5c09-427e-81d3-c671f488a6ca",
+    "restartedRunId": "dfcf39e4-6dbf-4325-a8e0-72dcf717db40",
+    "commands": [
+      {
+        "action": "start",
+        "code": 1
+      },
+      {
+        "action": "start",
+        "code": 1
+      },
+      {
+        "action": "doctor",
+        "code": 0
+      },
+      {
+        "action": "stop-run",
+        "code": 0
+      },
+      {
+        "action": "start",
+        "code": 0
+      },
+      {
+        "action": "doctor",
+        "code": 0
+      },
+      {
+        "action": "stop-run",
+        "code": 0
+      }
+    ],
+    "full024RollbackTested": false,
+    "productionExecutionAllowed": false
+  },
+  "gatewayAcceptance": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+    "commit": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+    "runId": "3b1ecfe9-5c09-427e-81d3-c671f488a6ca",
+    "oauthPkce": true,
+    "mcpInitialize": true,
+    "toolsList": true,
+    "toolCount": 38
+  },
+  "componentMatrix": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5",
+    "evidence": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5\\024-install-rollback-evidence",
+    "baselineCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "candidate": "1f425e2ef327942267dca41a7fe57f55ea25f0da",
+    "results": [
+      {
+        "action": "install",
+        "stage": "write-installed",
+        "code": 71,
+        "stdoutSha256": "470149ef5ada9bc0e1c0ce7ab0c84689c17cc5c4978993e9ff1594424ac5a0f0",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "0b67d0502d23ae46847c9cc1e678e188d1cea3fea8e0d0d921198907e3f991ed",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "app-files",
+        "code": 71,
+        "stdoutSha256": "e2c3283dadeb8e46a3bfd1c4dc06f148409b176f568aa37763c5fc1e19dd5b7f",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "1fa457baf1414fe1b09f492a96eeefc18646d1114dab63907c7a26129ab4dc2f",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "manager-files",
+        "code": 71,
+        "stdoutSha256": "26e15009f03d52d0d5796b85292a5735d1f1c17e930842f12a61b4070e91dd04",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "c5618024a3552a352105e6c8ad592a02c0a15a029f1ee15ee2ecd2b56764afd6",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "app-pin",
+        "code": 71,
+        "stdoutSha256": "2207c1d7b3ef866782946204a443a566e8e35d23b97cd52123540b506d571c5a",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "ab12eea3afb24da45352531d4d908bddac056dd7e72a8978d2f583f26dd1c9c5",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "manager-pin",
+        "code": 71,
+        "stdoutSha256": "18b2c78f235196c43f996a73e894696f9fcdc5c476aaf8b28e38f108826477b3",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "3c96618c08a64890539fe6508e9018deea3be7b25948811c50515b1290ed5399",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "profile",
+        "code": 71,
+        "stdoutSha256": "73f7d5119b4b409fbbd31eaeef696cdf53a0c2acc4a46a834da5a8710a99c310",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "7a44c085a1c32d22feaddba6091a5786e5e011f82fe681bd6c3941bdcd96ccc0",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "permissions",
+        "code": 71,
+        "stdoutSha256": "9f3f54199084115bb4ec23fc1ef73ef1be5e171a4597a7d08542c5daac29dbcc",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "2b53254940eb87f13643d7f78273b1b52afaaa5bc1a87f6c2e4e6f53d4073ce6",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "install",
+        "stage": "controls",
+        "code": 71,
+        "stdoutSha256": "464ce1d6dee212840f95eb64df6edc3115d8256bd404574f498b58ff46d6380c",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "action": "rollback",
+        "code": 0,
+        "stdoutSha256": "7e133b6bf1208253b17f3ea107b4b2a9d88f70306620fc8546c22a10790433a6",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "fullSourceNativeProfilePinsPermissionsControlsHashVerified": true,
+    "independentProcessRestore": true,
+    "allNative": true,
+    "installerRestorerComponentsOnly": true,
+    "handoffCrashRecoveryIntegrated": false,
+    "productionExecutionAllowed": false
+  },
+  "finalCandidateCrashAndRestore": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5",
+    "evidence": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5\\024-handoff-crash-evidence-90e3bc8",
+    "candidate": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+    "baselineCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "results": [
+      {
+        "stage": "start-failure",
+        "action": "install",
+        "code": 71,
+        "stdoutSha256": "76f966c0efa931cf8817c14b4b73d4b3c93ccc24c08301d98867e6deb005b447",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "stage": "start-failure",
+        "action": "control",
+        "code": 0,
+        "signal": null
+      },
+      {
+        "stage": "start-failure",
+        "action": "recover",
+        "code": 0,
+        "stdoutSha256": "073a3f9ab9b83c5edae1327efbc93ae090b5b8e5d9484214319c153b3440056c",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "stage": "controller-crash",
+        "action": "install",
+        "code": 71,
+        "stdoutSha256": "9a128f9201f51ce36dbfe0976bfc0bfea14e3a61bada0280a7d955897ed60c42",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "stage": "controller-crash",
+        "action": "control",
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      {
+        "stage": "controller-crash",
+        "action": "recover",
+        "code": 0,
+        "stdoutSha256": "2fb6bd52ad2dccb2f6cee5936b9458bb6a1ba4eb635d8caa805983facc7b99d7",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "nativeReadyTreeKilledOnControllerExit": true,
+    "independentFreezeAndFullVersionRestore": true,
+    "productionExecutionAllowed": false
+  },
+  "failedRuns": {
+    "handoff-v2-red-20261025": "Expected missing native API before implementation.",
+    "handoff-v2-real-release-20261025": "e13e4c9 Launcher Join-Path ProgramFiles missing in safeEnvironment; no Guardian created. Fixed without security policy changes.",
+    "handoff-v2-024-native-crash-20261025": "Test setup attempted wx recreation of existing enabled permission file. Fixed by verifying existing legitimate state.",
+    "handoff-v2-024-native-crash-fixed-20261025": "First controls checkpoint was mistaken for complete archival. Runtime safely refused CLEANUP_REQUIRED. Original old request unchanged; independent complete restore exit0; integration moved to starting checkpoint."
+  },
+  "remainingBlockers": [
+    "Production inventory ngrok identity SECURITY_UNAVAILABLE; MONITOR_FAILED historical cause UNKNOWN.",
+    "Commit-intent/disarmed recovery deliberately refused; live exact runtime stop/adoption branch and interruption acceptance missing.",
+    "Truncated unknown gate refuses automatic recovery; sealed snapshot retained for controlled offline recovery.",
+    "Production executor/native approvals/formal Task Scheduler and Host takeover not enabled or accepted."
+  ],
+  "boundaries": {
+    "primitiveWorkerIsSynthetic": true,
+    "fullReleaseUsesRealWindowsState": true,
+    "monitorIsInstrumentedIsolatedCopy": true,
+    "productionTaskUntouched": true,
+    "componentMatrixCandidate": "1f425e2ef327942267dca41a7fe57f55ea25f0da",
+    "dpapiBusinessRestoreIsStaging": true,
+    "productionReads": "Only non-secret release pin in baseline binding; no full production audit rerun; no plaintext production credentials.",
+    "productionWrites": false
+  },
+  "evidencePolicy": "Only metadata, hashes and isolated evidence locations are committed. Snapshots, DPAPI envelopes, OAuth tokens and databases remain local."
+}

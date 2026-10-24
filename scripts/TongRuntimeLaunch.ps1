@@ -31,7 +31,20 @@ try {
     $script:tongStartup.guardianCreated=$null
     Set-TongStartupStage 'create_guardian'
     $adoptionBudget=[int][Math]::Max(1,[Math]::Min(30000,($script:tongDeadline-[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())))
-    $childId=[TongStartupPreflight]::StartGuardian(('Local\TongGuardian-'+$RunId),$guardianShell,$arguments,$Root,$adoptionBudget)
+    $retainOuterJob=$false
+    $request=[IO.File]::ReadAllText((Join-Path $Root 'run\request.json'))|ConvertFrom-Json
+    if($request.PSObject.Properties['handoff']){
+        if($request.runId -cne $RunId){throw 'Handoff request mismatch'}
+        $proofInput=@{root=$Root;sessionId=$request.handoff.sessionId;profileDigest=$request.handoff.profileDigest;pid=$PID;role='launcher';action='start'}|ConvertTo-Json -Compress
+        # The pinned runtime environment deliberately omits ProgramFiles.
+        $proofHost=Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'PowerShell\7\pwsh.exe'
+        $proofRaw=$proofInput | & $proofHost -NoLogo -NoProfile -NonInteractive -File (Join-Path $PSScriptRoot 'Tong024Handoff.ps1') -Mode proof
+        if($LASTEXITCODE -ne 0){throw 'Handoff containment unavailable'}
+        $proof=$proofRaw|ConvertFrom-Json
+        if($proof.verified -cne $true -or $proof.caller.pid -ne $PID){throw 'Handoff containment refused'}
+        $retainOuterJob=$true
+    }
+    $childId=[TongStartupPreflight]::StartGuardian(('Local\TongGuardian-'+$RunId),$guardianShell,$arguments,$Root,$adoptionBudget,$retainOuterJob)
     $script:tongStartup.guardianCreated=$true
     $script:tongStartup['guardian']=[ordered]@{pid=$childId;exe=$guardianShell;startTicks=[TongStartupPreflight]::GuardianStartTicks;markerMatches=$true}
     $script:tongStartup['finishedAt']=[DateTime]::UtcNow.ToString('o')

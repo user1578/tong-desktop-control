@@ -8,7 +8,7 @@ import { buildRelease, verifyRelease } from '../../scripts/TongRuntimeRelease.mj
 import { verifyRuntimeCandidate } from '../../scripts/TongRuntimeCandidate.mjs';
 import { protectSecret } from '../../scripts/TongRuntimeSecurity.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
-export async function maintenanceNativeFixture(commit) {
+export async function maintenanceNativeFixture(commit,{baselineReleaseRoot,candidateReleaseRoot}={}) {
   assert.match(commit,/^[a-f0-9]{40}$/);
   const project=fileURLToPath(new URL('../../',import.meta.url));
   const simulationId='b23-maint-native-'+randomUUID().replaceAll('-','');
@@ -20,12 +20,13 @@ export async function maintenanceNativeFixture(commit) {
   const baselineCommit=process.env.TONG_MAINTENANCE_BASELINE_COMMIT??'34e26801876d8b1a2fc874dddce72b0939924e87';
   assert.ok(['34e26801876d8b1a2fc874dddce72b0939924e87','024d5b0920d9ad8f1a2baf2e55640a5666ad4739'].includes(baselineCommit));
   const build=(commit,releaseRoot)=>buildRelease({codeRoot:'D:\\Tong\\development\\tong-desktop-control',commit,releaseRoot,gitExecutable:'C:\\Users\\Rune\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\git\\cmd\\git.exe',pythonExecutable:'C:\\Program Files\\Python311\\python.exe'});
-  const oldRelease=baselineCommit.startsWith('024d5b0')?join(root,'baseline-release'):'D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\candidate-release';
-  if(baselineCommit.startsWith('024d5b0'))await build(baselineCommit,oldRelease);
+  const oldRelease=baselineReleaseRoot??(baselineCommit.startsWith('024d5b0')?join(root,'baseline-release'):'D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\candidate-release');
+  if(!baselineReleaseRoot&&baselineCommit.startsWith('024d5b0'))await build(baselineCommit,oldRelease);
   const oldManifest=await verifyRelease({releaseRoot:oldRelease});
   assert.equal(oldManifest.commit,baselineCommit);
-  const releaseRoot=join(root,'candidate-release');
-  const nextManifest=await build(commit,releaseRoot);
+  const releaseRoot=candidateReleaseRoot??join(root,'candidate-release');
+  const nextManifest=candidateReleaseRoot?await verifyRelease({releaseRoot}):await build(commit,releaseRoot);
+  assert.equal(nextManifest.commit,commit);
   for(const target of [initial.codeRoot,initial.managerRoot]) {
     await mkdir(target,{recursive:true});
     for(const name of ['@waishnav/devspace','@modelcontextprotocol/sdk','better-sqlite3','node-pty'])await cp(join(project,'node_modules',...name.split('/')),join(target,'node_modules',...name.split('/')),{recursive:true,errorOnExist:true,force:false});
