@@ -239,7 +239,8 @@ async function guardianComplete(root,runId) {
   if(record?.runId!==runId||guardian.nodePid!==record.supervisor?.pid)return false;
   try{await oldRuntimeGone(root,record,guardian,{completed:true});return true;}catch{return false;}
 }
-export async function startRuntime(root,{startupTimeoutMs}={}) {
+export async function startRuntime(root,{startupTimeoutMs,onRequest}={}) {
+  if(onRequest!==undefined&&typeof onRequest!=='function')throw fail('INVALID_REQUEST_OBSERVER');
   if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
   root=absoluteRoot(root);const approved=guardedRoot(root)?await loadApprovedProfile(root,'start'):null;
   const profile=await layout(root);if(approved&&JSON.stringify(profile)!==JSON.stringify(approved))throw fail('APPROVAL_DENIED');
@@ -314,6 +315,8 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
     await checkpoint('request');
     deadline=Date.now()+startupTimeoutMs;
     runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),startupDeadline:deadline,...(recoveryGrantId?{recoveryGrantId}:{})});
+    // Maintenance persists this identity before the launcher can create a tree.
+    if(onRequest)await onRequest({runId});
     stage='launcher_start';
     child=spawn(join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),
       ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',preserved(profile)?join(profile.managerRoot,'scripts','TongRuntimeLaunch.ps1'):guardianScript,'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',preserved(profile)?join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs'):self,...(recoveryGrantId?['-RecoveryGrantId',recoveryGrantId]:[])],

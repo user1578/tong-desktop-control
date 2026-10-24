@@ -78,9 +78,12 @@ public static class TongRuntimeJobProbe {
                 [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
             }
         } elseif ($Mode -eq 'inventory') {
+            $backendNames=@('node.exe','agentdock.exe')
+            if($inputData.mode -eq 'production'){$backendNames+='ngrok.exe'}elseif($inputData.mode -ne 'production-simulation'){throw 'inventory scope'}
             $all=@(Get-CimInstance Win32_Process -ErrorAction Stop)
             $matches=@();$identities=@()
             foreach($p in $all) {
+                if($p.Name -in $backendNames -and (-not $p.CommandLine -or -not $p.ExecutablePath -or -not $p.CreationDate)){throw 'backend inventory unavailable'}
                 if([int]$p.ProcessId -in @($inputData.pids)) {
                     if(-not $p.ExecutablePath -or -not $p.CreationDate){throw 'identity unavailable'}
                     $identities+=Process-Info $p

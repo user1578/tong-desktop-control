@@ -1,14 +1,15 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile, writeFile, mkdir, readdir, lstat, realpath, rename, open } from 'node:fs/promises';
+import { readFile, mkdir, readdir, lstat, realpath, rename, open } from 'node:fs/promises';
 import { join, dirname, resolve, relative, sep } from 'node:path';
 import { connect } from 'node:net';
+import {pathToFileURL} from 'node:url';
 import { validateProductionProfile, productionProfileDigest, verifyRuntimeApproval, runtimeApprovalPath, runtimeApprovalStore, readApprovedEnabledState, loadApprovedProfile } from './TongProductionProfile.mjs';
 import { verifyRuntimeCandidate } from './TongRuntimeCandidate.mjs';
 import { verifyRelease } from './TongRuntimeRelease.mjs';
 import { assertProtectedPaths, runtimeProcessInventory, startupJobsState, sameProcess } from './TongRuntimeSecurity.mjs';
 import { createProductionStateBackup, verifyProductionStateBackup } from './TongProductionState.mjs';
 import { withMaintenanceFreeze, maintenanceFreeze } from './TongLifecycleFreeze.mjs';
-import { startRuntime, stopRuntime, runtimeDoctor, runtimeStatus } from './TongAgentDockRuntime.mjs';
+import { runtimeStatus } from './TongAgentDockRuntime.mjs';
 import { loginRecoveryPath } from './TongLoginRecovery.mjs';
 
 const sha = data => createHash('sha256').update(data).digest('hex');
@@ -16,6 +17,8 @@ const fail = code => { throw new Error(code); };
 const transactionPath = root => join(root, 'logs', 'maintenance-transaction.json');
 const idPattern = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const actions = ['backup', 'restore', 'start', 'stop', 'manager'];
+const actionsFor=profile=>[...actions,profile.agentdockEnabled?'enable-agentdock':'disable-agentdock'];
+const installedRuntime=profile=>import(pathToFileURL(join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs')).href);
 function scoped(input) {
   // Scope is checked before even reading profile.json, logs, locks or receipts.
   if (input?.mode !== 'production-simulation') fail('MAINTENANCE_NOT_READY');
@@ -55,17 +58,26 @@ async function persist(root, state) { state.updatedAt = new Date().toISOString()
 function indexPath(profile, action) { return join(runtimeApprovalStore(profile.root), 'simulation-' + sha(profile.root) + '.' + action + '.current.dpapi.json'); }
 function profileFor(profile, action) { return action === 'manager' ? managerProfile(profile) : profile; }
 async function permissions(profile) {
-  for (const action of actions) await verifyRuntimeApproval(profileFor(profile, action), action);
-  if (profile.agentdockEnabled) await readApprovedEnabledState(profile);
+  for (const action of actionsFor(profile)) await verifyRuntimeApproval(profileFor(profile, action), action);
+  await readApprovedEnabledState(profile);
 }
 async function quiescent(profile, runIds = [], known = []) {
   const record = JSON.parse((await maybe(join(profile.root, 'run', 'runtime.json'))) ?? 'null');
   const guardian = JSON.parse((await maybe(join(profile.root, 'run', 'guardian.json'))) ?? 'null');
   const request = JSON.parse((await maybe(join(profile.root, 'run', 'request.json'))) ?? 'null');
   const identities = [...known, guardian, record?.supervisor, ...(record?.children ?? []), ...(record?.descendants ?? [])].filter(value => value?.pid);
-  const ids = [...new Set([...runIds, record?.runId, guardian?.runId, request?.runId].filter(Boolean))];
+  const recordedIds=[];
+  for(const name of await readdir(join(profile.root,'run'))){
+    if(name==='backup.freeze'||name==='release-pin.json'||name==='manager-pin.json')continue;
+    if(!/^[a-zA-Z0-9_.-]+\.json$/.test(name))fail('MAINTENANCE_CONTROL_UNKNOWN');
+    const value=JSON.parse(await data(join(profile.root,'run',name)));
+    if(value?.runId)recordedIds.push(value.runId);
+    const receipt=/^(?:launcher|guardian)\.([a-f0-9-]+)\.json$/.exec(name);
+    if(receipt){if(receipt[1]!==value?.runId)fail('MAINTENANCE_RUN_ID_UNKNOWN');recordedIds.push(receipt[1]);}
+  }
+  const ids = [...new Set([...runIds,...recordedIds, record?.runId, guardian?.runId, request?.runId].filter(Boolean))];
   if (ids.some(id => !idPattern.test(id))) fail('MAINTENANCE_RUN_ID_UNKNOWN');
-  const inventory = await runtimeProcessInventory({ roots: [profile.root, profile.codeRoot, profile.managerRoot], runIds: ids, pids: identities.map(id => id.pid) });
+  const inventory = await runtimeProcessInventory({ roots: [profile.root, profile.codeRoot, profile.managerRoot], runIds: ids, pids: identities.map(id => id.pid),mode:profile.mode });
   if (inventory.complete !== true || !Array.isArray(inventory.identities) || !Array.isArray(inventory.matchingProcesses)) fail('MAINTENANCE_INVENTORY_UNKNOWN');
   if (identities.some(expected => inventory.identities.some(actual => sameProcess(actual, expected))) || inventory.matchingProcesses.some(actual => actual.pid !== process.pid)) fail('MAINTENANCE_PROCESS_PRESENT');
   const jobs = [];
@@ -99,6 +111,7 @@ async function verifyManifest(root, state) {
   if (sha(encoded) !== state.seal) fail('MAINTENANCE_SNAPSHOT_CHANGED');
   const manifest = JSON.parse(encoded), old = scoped(manifest.baselineProfile), next = scoped(manifest.candidateProfile);
   if (old.root !== root || next.root !== root || manifest.transactionId !== state.transactionId || !Array.isArray(manifest.entries) || !Array.isArray(manifest.operations)) fail('MAINTENANCE_TRANSACTION_INVALID');
+  if(state.freezeSha256!==manifest.freezeSha256||!Number.isSafeInteger(state.index)||state.index<0||state.index>manifest.operations.length||state.pending&&(!Number.isSafeInteger(state.pending.index)||state.pending.index<0||state.pending.index>=manifest.operations.length||typeof state.pending.reverse!=='boolean'||(state.pending.reverse?state.pending.index!==state.index&&state.pending.index!==state.index-1:state.pending.index!==state.index)))fail('MAINTENANCE_TRANSACTION_INVALID');
   const permitted = new Set();
   for (const [component, target] of [['app', old.codeRoot], ['manager', old.managerRoot]]) {
     for (const entry of [...manifest.oldPin.sourceFiles, ...manifest.oldPin.native, ...manifest.newPin.sourceFiles, ...manifest.newPin.native]) permitted.add(member(target, entry.path));
@@ -106,8 +119,8 @@ async function verifyManifest(root, state) {
   for (const name of manifest.controlNames) { if (!/^[a-zA-Z0-9_.-]+$/.test(name) || name === 'backup.freeze') fail('MAINTENANCE_PATH_DENIED'); permitted.add(join(root, 'run', name)); }
   permitted.add(join(root, 'profile.json')); permitted.add(join(root, 'run', 'release-pin.json')); permitted.add(join(root, 'run', 'manager-pin.json'));
   for (const profile of [old, next]) {
-    for (const action of actions) { permitted.add(runtimeApprovalPath(profileFor(profile, action), action)); permitted.add(indexPath(profile, action)); }
-    if (profile.agentdockEnabled) permitted.add(join(runtimeApprovalStore(root), productionProfileDigest(profile) + '.enabled.dpapi.json'));
+    for (const action of actionsFor(profile)) { permitted.add(runtimeApprovalPath(profileFor(profile, action), action)); permitted.add(indexPath(profile, action)); }
+    permitted.add(join(runtimeApprovalStore(root), productionProfileDigest(profile) + '.enabled.dpapi.json'));
   }
   permitted.add(loginRecoveryPath(root));
   const paths = new Set();
@@ -116,7 +129,13 @@ async function verifyManifest(root, state) {
     paths.add(entry.path);
     if (sha(await data(join(folder, 'preimage', entry.id))) !== entry.beforeSha256) fail('MAINTENANCE_SNAPSHOT_CHANGED');
   }
-  for (const operation of manifest.operations) if (!permitted.has(operation.path) || operation.beforeSha256 !== null && !/^[a-f0-9]{64}$/.test(operation.beforeSha256) || operation.afterSha256 !== null && !/^[a-f0-9]{64}$/.test(operation.afterSha256)) fail('MAINTENANCE_TRANSACTION_INVALID');
+  const operated=new Set();
+  for (const operation of manifest.operations){
+    if (!permitted.has(operation.path)||operated.has(operation.path)||operation.beforeSha256 !== null && !/^[a-f0-9]{64}$/.test(operation.beforeSha256) || operation.afterSha256 !== null && (!/^[a-f0-9]{64}$/.test(operation.afterSha256)||sha(Buffer.from(operation.desired??'','base64'))!==operation.afterSha256)) fail('MAINTENANCE_TRANSACTION_INVALID');
+    const before=manifest.entries.find(entry=>entry.path===operation.path);
+    if(operation.beforeSha256!==(before?.beforeSha256??null)||operation.beforeId!==(before?.id??null))fail('MAINTENANCE_TRANSACTION_INVALID');
+    operated.add(operation.path);
+  }
   return { folder, manifest, old, next };
 }
 async function prepare(input, onCheckpoint) {
@@ -162,10 +181,10 @@ async function prepare(input, onCheckpoint) {
   await add(join(old.root, 'run', 'release-pin.json'), pinBytes, 'app-pin');
   await add(join(old.root, 'run', 'manager-pin.json'), pinBytes, 'manager-pin');
   await add(join(old.root, 'profile.json'), Buffer.from(JSON.stringify(next, null, 2) + '\n'), 'profile');
-  for (const profile of [old, next]) for (const action of actions) await save(runtimeApprovalPath(profileFor(profile, action), action));
-  for (const profile of [old, next]) if (profile.agentdockEnabled) await save(join(runtimeApprovalStore(old.root), productionProfileDigest(profile) + '.enabled.dpapi.json'));
+  for (const profile of [old, next]) for (const action of actionsFor(profile)) await save(runtimeApprovalPath(profileFor(profile, action), action));
+  for (const profile of [old, next]) await save(join(runtimeApprovalStore(old.root), productionProfileDigest(profile) + '.enabled.dpapi.json'));
   await save(loginRecoveryPath(old.root));
-  for (const action of actions) await add(indexPath(next, action), await data(runtimeApprovalPath(profileFor(next, action), action)), 'permissions');
+  for (const action of actionsFor(next)) await add(indexPath(next, action), await data(runtimeApprovalPath(profileFor(next, action), action)), 'permissions');
   const controlNames = [];
   for (const name of (await readdir(join(old.root, 'run'))).sort()) {
     if (['backup.freeze', 'release-pin.json', 'manager-pin.json'].includes(name)) continue;
@@ -203,12 +222,13 @@ async function applyOperation(root, folder, operation, index, state, reverse = f
   }
   if(onCheckpoint)await onCheckpoint({name:reverse?'rollback-installed':'write-installed',index,transactionId:state.transactionId});
 }
-async function assertLedger(state, manifest) {
+async function assertLedger(state, manifest, { candidateControls = false } = {}) {
   const byPath = new Map(manifest.operations.map((op, index) => [op.path, { op, index }]));
   for (const entry of manifest.entries) {
     const operation = byPath.get(entry.path), current = fingerprint(await maybe(entry.path));
     if (!operation) { if (current !== entry.beforeSha256) fail('MAINTENANCE_EXTERNAL_CHANGE'); continue; }
     const { op, index } = operation;
+    if(candidateControls&&op.stage==='controls')continue;
     const allowed = state.pending?.index === index ? [op.beforeSha256, op.afterSha256] : index < state.index ? [op.afterSha256] : [op.beforeSha256];
     if (!allowed.includes(current)) fail('MAINTENANCE_EXTERNAL_CHANGE');
   }
@@ -228,7 +248,7 @@ async function apply(root, state, onCheckpoint) {
     else await createProductionStateBackup(old, { backupRoot: state.backupRoot });
     state.backupVerified = true; await checkpoint(root, state, 'state-backup', onCheckpoint);
   }
-  await assertLedger(state, manifest);
+  await assertLedger(state, manifest, {candidateControls:!!state.candidateRunId});
   while (state.index < manifest.operations.length) {
     const index = state.index, operation = manifest.operations[index];
     await applyOperation(root, folder, operation, index, state, false, onCheckpoint);
@@ -238,12 +258,17 @@ async function apply(root, state, onCheckpoint) {
   await verifyRuntimeCandidate(next); await verifyRuntimeCandidate(next, { manager: true, reviewedManagerProfile: managerProfile(next) });
   await permissions(next);
   if (!state.startedRunId) {
+    if(state.candidateRunId)fail('MAINTENANCE_START_INCOMPLETE_ROLLBACK_REQUIRED');
     await quiescent(next, manifest.observation.jobs.map(job => job.runId));
     state.startIntentAt=new Date().toISOString();await checkpoint(root, state, 'starting', onCheckpoint);
-    const started = await startRuntime(root,{startupTimeoutMs:manifest.startupTimeoutMs}); state.startedRunId = started.runId;
+    const runtime=await installedRuntime(next);
+    const started = await runtime.startRuntime(root,{startupTimeoutMs:manifest.startupTimeoutMs,onRequest:async({runId})=>{
+      state.candidateRunId=runId;state.requestSha256=sha(await data(join(root,'run','request.json')));await persist(root,state);
+    }}); state.startedRunId = started.runId;
     await checkpoint(root, state, 'started', onCheckpoint);
   }
-  const doctor = await runtimeDoctor(root); if (doctor.healthy !== true) fail('MAINTENANCE_HEALTH_FAILED');
+  if(sha(await data(join(root,'run','request.json')))!==state.requestSha256)fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
+  const runtime=await installedRuntime(next),doctor = await runtime.runtimeDoctor(root),status=await runtime.runtimeStatus(root); if (doctor.healthy !== true||status.runId!==state.startedRunId||!status.supervisorAlive) fail('MAINTENANCE_HEALTH_FAILED');
   await checkpoint(root, state, 'accepted', onCheckpoint);
   return { transactionId: state.transactionId, phase: state.phase, startedRunId: state.startedRunId, doctorHealthy: true, snapshotSeal: state.seal, backupRoot: state.backupRoot, productionExecutionAllowed: false };
 }
@@ -251,12 +276,13 @@ async function stopCandidate(root, state, manifest) {
   const request = JSON.parse((await maybe(join(root, 'run', 'request.json'))) ?? 'null');
   const oldRequest = manifest.entries.find(entry => entry.path === join(root, 'run', 'request.json'));
   const requestIsOld = oldRequest && fingerprint(await maybe(join(root, 'run', 'request.json'))) === oldRequest.beforeSha256;
-  const candidateId = state.startedRunId ?? (['starting', 'started', 'accepted'].includes(state.phase) && !requestIsOld ? request?.runId : null);
+  const candidateId = state.candidateRunId ?? state.startedRunId;
   if (candidateId && !idPattern.test(candidateId)) fail('MAINTENANCE_NEW_RUN_UNKNOWN');
+  if(candidateId&&!requestIsOld&&(request?.runId!==candidateId||sha(await data(join(root,'run','request.json')))!==state.requestSha256))fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
   const status = await runtimeStatus(root);
   if (status.supervisorAlive) {
     if (!candidateId || status.runId !== candidateId) fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
-    await stopRuntime(root, { expectedRunId: candidateId });
+    await (await installedRuntime(manifest.candidateProfile)).stopRuntime(root, { expectedRunId: candidateId });
   }
   await quiescent(manifest.candidateProfile, [...manifest.observation.jobs.map(job => job.runId), candidateId].filter(Boolean));
   if (!state.candidateControls) {
@@ -280,9 +306,18 @@ async function stopCandidate(root, state, manifest) {
     await rename(source, target);
   }
 }
+async function verifyRestored(root,state,manifest,old) {
+  await quiescent(old,manifest.observation.jobs.map(job=>job.runId));
+  for (const entry of manifest.entries) if (fingerprint(await maybe(entry.path)) !== entry.beforeSha256) fail('MAINTENANCE_RESTORE_VERIFY_FAILED');
+  for (const op of manifest.operations) if (op.beforeSha256 === null && await maybe(op.path) !== null) fail('MAINTENANCE_RESTORE_VERIFY_FAILED');
+  await verifyRuntimeCandidate(old); await verifyRuntimeCandidate(old, { manager: true, reviewedManagerProfile: managerProfile(old) });
+  await permissions(old); if(state.backupVerified)await verifyProductionStateBackup(old, { backupRoot: state.backupRoot });
+  for (const action of actionsFor(old)) if (productionProfileDigest(await loadApprovedProfile(root, action)) !== productionProfileDigest(profileFor(old, action))) fail('MAINTENANCE_PERMISSION_RESTORE_FAILED');
+}
 async function rollback(root, state, onCheckpoint) {
   const { folder, manifest, old } = await verifyManifest(root, state);
-  if (state.phase === 'rolled-back') return { transactionId: state.transactionId, phase: state.phase, verified: true, productionExecutionAllowed: false };
+  if (state.phase === 'rolled-back') {await verifyRestored(root,state,manifest,old);return { transactionId: state.transactionId, phase: state.phase, verified: true, productionExecutionAllowed: false };}
+  await assertLedger(state,manifest,{candidateControls:!!state.candidateRunId});
   await stopCandidate(root, state, manifest);
   // Candidate records have their own archive. Never overlay them with old data.
   await assertLedger(state, manifest);
@@ -294,11 +329,7 @@ async function rollback(root, state, onCheckpoint) {
     state.index = index; state.pending = null; await persist(root, state);
     if (onCheckpoint) await onCheckpoint({ name: 'rollback-file', index, transactionId: state.transactionId });
   }
-  for (const entry of manifest.entries) if (fingerprint(await maybe(entry.path)) !== entry.beforeSha256) fail('MAINTENANCE_RESTORE_VERIFY_FAILED');
-  for (const op of manifest.operations) if (op.beforeSha256 === null && await maybe(op.path) !== null) fail('MAINTENANCE_RESTORE_VERIFY_FAILED');
-  await verifyRuntimeCandidate(old); await verifyRuntimeCandidate(old, { manager: true, reviewedManagerProfile: managerProfile(old) });
-  await permissions(old); if(state.backupVerified)await verifyProductionStateBackup(old, { backupRoot: state.backupRoot });
-  for (const action of actions) if (productionProfileDigest(await loadApprovedProfile(root, action)) !== productionProfileDigest(profileFor(old, action))) fail('MAINTENANCE_PERMISSION_RESTORE_FAILED');
+  await verifyRestored(root,state,manifest,old);
   await checkpoint(root, state, 'rolled-back', onCheckpoint);
   return { transactionId: state.transactionId, phase: state.phase, verified: true, snapshotSeal: state.seal, restoredFiles: manifest.entries.length, productionExecutionAllowed: false };
 }
@@ -321,7 +352,7 @@ export async function resumeMaintenanceTransaction(input, { transactionId, actio
     if (action === 'rollback') return rollback(root, state, onCheckpoint);
     if (action === 'stop') {
       const status = await runtimeStatus(root); if (status.runId !== state.startedRunId) fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
-      await stopRuntime(root, { expectedRunId: state.startedRunId });
+      await (await installedRuntime(manifest.candidateProfile)).stopRuntime(root, { expectedRunId: state.startedRunId });
       return { phase: 'candidate-stopped', transactionId, productionExecutionAllowed: false };
     }
     fail('MAINTENANCE_ACTION_DENIED');

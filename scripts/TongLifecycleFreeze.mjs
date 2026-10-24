@@ -5,7 +5,11 @@ import { readFile, lstat, realpath, open, unlink } from 'node:fs/promises';
 import { join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const context = new AsyncLocalStorage(), borrowed = new WeakSet();
+// Reviewed modules in App/Manager can have different physical module URLs.
+// Share the in-process capability, never an environment/CLI bypass token.
+const key=Symbol.for('tong.lifecycle.freeze.v1');
+const shared=globalThis[key]??=Object.freeze({context:new AsyncLocalStorage(),borrowed:new WeakSet()});
+const {context,borrowed}=shared;
 const fail = code => new Error(code), sha = data => createHash('sha256').update(data).digest('hex');
 const helper = fileURLToPath(new URL('TongLifecycleFreeze.ps1', import.meta.url));
 const gate = root => join(root, 'run', 'backup.freeze');

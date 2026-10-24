@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile, rename } from 'node:fs/promises';
+import { readFile, writeFile, rename,copyFile } from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -15,6 +16,8 @@ await api.withMaintenanceFreeze(fx.profile, { expectedSha256: sha256 }, async le
   assert.equal(proof.sha256, sha256); assert.equal(proof.exclusiveWriter, true);
   const borrowed = await api.acquireRuntimeFreeze(fx.root);
   await api.releaseRuntimeFreeze(fx.root, borrowed);
+  const copy=join(fx.root,'lease-module-copy.mjs');await copyFile(new URL('../scripts/TongLifecycleFreeze.mjs',import.meta.url),copy);
+  const installed=await import(pathToFileURL(copy).href),other=await installed.acquireRuntimeFreeze(fx.root);await installed.releaseRuntimeFreeze(fx.root,other);
   assert.deepEqual(await readFile(path), original, 'borrowed operations must not release or rewrite the gate');
   const worker = `import {open,rename} from 'node:fs/promises';const path=${JSON.stringify(path)};let refused=0;try{await open(path,'wx');}catch(e){if(e.code==='EEXIST')refused++;}try{await rename(path,path+'.unexpected');}catch(e){if(['EPERM','EACCES','EBUSY'].includes(e.code))refused++;}console.log(JSON.stringify({refused}));process.exitCode=refused===2?0:3;`;
   const child = spawnSync(process.execPath, ['--input-type=module', '-e', worker], { windowsHide: true, encoding: 'utf8', timeout: 10000 });
