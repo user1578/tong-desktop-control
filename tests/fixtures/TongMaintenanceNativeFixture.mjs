@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir, copyFile, cp, symlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, copyFile, cp, symlink,rename,lstat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import { fileURLToPath,pathToFileURL } from 'node:url';
@@ -58,4 +58,19 @@ export async function maintenanceNativeFixture(commit) {
   await writeFile(join(root,'maintenance-native-fixture.json'),JSON.stringify(metadata,null,2)+'\n',{flag:'wx'});
   console.log(JSON.stringify({event:'native_maintenance_fixture_ready',root,candidateCommit:commit,baselineCommit:oldManifest.commit,baselineRunId:run.runId,oldSourceFiles:oldManifest.sourceFiles.length,newSourceFiles:nextManifest.sourceFiles.length,nativeFiles:oldManifest.native.length}));
   return metadata;
+}
+// Reuse a fully restored fixture when a directly affected product fix needs a
+// new exact release. Preserve its prior metadata, release and transaction data.
+export async function rebindMaintenanceNativeFixture(root,commit){
+  assert.match(root,/^D:\\Tong\\state\\b23-maint-native-[a-f0-9]{32}$/);assert.match(commit,/^[a-f0-9]{40}$/);
+  const path=join(root,'maintenance-native-fixture.json'),fx=JSON.parse(await readFile(path,'utf8'));assert.equal(fx.root,root);
+  await assert.rejects(lstat(join(root,'logs','maintenance-transaction.json')),{code:'ENOENT'});
+  await verifyRuntimeCandidate(fx.baselineProfile);await verifyRuntimeCandidate(fx.baselineProfile,{manager:true,reviewedManagerProfile:{...fx.baselineProfile,agentdockEnabled:false}});
+  const releaseRoot=join(root,'candidate-release-'+commit.slice(0,12)),manifest=await buildRelease({codeRoot:'D:\\Tong\\development\\tong-desktop-control',commit,releaseRoot,gitExecutable:'C:\\Users\\Rune\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\git\\cmd\\git.exe',pythonExecutable:'C:\\Program Files\\Python311\\python.exe'});
+  const candidateProfile={...fx.baselineProfile,sourceDigest:manifest.files.find(file=>file.path==='code/source.tar').sha256,releaseDigest:sha(await readFile(join(releaseRoot,'release-manifest.json')))};
+  for(const profile of [candidateProfile,fx.baselineProfile])for(const action of ['backup','restore','start','stop','manager','enable-agentdock'])await issueSimulationApproval(action==='manager'?{...profile,agentdockEnabled:false}:profile,action,{expiresAt:new Date(Date.now()+3500000).toISOString()});
+  await recordApprovedEnabledState(candidateProfile);
+  await rename(path,join(root,'transaction-native-evidence','fixture-before-'+commit.slice(0,12)+'.json'));
+  const updated={...fx,candidateProfile,releaseRoot,candidateCommit:commit};await writeFile(path,JSON.stringify(updated,null,2)+'\n',{flag:'wx'});
+  console.log(JSON.stringify({event:'native_maintenance_fixture_rebound',root,candidateCommit:commit,sourceDigest:candidateProfile.sourceDigest,releaseDigest:candidateProfile.releaseDigest}));return updated;
 }

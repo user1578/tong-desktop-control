@@ -262,9 +262,9 @@ async function apply(root, state, onCheckpoint) {
     await quiescent(next, manifest.observation.jobs.map(job => job.runId));
     state.startIntentAt=new Date().toISOString();await checkpoint(root, state, 'starting', onCheckpoint);
     const runtime=await installedRuntime(next);
-    const started = await runtime.startRuntime(root,{startupTimeoutMs:manifest.startupTimeoutMs,onRequest:async({runId})=>{
+    let started;try{started = await runtime.startRuntime(root,{startupTimeoutMs:manifest.startupTimeoutMs,onRequest:async({runId})=>{
       state.candidateRunId=runId;state.requestSha256=sha(await data(join(root,'run','request.json')));await persist(root,state);
-    }}); state.startedRunId = started.runId;
+    }});}catch(error){state.startFailure={code:/^[A-Z_]+$/.test(error.message)?error.message:'START_FAILED',cleanupProven:error.startupFailure?.cleanup?.proven===true,...(error.startupFailure?{evidence:error.startupFailure}:{})};await persist(root,state);throw error;} state.startedRunId = started.runId;
     await checkpoint(root, state, 'started', onCheckpoint);
   }
   if(sha(await data(join(root,'run','request.json')))!==state.requestSha256)fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
@@ -283,7 +283,9 @@ async function stopCandidate(root, state, manifest) {
   if (status.supervisorAlive) {
     if (!candidateId || status.runId !== candidateId) fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
     await (await installedRuntime(manifest.candidateProfile)).stopRuntime(root, { expectedRunId: candidateId });
+    state.candidateStopped=true;await persist(root,state);
   }
+  if(candidateId&&!state.startedRunId&&!state.candidateStopped&&state.startFailure?.cleanupProven!==true)fail('MAINTENANCE_STARTUP_CLEANUP_UNPROVEN');
   await quiescent(manifest.candidateProfile, [...manifest.observation.jobs.map(job => job.runId), candidateId].filter(Boolean));
   if (!state.candidateControls) {
     const controls = [];

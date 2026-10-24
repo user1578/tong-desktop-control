@@ -4,10 +4,11 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { maintenanceNativeFixture } from './fixtures/TongMaintenanceNativeFixture.mjs';
+import { maintenanceNativeFixture,rebindMaintenanceNativeFixture } from './fixtures/TongMaintenanceNativeFixture.mjs';
 import { processIdentity } from '../scripts/TongRuntimeSecurity.mjs';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const fx=process.env.TONG_MAINTENANCE_TEST_ROOT?JSON.parse(await readFile(join(process.env.TONG_MAINTENANCE_TEST_ROOT,'maintenance-native-fixture.json'),'utf8')):await maintenanceNativeFixture(process.env.TONG_MAINTENANCE_TEST_COMMIT);
+let fx=process.env.TONG_MAINTENANCE_TEST_ROOT?JSON.parse(await readFile(join(process.env.TONG_MAINTENANCE_TEST_ROOT,'maintenance-native-fixture.json'),'utf8')):await maintenanceNativeFixture(process.env.TONG_MAINTENANCE_TEST_COMMIT);
+if(process.env.TONG_MAINTENANCE_REBIND_COMMIT)fx=await rebindMaintenanceNativeFixture(fx.root,process.env.TONG_MAINTENANCE_REBIND_COMMIT);
 assert.match(fx.root,/^D:\\Tong\\state\\b23-maint-native-[a-f0-9]{32}$/);
 const evidence=join(fx.root,'transaction-native-evidence');await mkdir(evidence,{recursive:true});
 const worker=fileURLToPath(new URL('./fixtures/TongMaintenanceTransactionWorker.mjs',import.meta.url));
@@ -27,7 +28,7 @@ async function command(label,action,id,fault){
 const state=()=>readFile(join(fx.root,'logs','maintenance-transaction.json'),'utf8').then(JSON.parse);
 async function retain(id,label){const latest=await state();assert.equal(latest.phase,'rolled-back');assert.equal(latest.transactionId,id);await rename(join(fx.root,'logs','maintenance-transaction.json'),join(evidence,label+'.transaction.json'));}
 if(process.env.TONG_MAINTENANCE_TEST_RETAIN){assert.match(process.env.TONG_MAINTENANCE_TEST_RETAIN,/^[a-z0-9-]+$/);const tx=await state();await retain(tx.transactionId,process.env.TONG_MAINTENANCE_TEST_RETAIN);}
-const cases=process.env.TONG_MAINTENANCE_TEST_CASES?.split(',')??['write-installed','app-files','manager-files','app-pin','manager-pin','profile','permissions','controls','starting','started'];
+const cases=process.env.TONG_MAINTENANCE_TEST_CASES!==undefined?process.env.TONG_MAINTENANCE_TEST_CASES.split(',').filter(Boolean):['write-installed','app-files','manager-files','app-pin','manager-pin','profile','permissions','controls','starting','started'];
 for(const fault of cases){
  const result=await command(fault+'-interrupt','run',null,fault);assert.equal(result.code,71,result.stderr);
  const tx=await state();const rollback=await command(fault+'-rollback','rollback',tx.transactionId);assert.equal(rollback.code,0,rollback.stderr);assert.equal((await state()).phase,'rolled-back');
