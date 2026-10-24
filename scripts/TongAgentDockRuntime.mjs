@@ -114,11 +114,14 @@ export async function initializeProductionRuntime(profile,{releaseRoot,managerRe
 export async function updateRuntimeProfile(profile,{releaseRoot}={}){
   if(loginRecoveryGrantId())throw fail('APPROVAL_DENIED');
   profile=validateProductionProfile(profile);await verifyRuntimeApproval(profile,'start');
+  const held=await freeze(profile.root);
+  try{
   const previous=await layout(profile.root),status=await runtimeStatus(profile.root);
   if(status.supervisorAlive||!['not_started','stopped','abnormal_exit'].includes(status.phase)||status.runId&&!await guardianComplete(profile.root,status.runId))throw fail('RUNTIME_BUSY');
   if(profile.agentdockEnabled){await verifyRuntimeApproval(profile,'enable-agentdock');try{await readApprovedEnabledState(profile);}catch{await recordApprovedEnabledState(profile);}}
   else if(previous.agentdockEnabled){await verifyRuntimeApproval(profile,'disable-agentdock');await recordApprovedEnabledState(profile);}
   await pinRuntimeRelease(profile,releaseRoot,{replace:true});await save(join(profile.root,'profile.json'),profile);return profile;
+  }finally{await releaseFreeze(profile.root,held);}
 }
 async function unused(port){await new Promise((ok,reject)=>{const socket=createConnection({host:'127.0.0.1',port});const timer=setTimeout(()=>{socket.destroy();reject(fail('PORT_CHECK_FAILED'));},1000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy();reject(fail('PORT_OCCUPIED'));});socket.once('error',error=>{clearTimeout(timer);socket.destroy();error.code==='ECONNREFUSED'?ok():reject(fail('PORT_CHECK_FAILED'));});});}
 async function freeze(root){try{return await acquireRuntimeFreeze(root);}catch{throw fail('RUNTIME_BUSY');}}

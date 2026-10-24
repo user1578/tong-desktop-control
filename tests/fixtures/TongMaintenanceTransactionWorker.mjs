@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { executeRecovery, executeRollback } from '../../scripts/Tong024ProductionMaintenance.mjs';
 import { resumeMaintenanceTransaction } from '../../scripts/TongMaintenanceTransaction.mjs';
 import { maintenanceFreeze } from '../../scripts/TongLifecycleFreeze.mjs';
-import { startRuntime,stopRuntime } from '../../scripts/TongAgentDockRuntime.mjs';
+import { startRuntime,stopRuntime,updateRuntimeProfile } from '../../scripts/TongAgentDockRuntime.mjs';
 import { createProductionStateBackup } from '../../scripts/TongProductionState.mjs';
 const root=process.env.TONG_MAINTENANCE_TEST_ROOT;
 if(!/^D:\\Tong\\state\\b23-maint-native-[a-f0-9]{32}$/.test(root??''))throw Error('NATIVE_FIXTURE_SCOPE');
@@ -23,7 +23,7 @@ const onCheckpoint=async event=>{
 try{
  if(action==='compete'){
   const results=[];
-  for(const [name,invoke,expected]of[['start',()=>startRuntime(root),'RUNTIME_BUSY'],['stop',()=>stopRuntime(root,{expectedRunId:fx.baselineRunId}),'RUNTIME_BUSY'],['backup',()=>createProductionStateBackup(fx.baselineProfile,{backupRoot:join(root,'race-backup')}),'STATE_BUSY']]){
+  for(const [name,invoke,expected]of[['start',()=>startRuntime(root),'RUNTIME_BUSY'],['stop',()=>stopRuntime(root,{expectedRunId:fx.baselineRunId}),'RUNTIME_BUSY'],['profile',()=>updateRuntimeProfile(fx.baselineProfile,{releaseRoot:fx.releaseRoot}),'RUNTIME_BUSY'],['backup',()=>createProductionStateBackup(fx.baselineProfile,{backupRoot:join(root,'race-backup')}),'STATE_BUSY']]){
    try{await invoke();throw Error('CONCURRENT_OPERATION_ENTERED');}catch(error){if(error.message!==expected)throw error;results.push({operation:name,code:error.message});}
   }
   console.log(JSON.stringify({event:'native_concurrent_lifecycle_refused',results}));
