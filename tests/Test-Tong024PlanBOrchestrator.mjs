@@ -9,6 +9,10 @@ import {verifyRelease} from '../scripts/TongRuntimeRelease.mjs';
 import {startRuntime} from '../scripts/TongAgentDockRuntime.mjs';
 import {protectSecret, safeEnvironment} from '../scripts/TongRuntimeSecurity.mjs';
 
+// Serial component demonstration only. archive() has no continuous lease once
+// it renames backup.freeze. It must never be used as a production executor.
+// Test-Tong024PlanBHandoff.mjs demonstrates the native competing-entry window.
+
 const commit='34e26801876d8b1a2fc874dddce72b0939924e87';
 const releaseRoot='D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\planb-release-34e2680';
 const manifest=await verifyRelease({releaseRoot});
@@ -89,7 +93,7 @@ try{
   // 7. Safe stop; the freeze is transient (open('wx') + unlink), no residual gate.
   const stopped=await command('stop-run',['--run-id',status.result.runId]);assert.equal(stopped.code,0);
   await assert.rejects(lstat(join(root,'run','backup.freeze')),{code:'ENOENT'},'no residual freeze after ready+stop');
-  console.log(JSON.stringify({passed:true,phase:'orchestrator',rejectBefore:'RUNTIME_BUSY',archived:true,rollbackRestores024:true,reArchived:true,installed:true,ready:true,doctorHealthy:true,agentdockAuth:true,gatewayAuthBoundary:true,stopped:true,noResidualFreeze:true,runId:status.result.runId}));
+  console.log(JSON.stringify({passed:true,phase:'serial-component-demonstration',recoveryExecutorTested:false,continuousHandoffProven:false,productionReadiness:'NOT READY',rejectBefore:'RUNTIME_BUSY',archived:true,rollbackRestores024:true,reArchived:true,installed:true,ready:true,doctorHealthy:true,agentdockAuth:true,gatewayAuthBoundary:true,stopped:true,noResidualFreeze:true,runId:status.result.runId}));
 }finally{
   const st=await command('status');if(st.code===0&&st.result.supervisorAlive)await command('stop-run',['--run-id',st.result.runId]);
   await revokeSimulationLoginRecovery(root);

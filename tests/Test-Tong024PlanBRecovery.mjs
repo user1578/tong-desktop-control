@@ -43,9 +43,8 @@ async function injectLegacyRecords(root){
   return {guardian,runtime,request,abort};
 }
 
-// Minimal controlled archival, mirroring the production-adapter core and the
-// reviewed offline rehearsal: seal evidence, then retire the old control
-// records under a continuous exclusive hold (backup.freeze moved last).
+// Serial archival rehearsal only: moving backup.freeze last does not provide
+// continuous exclusion after that rename. This is not a production executor.
 async function archive(root){
   const evidence=join(root,'legacy-evidence');await mkdir(join(evidence,'original'),{recursive:true});await mkdir(join(evidence,'retired'),{recursive:true});
   const original={};for(const name of required)original[name]=await readFile(join(root,'run',name));

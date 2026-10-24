@@ -31,11 +31,17 @@ const fail = code => { const error = new Error(code); error.code = code; throw e
 // transaction yet. A successful simulation must never enable production I/O.
 const executionBlockers = Object.freeze([
   'CONTINUOUS_LIFECYCLE_HANDOFF_UNSUPPORTED',
+  'EXACT_34E2680_HAS_NO_MAINTENANCE_LEASE_HANDOFF',
   'SOURCE_NATIVE_PROFILE_PIN_PERMISSION_RESTORE_UNSUPPORTED',
   'NATIVE_PROCESS_AND_MONITOR_INVENTORY_NOT_CONNECTED',
 ]);
 function denyProductionExecution(profile) {
-  if (profile.mode === 'production') fail('MAINTENANCE_NOT_READY');
+  if (profile.mode === 'production') {
+    const error = new Error('MAINTENANCE_NOT_READY');
+    error.code = 'MAINTENANCE_NOT_READY';
+    error.executionBlockers = [...executionBlockers];
+    throw error;
+  }
 }
 
 export const maintenance = Object.freeze({
@@ -486,6 +492,13 @@ export function describeMaintenance() {
     kind: maintenance.kind,
     executionReadiness: 'NOT READY',
     executionBlockers: [...executionBlockers],
+    executionOrderStatus: 'BLOCKED_NOT_EXECUTABLE',
+    startupHandoff: {
+      candidateCommit: maintenance.candidateCommit,
+      candidateProtocol: 'open-wx/unlink',
+      supported: false,
+      reason: 'Keeping backup.freeze blocks the exact candidate; renaming it admits every competing starter. The later in-process maintenance lease is absent from 34e2680.',
+    },
     baselineCommit: maintenance.baselineCommit,
     candidateCommit: maintenance.candidateCommit,
     productionRoot: PRODUCTION_ROOT,
@@ -936,15 +949,24 @@ if (process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(
       const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
       console.log(JSON.stringify(await verifyMaintenanceBaseline(profile), null, 2));
     } else if (command === 'run') {
+      // Reject the fixed production target before even loading its profile.
+      // No CLI flag or simulated authorization can enable Plan B execution.
+      if (resolve(option('--root') ?? PRODUCTION_ROOT).toLowerCase() === resolve(PRODUCTION_ROOT).toLowerCase()) denyProductionExecution({ mode: 'production' });
       const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
       const result = await runProductionRecovery(profile, { backupRoot: option('--backup-root'), releaseRoot: option('--release-root'), restoreRoot: option('--restore-root') });
       console.log(JSON.stringify({ ok: true, state: result.state }, null, 2));
     } else if (command === 'rollback') {
+      if (resolve(option('--root') ?? PRODUCTION_ROOT).toLowerCase() === resolve(PRODUCTION_ROOT).toLowerCase()) denyProductionExecution({ mode: 'production' });
       const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
       const result = await rollbackProductionRecovery(profile, { transactionId: option('--transaction-id') });
       console.log(JSON.stringify({ ok: true, state: result.state }, null, 2));
     } else {
       fail('MAINTENANCE_BAD_COMMAND');
     }
-  } catch (error) { console.error(String(error?.code ?? error?.message ?? error)); process.exitCode = 1; }
+  } catch (error) {
+    if (args.includes('--error-json') && error?.code === 'MAINTENANCE_NOT_READY') {
+      console.error(JSON.stringify({ error: error.code, executionReadiness: 'NOT READY', executionBlockers: error.executionBlockers }));
+    } else console.error(String(error?.code ?? error?.message ?? error));
+    process.exitCode = 1;
+  }
 }

@@ -1,0 +1,585 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-25",
+  "timezone": "Asia/Tokyo",
+  "reviewBase": "36c1df19a063ebc0f6add9d7f07d24c0efe461c8",
+  "readiness": "NOT READY",
+  "productionExecutionAllowed": false,
+  "baselineCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "candidateCommit": "34e26801876d8b1a2fc874dddce72b0939924e87",
+  "candidateSourceDigest": "d38ee4d6141f430666088d08638f7d5022961e21097f153b915b990cd53b66d9",
+  "candidateReleaseDigest": "160e33da2fbb2d9ba598e31897e83ea1d47073d2ad3844055edb962d23ef9062",
+  "implementation": "Fail-closed diagnostics only; exact candidate has no supported continuous handoff. No production recovery executor implemented or enabled.",
+  "audit": {
+    "observedAt": "2026-10-24T16:02:49.831Z",
+    "productionReadOnly": true,
+    "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "sourceFiles": 283,
+    "nativeFiles": 23,
+    "bindings": {
+      "app": {
+        "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+        "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+        "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+        "node": {
+          "executable": "D:\\node\\node.exe",
+          "version": "v24.15.0",
+          "abi": "137",
+          "platform": "win32",
+          "arch": "x64",
+          "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+        },
+        "verified": true
+      },
+      "manager": {
+        "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+        "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+        "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+        "node": {
+          "executable": "D:\\node\\node.exe",
+          "version": "v24.15.0",
+          "abi": "137",
+          "platform": "win32",
+          "arch": "x64",
+          "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+        },
+        "verified": true
+      }
+    },
+    "identities": [
+      {
+        "pid": 14116,
+        "state": "GONE"
+      },
+      {
+        "pid": 45836,
+        "state": "GONE"
+      },
+      {
+        "pid": 14176,
+        "state": "GONE"
+      },
+      {
+        "pid": 51128,
+        "state": "GONE"
+      },
+      {
+        "pid": 27824,
+        "state": "GONE"
+      },
+      {
+        "pid": 12832,
+        "state": "GONE"
+      },
+      {
+        "pid": 49300,
+        "state": "GONE"
+      },
+      {
+        "pid": 17768,
+        "state": "GONE"
+      },
+      {
+        "pid": 49724,
+        "state": "GONE"
+      },
+      {
+        "pid": 24772,
+        "state": "GONE"
+      }
+    ],
+    "jobs": {
+      "74cd4ad3-f21b-40ec-96f5-3f9015649e5d": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "d348ae39-27cf-4167-8e35-58de75421309": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      }
+    },
+    "inventory": {
+      "complete": false,
+      "error": "SECURITY_UNAVAILABLE"
+    },
+    "status": {
+      "phase": "abnormal_exit",
+      "supervisorAlive": false,
+      "guardianAlive": false
+    },
+    "doctor": {
+      "probed": false,
+      "reason": "READ_ONLY_NO_SECRET_UNSEAL"
+    },
+    "observerDescendantCount": 1,
+    "native": {
+      "services": [
+        {
+          "Name": "ngrok",
+          "State": "Running",
+          "StartMode": "Auto",
+          "ProcessId": 40452
+        }
+      ],
+      "tasks": [
+        {
+          "name": "TongLoginRuntime",
+          "state": "Ready",
+          "lastTaskResult": 1,
+          "lastRunTime": "2026-10-23T10:54:24.0000000Z"
+        },
+        {
+          "name": "TongNgrokRestore",
+          "state": "Disabled",
+          "lastTaskResult": 3221225786,
+          "lastRunTime": "2026-10-12T20:19:35.0000000Z"
+        }
+      ],
+      "listeners": [],
+      "ngrok": [
+        {
+          "pid": 40452,
+          "parentPid": 2728,
+          "createdAt": "2026-10-23T03:27:46.4025660Z",
+          "exeReadable": false,
+          "commandReadable": false,
+          "parentName": "services.exe",
+          "parentCreatedAt": "2026-10-16T16:33:13.6102720Z"
+        }
+      ],
+      "monitors": []
+    },
+    "historicalShutdown": {
+      "at": "2026-10-23T01:51:02.854Z",
+      "reason": "MONITOR_FAILED"
+    },
+    "legacyGuardianContainmentPresent": false,
+    "legacyFailedRunReceiptPresent": false,
+    "hashes": {
+      "profile.json": {
+        "size": 876,
+        "sha256": "ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35"
+      },
+      "run/release-pin.json": {
+        "size": 110871,
+        "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+      },
+      "run/manager-pin.json": {
+        "size": 110871,
+        "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+      },
+      "run/runtime.json": {
+        "size": 6089,
+        "sha256": "4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557"
+      },
+      "run/guardian.json": {
+        "size": 614,
+        "sha256": "383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7"
+      },
+      "run/request.json": {
+        "size": 194,
+        "sha256": "b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff"
+      },
+      "run/abort.json": {
+        "size": 126,
+        "sha256": "3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660"
+      },
+      "run/backup.freeze": {
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs/maintenance-transaction.json": {
+        "size": 2107,
+        "sha256": "76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473"
+      }
+    },
+    "hashedFileCount": 88,
+    "encryptedEnvelopesHashedOnly": true,
+    "controlledFileSetSha256": "ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642",
+    "controlledFilesUnchanged": true,
+    "productionExecutionAllowed": false
+  },
+  "counterexample": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-planb-handoff-338e5205-42bc-4b80-bc5c-680ba4800f31",
+    "commit": "34e26801876d8b1a2fc874dddce72b0939924e87",
+    "candidateRuntimeSha256": "3b7ab8ab21914f16a1f83633468df02b5424a567e23a6064c103a59118ce0694",
+    "nativeGatePrimitiveOnly": true,
+    "heldLeaseBlocksCandidateGate": true,
+    "heldLeaseBlocksArchive": true,
+    "competitorAcquiredAfterArchive": true,
+    "secondGateContenderRejected": true,
+    "recordsRestoredByteIdentical": true,
+    "continuousHandoffProven": false,
+    "readiness": "NOT READY",
+    "childExitCodes": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "nativeAcceptance": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-login-8e32da332608430bb4971bc668ef4ace",
+    "evidence": "D:\\Tong\\state\\b23-login-8e32da332608430bb4971bc668ef4ace\\logs\\planb-independent-771db1f4-6663-436f-9f5d-30b32172bb74",
+    "commit": "34e26801876d8b1a2fc874dddce72b0939924e87",
+    "gatewayOAuthInitialize": true,
+    "gatewayOAuthToolsList": true,
+    "toolCount": 38,
+    "firstRunId": "2336e2b7-0042-4cf5-83f2-7d1062d61671",
+    "restartedRunId": "cdbfaede-2c7f-4cf0-bb99-0530b8dab702",
+    "monitorCode": 0,
+    "normalRestart": true,
+    "noResidualFreeze": true,
+    "jobs": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    },
+    "commandResults": [
+      {
+        "action": "start",
+        "code": 0
+      },
+      {
+        "action": "status",
+        "code": 0
+      },
+      {
+        "action": "doctor",
+        "code": 0
+      },
+      {
+        "action": "status",
+        "code": 0
+      },
+      {
+        "action": "doctor",
+        "code": 0
+      },
+      {
+        "action": "stop-run",
+        "code": 0
+      },
+      {
+        "action": "start",
+        "code": 0
+      },
+      {
+        "action": "status",
+        "code": 0
+      },
+      {
+        "action": "doctor",
+        "code": 0
+      },
+      {
+        "action": "stop-run",
+        "code": 0
+      },
+      {
+        "action": "status",
+        "code": 0
+      }
+    ],
+    "productionExecutionAllowed": false,
+    "recoveryExecutorTested": false,
+    "isolatedRunnerInitialHealthy": true,
+    "runnerAliveAfter35Seconds": true,
+    "periodicHealthLoopObserved": false,
+    "scheduledTaskTakeoverTested": false,
+    "monitorEvents": [
+      {
+        "at": "2026-10-24T16:03:16.3743706Z",
+        "event": "runtime_healthy",
+        "runnerPid": 37960,
+        "runId": "2336e2b7-0042-4cf5-83f2-7d1062d61671"
+      },
+      {
+        "at": "2026-10-24T16:04:38.0518406Z",
+        "event": "requested_stop_observed",
+        "runnerPid": 37960,
+        "runId": "2336e2b7-0042-4cf5-83f2-7d1062d61671"
+      }
+    ],
+    "monitorExitCode": 0,
+    "interpretation": "Original stdout label nativeMonitorTakeover is limited to these isolated runner events. Harness cleanup and result labels were amended after launch and syntax checked; immutable installed release bytes did not change. Full cleanup fault branches were not rerun."
+  },
+  "notRun": [
+    "complete native recovery executor",
+    "sealed complete baseline source/native/profile/dual-pin/DPAPI/control/monitor snapshot",
+    "continuous exclusion during install and startup",
+    "install interruption/startup failure/controller crash matrix",
+    "new-process complete 024d5b0 rollback and all restored hashes",
+    "real scheduled task/Host takeover",
+    "long-term login monitoring",
+    "ngrok public connectivity"
+  ],
+  "failuresRetained": {
+    "planb-gate-red-20261025": "Expected red: missing explicit blocked-execution contract",
+    "planb-handoff-20261025": "Harness IPC EPIPE while closing a rejected child; fixed",
+    "planb-existing-release-20261025": "Outdated 25-tool helper expectation; verified pinned allowlist is 38; runtime stopped safely"
+  },
+  "superseded": {
+    "planb-production-audit-20261025": "Observer command line self-matched monitor; corrected. Terminal doctor did not enter secret probe.",
+    "planb-production-audit-fixed-20261025": "Self-match fixed; doctor path subsequently removed to prevent any possible secret unseal.",
+    "planb-handoff-fixed-20261025": "Output labels subsequently narrowed to gate primitives.",
+    "planb-handoff-final-20261025": "Subsequently added explicit release/source/runtime digest assertions."
+  },
+  "resources": {
+    "dependenciesCopied": false,
+    "releasesBuilt": false,
+    "existingFixture": "D:\\Tong\\state\\b23-login-8e32da332608430bb4971bc668ef4ace",
+    "captureBytes": 21227,
+    "counterexampleRoots": [
+      "D:\\Tong\\state\\b23-planb-handoff-338e5205-42bc-4b80-bc5c-680ba4800f31",
+      "D:\\Tong\\state\\b23-planb-handoff-4fdc9bee-b38b-4914-b935-79e2d618b2bd",
+      "D:\\Tong\\state\\b23-planb-handoff-7fe6fdbf-703c-4e70-a087-f4c359543581",
+      "D:\\Tong\\state\\b23-planb-handoff-ac8a837d-daa7-4978-a7fd-c3987d9c082c"
+    ],
+    "counterexampleBytes": 4820,
+    "isolatedAcceptanceEvidenceAndNewComponentLogBytes": 722191,
+    "note": "Small model fixtures and isolated OAuth DB growth are additional; no full dependency/source copy or production snapshot. Historical artifacts retained."
+  },
+  "runs": [
+    {
+      "label": "planb-baseline-binding-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024BaselineBinding.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T15:58:38.301Z",
+      "durationMs": 1246,
+      "stdoutSha256": "59b160181caeb768cee1b9418a3ebab719c251984078eaf13d249e56fbd6aefe",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-baseline-binding-20261025",
+      "stdout": "{\"passed\":true,\"baseline\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"productFiles\":[\"scripts/Tong024LegacyRecovery.mjs\",\"scripts/Tong024ProductionMaintenance.mjs\",\"scripts/TongAgentDockRuntime.mjs\",\"scripts/TongLifecycleFreeze.mjs\",\"scripts/TongLifecycleFreeze.ps1\",\"scripts/TongLoginRecovery.mjs\",\"scripts/TongMaintenanceTransaction.mjs\",\"scripts/TongProductionState.mjs\",\"scripts/TongRuntimeGuardian.ps1\",\"scripts/TongRuntimeLaunch.ps1\",\"scripts/TongRuntimeSecurity.mjs\",\"scripts/TongRuntimeSecurity.ps1\",\"scripts/TongStartupProtocol.ps1\"],\"baselineSourceFiles\":283,\"nativeFiles\":23,\"nodeBound\":true,\"sqliteNativeLoaded\":true,\"conptyNativeLoaded\":true,\"productionReadOnly\":true}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-existing-release-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBExistingRelease.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T15:56:44.858Z",
+      "durationMs": 147139,
+      "stdoutSha256": "77b098b8301aec54c18e7b99ca9e3a1dc01015f812e887173d4593391566c2ea",
+      "stderrSha256": "dfb2c79cd51b717d8ebd62c401f34c40e420bafcd49e700d60a1e7710e0a7bb9",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-existing-release-20261025",
+      "stdout": "{\"event\":\"verified_existing_fixture\",\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-8e32da332608430bb4971bc668ef4ace\",\"evidence\":\"D:\\\\Tong\\\\state\\\\b23-login-8e32da332608430bb4971bc668ef4ace\\\\logs\\\\planb-independent-ce0785c3-d93e-4f6a-ac1c-86d28f8cbf58\",\"commit\":\"34e26801876d8b1a2fc874dddce72b0939924e87\",\"sourceDigest\":\"d38ee4d6141f430666088d08638f7d5022961e21097f153b915b990cd53b66d9\",\"releaseDigest\":\"160e33da2fbb2d9ba598e31897e83ea1d47073d2ad3844055edb962d23ef9062\"}\n",
+      "stderr": "node:internal/modules/run_main:107\r\n    triggerUncaughtException(\r\n    ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n\r\n38 !== 25\r\n\r\n    at connectMcp (file:///D:/Tong/development/tong-024-startup-recovery/tests/fixtures/TongProductionSwitchSupport.mjs:83:12)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\r\n    at async file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024PlanBExistingRelease.mjs:57:22 {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: 38,\r\n  expected: 25,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.15.0\r\n"
+    },
+    {
+      "label": "planb-existing-release-fixed-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBExistingRelease.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:00:55.745Z",
+      "durationMs": 362544,
+      "stdoutSha256": "63deef6f877984d26c35090d80bd6148fa3d7061a02b37f6d849a59266940cff",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-existing-release-fixed-20261025",
+      "stdout": "{\"event\":\"verified_existing_fixture\",\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-8e32da332608430bb4971bc668ef4ace\",\"evidence\":\"D:\\\\Tong\\\\state\\\\b23-login-8e32da332608430bb4971bc668ef4ace\\\\logs\\\\planb-independent-771db1f4-6663-436f-9f5d-30b32172bb74\",\"commit\":\"34e26801876d8b1a2fc874dddce72b0939924e87\",\"sourceDigest\":\"d38ee4d6141f430666088d08638f7d5022961e21097f153b915b990cd53b66d9\",\"releaseDigest\":\"160e33da2fbb2d9ba598e31897e83ea1d47073d2ad3844055edb962d23ef9062\"}\n{\"event\":\"gateway_oauth_initialize_tools_list_passed\",\"toolCount\":38,\"runId\":\"2336e2b7-0042-4cf5-83f2-7d1062d61671\"}\n{\"passed\":true,\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-8e32da332608430bb4971bc668ef4ace\",\"evidence\":\"D:\\\\Tong\\\\state\\\\b23-login-8e32da332608430bb4971bc668ef4ace\\\\logs\\\\planb-independent-771db1f4-6663-436f-9f5d-30b32172bb74\",\"commit\":\"34e26801876d8b1a2fc874dddce72b0939924e87\",\"gatewayOAuthInitialize\":true,\"gatewayOAuthToolsList\":true,\"toolCount\":38,\"firstRunId\":\"2336e2b7-0042-4cf5-83f2-7d1062d61671\",\"restartedRunId\":\"cdbfaede-2c7f-4cf0-bb99-0530b8dab702\",\"nativeMonitorTakeover\":true,\"monitorCode\":0,\"normalRestart\":true,\"noResidualFreeze\":true,\"jobs\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"commandResults\":[{\"action\":\"start\",\"code\":0},{\"action\":\"status\",\"code\":0},{\"action\":\"doctor\",\"code\":0},{\"action\":\"status\",\"code\":0},{\"action\":\"doctor\",\"code\":0},{\"action\":\"stop-run\",\"code\":0},{\"action\":\"start\",\"code\":0},{\"action\":\"status\",\"code\":0},{\"action\":\"doctor\",\"code\":0},{\"action\":\"stop-run\",\"code\":0},{\"action\":\"status\",\"code\":0}],\"productionExecutionAllowed\":false,\"recoveryExecutorTested\":false}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-final-static-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts\\024-native-review\\planb-final-static.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:09:54.568Z",
+      "durationMs": 595,
+      "stdoutSha256": "00697339791b0b5f589c7cc1f4922b06e922df3045d0867ed769643613e25824",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-final-static-20261025",
+      "stdout": "{\"passed\":true,\"syntaxChecks\":[{\"path\":\"scripts/Tong024ProductionMaintenance.mjs\",\"code\":0,\"sha256\":\"9b06d3b88c0e8cd4c791d7a425ea660a880823f39d38b0cf0baf6c50e6585442\"},{\"path\":\"tests/Test-Tong024PlanBExecutionGate.mjs\",\"code\":0,\"sha256\":\"eda848e4fe18a7c98dbe7ca33c0fab8cce11f8032b7eca7642e3dceefea2190b\"},{\"path\":\"tests/Test-Tong024PlanBHandoff.mjs\",\"code\":0,\"sha256\":\"f5176c1cf40b3fa6886aa370df6712e5d07eaa9e0229f67ca57d578d48bc94de\"},{\"path\":\"tests/Test-Tong024PlanBProductionAudit.mjs\",\"code\":0,\"sha256\":\"15c75e5701736fd44211e4dd5aa755adc9b24ad02c0debccb86ef4ee1bc5ea5a\"},{\"path\":\"tests/Test-Tong024PlanBExistingRelease.mjs\",\"code\":0,\"sha256\":\"d8e7d5c418a15f1e8cea77c68a2e91ef217741f1c3922e572ee20020eba3d6d2\"},{\"path\":\"tests/Test-Tong024PlanBOrchestrator.mjs\",\"code\":0,\"sha256\":\"d26c4ce5d0f774e7b1e208f709d918c04356e69a23eee58e7c858b528b6eef84\"},{\"path\":\"tests/Test-Tong024PlanBRecovery.mjs\",\"code\":0,\"sha256\":\"0064be9797a41c49b1970c4e8657f052ee27954b467aa8ca3decf76032bdf32c\"}],\"diffCheckCode\":0}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-gate-green-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBExecutionGate.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T15:50:28.617Z",
+      "durationMs": 229,
+      "stdoutSha256": "ff9dc556b64bd78d24d64379fc008bc432d7628ffefd46a308daee6219f9e94e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-gate-green-20261025",
+      "stdout": "{\"passed\":true,\"productionIOBlocked\":true,\"cliCommands\":[\"run\",\"rollback\"],\"readiness\":\"NOT READY\"}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-gate-red-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBExecutionGate.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T15:50:14.061Z",
+      "durationMs": 98,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "def24d064a656a8977e455e42bc9a3b7b3c2bfef6c5213e27b8b3ed905e7319e",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-gate-red-20261025",
+      "stdout": "",
+      "stderr": "node:internal/modules/run_main:107\r\n    triggerUncaughtException(\r\n    ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n+ actual - expected\r\n\r\n+ undefined\r\n- 'BLOCKED_NOT_EXECUTABLE'\r\n\r\n    at file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024PlanBExecutionGate.mjs:8:8 {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: undefined,\r\n  expected: 'BLOCKED_NOT_EXECUTABLE',\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.15.0\r\n"
+    },
+    {
+      "label": "planb-handoff-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBHandoff.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T15:51:43.205Z",
+      "durationMs": 2542,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "5ddd784a89633ae3b80f0a7906c9b9285162f5aebbf613dbd4e36507618b0624",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-handoff-20261025",
+      "stdout": "",
+      "stderr": "node:internal/child_process:900\r\n        const ex = new ErrnoException(err, 'write');\r\n                   ^\r\n\r\nError: write EPIPE\r\n    at target._send (node:internal/child_process:900:20)\r\n    at target.send (node:internal/child_process:775:19)\r\n    at Object.close (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024PlanBHandoff.mjs:50:63)\r\n    at assertBusy (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024PlanBHandoff.mjs:52:152)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\r\n    at async file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024PlanBHandoff.mjs:54:1 {\r\n  errno: -4047,\r\n  code: 'EPIPE',\r\n  syscall: 'write'\r\n}\r\n\r\nNode.js v24.15.0\r\n"
+    },
+    {
+      "label": "planb-handoff-bound-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:09:54.569Z",
+      "durationMs": 3939,
+      "stdoutSha256": "18017b96cb479a831b6aaca81c1583138118335d535c22b21d6397e2a5b0e048",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-handoff-bound-20261025",
+      "stdout": "{\"passed\":true,\"root\":\"D:\\\\Tong\\\\state\\\\b23-planb-handoff-338e5205-42bc-4b80-bc5c-680ba4800f31\",\"commit\":\"34e26801876d8b1a2fc874dddce72b0939924e87\",\"candidateRuntimeSha256\":\"3b7ab8ab21914f16a1f83633468df02b5424a567e23a6064c103a59118ce0694\",\"nativeGatePrimitiveOnly\":true,\"heldLeaseBlocksCandidateGate\":true,\"heldLeaseBlocksArchive\":true,\"competitorAcquiredAfterArchive\":true,\"secondGateContenderRejected\":true,\"recordsRestoredByteIdentical\":true,\"continuousHandoffProven\":false,\"readiness\":\"NOT READY\",\"childExitCodes\":[0,0,0,0]}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-handoff-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:02:30.397Z",
+      "durationMs": 4274,
+      "stdoutSha256": "e117581f46d249be9e1b206784815f1e92dbeedf2af7160c2196539cbf758909",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-handoff-final-20261025",
+      "stdout": "{\"passed\":true,\"root\":\"D:\\\\Tong\\\\state\\\\b23-planb-handoff-ac8a837d-daa7-4978-a7fd-c3987d9c082c\",\"commit\":\"34e26801876d8b1a2fc874dddce72b0939924e87\",\"candidateRuntimeSha256\":\"3b7ab8ab21914f16a1f83633468df02b5424a567e23a6064c103a59118ce0694\",\"nativeGatePrimitiveOnly\":true,\"heldLeaseBlocksCandidateGate\":true,\"heldLeaseBlocksArchive\":true,\"competitorAcquiredAfterArchive\":true,\"secondGateContenderRejected\":true,\"recordsRestoredByteIdentical\":true,\"continuousHandoffProven\":false,\"readiness\":\"NOT READY\",\"childExitCodes\":[0,0,0,0]}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-handoff-fixed-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBHandoff.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T15:51:59.720Z",
+      "durationMs": 3911,
+      "stdoutSha256": "1b029bb35d8b5e4925acb70e0abd7320df34627f3763d9841a7db0a39992cca2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-handoff-fixed-20261025",
+      "stdout": "{\"passed\":true,\"root\":\"D:\\\\Tong\\\\state\\\\b23-planb-handoff-7fe6fdbf-703c-4e70-a087-f4c359543581\",\"commit\":\"34e26801876d8b1a2fc874dddce72b0939924e87\",\"candidateRuntimeSha256\":\"3b7ab8ab21914f16a1f83633468df02b5424a567e23a6064c103a59118ce0694\",\"nativeGatePrimitiveOnly\":true,\"heldLeaseBlocksCandidate\":true,\"heldLeaseBlocksArchive\":true,\"competitorAcquiredAfterArchive\":true,\"authorizedStarterRejected\":true,\"recordsRestoredByteIdentical\":true,\"continuousHandoffProven\":false,\"readiness\":\"NOT READY\",\"childExitCodes\":[0,0,0,0]}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-maintenance-regression-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "--test",
+        "tests\\Test-Tong024MaintenanceExecution.mjs",
+        "tests\\Test-Tong024MaintenanceSafety.mjs",
+        "tests\\Test-Tong024MaintenanceGuard.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T15:58:38.287Z",
+      "durationMs": 831,
+      "stdoutSha256": "9a110db659c40a6964f12c9529b99c096078437a50fe5b228911b0ffdd3ab9e0",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-maintenance-regression-20261025",
+      "stdout": "{\"passed\":true,\"quiescenceDoesNotProveExclusion\":true,\"liveProcessRefused\":true,\"busyJobRefused\":true,\"busyPortRefused\":true,\"presentReceiptRecorded\":true,\"planBound\":true,\"productionEntryFailClosed\":true,\"completeEntryFailClosed\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024MaintenanceExecution.mjs (155.6219ms)\n{\"passed\":true,\"unsafeSiteRefused\":true,\"authorizationDeniedExpiredReboundRefused\":true,\"snapshotTamperRefused\":true,\"archiveRestoreVerified\":true,\"interruptionRollback\":true,\"partialRollbackRetry\":true,\"externalChangeConflict\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024MaintenanceGuard.mjs (495.904ms)\n✔ snapshot retains the stale freeze continuously (38.6927ms)\n✔ missing snapshot implementation cannot advance to installation (33.2367ms)\n✔ backup evidence is persisted before installation (39.3831ms)\n✔ state paths outside the runtime root are rejected before transaction creation (4.4463ms)\n✔ an invalid simulation marker cannot create a transaction on denial (10.3247ms)\n✔ a second invocation cannot rewrite an existing transaction (17.3617ms)\n✔ rollback rejects a transaction rebound to another root (27.5293ms)\n✔ partial installation cannot be reported as rolled back without a release restore (37.1817ms)\n✔ empty Job inventory cannot prove a safe startup site (0.5132ms)\n✔ process inventory cannot default to empty success (4.9935ms)\n✔ the recorded live identity is unsafe even when its command marker is unreadable (10.5949ms)\n✔ quiescence is never represented as a held lifecycle lease (9.5885ms)\n✔ unreadable live identity metadata cannot prove disappearance (12.1367ms)\n✔ a matching inventoried process with a recycled recorded PID is still unsafe (9.4301ms)\n✔ native observation errors and uncertain ports propagate as refusal (12.0021ms)\n✔ pre-install rollback is independently reloadable, with simulated observation explicitly labelled (130.0829ms)\n✔ crash inside installation leaves a durable intent for a new rollback process (113.7041ms)\n✔ stateless restore preflights every conflict before restoring freeze (24.729ms)\n✔ raw release copy rejects traversal before writing a target (5.3829ms)\n✔ raw release copy refuses a junction target before overwriting its destination (15.3207ms)\n✔ production recovery is disabled before touching any production file (85.5126ms)\nℹ tests 23\nℹ suites 0\nℹ pass 23\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 753.1641\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-production-audit-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBProductionAudit.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T15:53:09.559Z",
+      "durationMs": 27231,
+      "stdoutSha256": "b042563ea9c7aacb49791f77567d608f58c55cf34e62fd1ea74ea0cae0864ccc",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-production-audit-20261025",
+      "stdout": "{\"observedAt\":\"2026-10-24T15:53:36.773Z\",\"productionReadOnly\":true,\"baseline\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceFiles\":283,\"nativeFiles\":23,\"bindings\":{\"app\":{\"commit\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceDigest\":\"7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981\",\"releaseDigest\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\",\"node\":{\"executable\":\"D:\\\\node\\\\node.exe\",\"version\":\"v24.15.0\",\"abi\":\"137\",\"platform\":\"win32\",\"arch\":\"x64\",\"sha256\":\"3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5\"},\"verified\":true},\"manager\":{\"commit\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceDigest\":\"7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981\",\"releaseDigest\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\",\"node\":{\"executable\":\"D:\\\\node\\\\node.exe\",\"version\":\"v24.15.0\",\"abi\":\"137\",\"platform\":\"win32\",\"arch\":\"x64\",\"sha256\":\"3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5\"},\"verified\":true}},\"identities\":[{\"pid\":14116,\"state\":\"GONE\"},{\"pid\":45836,\"state\":\"GONE\"},{\"pid\":14176,\"state\":\"GONE\"},{\"pid\":51128,\"state\":\"GONE\"},{\"pid\":27824,\"state\":\"GONE\"},{\"pid\":12832,\"state\":\"GONE\"},{\"pid\":49300,\"state\":\"GONE\"},{\"pid\":17768,\"state\":\"GONE\"},{\"pid\":49724,\"state\":\"GONE\"},{\"pid\":24772,\"state\":\"GONE\"}],\"jobs\":{\"74cd4ad3-f21b-40ec-96f5-3f9015649e5d\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"d348ae39-27cf-4167-8e35-58de75421309\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0}},\"inventory\":{\"complete\":false,\"error\":\"SECURITY_UNAVAILABLE\"},\"status\":{\"phase\":\"abnormal_exit\",\"supervisorAlive\":false,\"guardianAlive\":false},\"doctor\":{\"healthy\":false,\"phase\":\"abnormal_exit\"},\"observerDescendantCount\":1,\"native\":{\"listeners\":[],\"ngrok\":[{\"pid\":40452,\"parentPid\":2728,\"createdAt\":\"2026-10-23T03:27:46.4025660Z\",\"exeReadable\":false,\"commandReadable\":false,\"parentName\":\"services.exe\",\"parentCreatedAt\":\"2026-10-16T16:33:13.6102720Z\"}],\"services\":[{\"Name\":\"ngrok\",\"State\":\"Running\",\"StartMode\":\"Auto\",\"ProcessId\":40452}],\"tasks\":[{\"name\":\"TongLoginRuntime\",\"state\":\"Ready\",\"lastTaskResult\":1,\"lastRunTime\":\"2026-10-23T10:54:24.0000000Z\"},{\"name\":\"TongNgrokRestore\",\"state\":\"Disabled\",\"lastTaskResult\":3221225786,\"lastRunTime\":\"2026-10-12T20:19:35.0000000Z\"}],\"monitors\":[{\"ProcessId\":10404,\"ParentProcessId\":6428,\"Name\":\"pwsh.exe\"}]},\"historicalShutdown\":{\"at\":\"2026-10-23T01:51:02.854Z\",\"reason\":\"MONITOR_FAILED\"},\"legacyGuardianContainmentPresent\":false,\"legacyFailedRunReceiptPresent\":false,\"hashes\":{\"profile.json\":{\"size\":876,\"sha256\":\"ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35\"},\"run/release-pin.json\":{\"size\":110871,\"sha256\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\"},\"run/manager-pin.json\":{\"size\":110871,\"sha256\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\"},\"run/runtime.json\":{\"size\":6089,\"sha256\":\"4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557\"},\"run/guardian.json\":{\"size\":614,\"sha256\":\"383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7\"},\"run/request.json\":{\"size\":194,\"sha256\":\"b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff\"},\"run/abort.json\":{\"size\":126,\"sha256\":\"3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660\"},\"run/backup.freeze\":{\"size\":0,\"sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"},\"logs/maintenance-transaction.json\":{\"size\":2107,\"sha256\":\"76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473\"}},\"hashedFileCount\":88,\"encryptedEnvelopesHashedOnly\":true,\"controlledFileSetSha256\":\"ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642\",\"controlledFilesUnchanged\":true,\"productionExecutionAllowed\":false}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-production-audit-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBProductionAudit.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T16:02:30.378Z",
+      "durationMs": 19469,
+      "stdoutSha256": "a25b95edb15f62e10e03079485939ca7a9c9e4965ffdb1c2f5195cfa98f87f62",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-production-audit-final-20261025",
+      "stdout": "{\"observedAt\":\"2026-10-24T16:02:49.831Z\",\"productionReadOnly\":true,\"baseline\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceFiles\":283,\"nativeFiles\":23,\"bindings\":{\"app\":{\"commit\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceDigest\":\"7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981\",\"releaseDigest\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\",\"node\":{\"executable\":\"D:\\\\node\\\\node.exe\",\"version\":\"v24.15.0\",\"abi\":\"137\",\"platform\":\"win32\",\"arch\":\"x64\",\"sha256\":\"3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5\"},\"verified\":true},\"manager\":{\"commit\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceDigest\":\"7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981\",\"releaseDigest\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\",\"node\":{\"executable\":\"D:\\\\node\\\\node.exe\",\"version\":\"v24.15.0\",\"abi\":\"137\",\"platform\":\"win32\",\"arch\":\"x64\",\"sha256\":\"3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5\"},\"verified\":true}},\"identities\":[{\"pid\":14116,\"state\":\"GONE\"},{\"pid\":45836,\"state\":\"GONE\"},{\"pid\":14176,\"state\":\"GONE\"},{\"pid\":51128,\"state\":\"GONE\"},{\"pid\":27824,\"state\":\"GONE\"},{\"pid\":12832,\"state\":\"GONE\"},{\"pid\":49300,\"state\":\"GONE\"},{\"pid\":17768,\"state\":\"GONE\"},{\"pid\":49724,\"state\":\"GONE\"},{\"pid\":24772,\"state\":\"GONE\"}],\"jobs\":{\"74cd4ad3-f21b-40ec-96f5-3f9015649e5d\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"d348ae39-27cf-4167-8e35-58de75421309\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0}},\"inventory\":{\"complete\":false,\"error\":\"SECURITY_UNAVAILABLE\"},\"status\":{\"phase\":\"abnormal_exit\",\"supervisorAlive\":false,\"guardianAlive\":false},\"doctor\":{\"probed\":false,\"reason\":\"READ_ONLY_NO_SECRET_UNSEAL\"},\"observerDescendantCount\":1,\"native\":{\"services\":[{\"Name\":\"ngrok\",\"State\":\"Running\",\"StartMode\":\"Auto\",\"ProcessId\":40452}],\"tasks\":[{\"name\":\"TongLoginRuntime\",\"state\":\"Ready\",\"lastTaskResult\":1,\"lastRunTime\":\"2026-10-23T10:54:24.0000000Z\"},{\"name\":\"TongNgrokRestore\",\"state\":\"Disabled\",\"lastTaskResult\":3221225786,\"lastRunTime\":\"2026-10-12T20:19:35.0000000Z\"}],\"listeners\":[],\"ngrok\":[{\"pid\":40452,\"parentPid\":2728,\"createdAt\":\"2026-10-23T03:27:46.4025660Z\",\"exeReadable\":false,\"commandReadable\":false,\"parentName\":\"services.exe\",\"parentCreatedAt\":\"2026-10-16T16:33:13.6102720Z\"}],\"monitors\":[]},\"historicalShutdown\":{\"at\":\"2026-10-23T01:51:02.854Z\",\"reason\":\"MONITOR_FAILED\"},\"legacyGuardianContainmentPresent\":false,\"legacyFailedRunReceiptPresent\":false,\"hashes\":{\"profile.json\":{\"size\":876,\"sha256\":\"ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35\"},\"run/release-pin.json\":{\"size\":110871,\"sha256\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\"},\"run/manager-pin.json\":{\"size\":110871,\"sha256\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\"},\"run/runtime.json\":{\"size\":6089,\"sha256\":\"4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557\"},\"run/guardian.json\":{\"size\":614,\"sha256\":\"383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7\"},\"run/request.json\":{\"size\":194,\"sha256\":\"b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff\"},\"run/abort.json\":{\"size\":126,\"sha256\":\"3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660\"},\"run/backup.freeze\":{\"size\":0,\"sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"},\"logs/maintenance-transaction.json\":{\"size\":2107,\"sha256\":\"76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473\"}},\"hashedFileCount\":88,\"encryptedEnvelopesHashedOnly\":true,\"controlledFileSetSha256\":\"ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642\",\"controlledFilesUnchanged\":true,\"productionExecutionAllowed\":false}\n",
+      "stderr": ""
+    },
+    {
+      "label": "planb-production-audit-fixed-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests\\Test-Tong024PlanBProductionAudit.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T15:57:54.360Z",
+      "durationMs": 23494,
+      "stdoutSha256": "47a465547209fe3286d4b5e46f8968a0a6510ed4cd38fef1c866358928cd15c0",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidencePath": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\planb-production-audit-fixed-20261025",
+      "stdout": "{\"observedAt\":\"2026-10-24T15:58:17.838Z\",\"productionReadOnly\":true,\"baseline\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceFiles\":283,\"nativeFiles\":23,\"bindings\":{\"app\":{\"commit\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceDigest\":\"7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981\",\"releaseDigest\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\",\"node\":{\"executable\":\"D:\\\\node\\\\node.exe\",\"version\":\"v24.15.0\",\"abi\":\"137\",\"platform\":\"win32\",\"arch\":\"x64\",\"sha256\":\"3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5\"},\"verified\":true},\"manager\":{\"commit\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"sourceDigest\":\"7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981\",\"releaseDigest\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\",\"node\":{\"executable\":\"D:\\\\node\\\\node.exe\",\"version\":\"v24.15.0\",\"abi\":\"137\",\"platform\":\"win32\",\"arch\":\"x64\",\"sha256\":\"3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5\"},\"verified\":true}},\"identities\":[{\"pid\":14116,\"state\":\"GONE\"},{\"pid\":45836,\"state\":\"GONE\"},{\"pid\":14176,\"state\":\"GONE\"},{\"pid\":51128,\"state\":\"GONE\"},{\"pid\":27824,\"state\":\"GONE\"},{\"pid\":12832,\"state\":\"GONE\"},{\"pid\":49300,\"state\":\"GONE\"},{\"pid\":17768,\"state\":\"GONE\"},{\"pid\":49724,\"state\":\"GONE\"},{\"pid\":24772,\"state\":\"GONE\"}],\"jobs\":{\"74cd4ad3-f21b-40ec-96f5-3f9015649e5d\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"d348ae39-27cf-4167-8e35-58de75421309\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0}},\"inventory\":{\"complete\":false,\"error\":\"SECURITY_UNAVAILABLE\"},\"status\":{\"phase\":\"abnormal_exit\",\"supervisorAlive\":false,\"guardianAlive\":false},\"doctor\":{\"healthy\":false,\"phase\":\"abnormal_exit\"},\"observerDescendantCount\":1,\"native\":{\"ngrok\":[{\"pid\":40452,\"parentPid\":2728,\"createdAt\":\"2026-10-23T03:27:46.4025660Z\",\"exeReadable\":false,\"commandReadable\":false,\"parentName\":\"services.exe\",\"parentCreatedAt\":\"2026-10-16T16:33:13.6102720Z\"}],\"listeners\":[],\"monitors\":[],\"tasks\":[{\"name\":\"TongLoginRuntime\",\"state\":\"Ready\",\"lastTaskResult\":1,\"lastRunTime\":\"2026-10-23T10:54:24.0000000Z\"},{\"name\":\"TongNgrokRestore\",\"state\":\"Disabled\",\"lastTaskResult\":3221225786,\"lastRunTime\":\"2026-10-12T20:19:35.0000000Z\"}],\"services\":[{\"Name\":\"ngrok\",\"State\":\"Running\",\"StartMode\":\"Auto\",\"ProcessId\":40452}]},\"historicalShutdown\":{\"at\":\"2026-10-23T01:51:02.854Z\",\"reason\":\"MONITOR_FAILED\"},\"legacyGuardianContainmentPresent\":false,\"legacyFailedRunReceiptPresent\":false,\"hashes\":{\"profile.json\":{\"size\":876,\"sha256\":\"ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35\"},\"run/release-pin.json\":{\"size\":110871,\"sha256\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\"},\"run/manager-pin.json\":{\"size\":110871,\"sha256\":\"482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd\"},\"run/runtime.json\":{\"size\":6089,\"sha256\":\"4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557\"},\"run/guardian.json\":{\"size\":614,\"sha256\":\"383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7\"},\"run/request.json\":{\"size\":194,\"sha256\":\"b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff\"},\"run/abort.json\":{\"size\":126,\"sha256\":\"3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660\"},\"run/backup.freeze\":{\"size\":0,\"sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"},\"logs/maintenance-transaction.json\":{\"size\":2107,\"sha256\":\"76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473\"}},\"hashedFileCount\":88,\"encryptedEnvelopesHashedOnly\":true,\"controlledFileSetSha256\":\"ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642\",\"controlledFilesUnchanged\":true,\"productionExecutionAllowed\":false}\n",
+      "stderr": ""
+    }
+  ]
+}
