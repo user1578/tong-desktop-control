@@ -6,42 +6,54 @@ try {
     if(@($Root,$NodeExe,$Supervisor,$guardian) | Where-Object {$_ -match '["\r\n]'}){throw 'Invalid launch path'}
     if($RunId -notmatch '^[a-f0-9-]{36}$'){throw 'Invalid run identity'}
     $Root=[IO.Path]::GetFullPath($Root)
+    if($Root -cne 'D:\Tong\runtime' -and -not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
+    if($Root -ceq 'D:\Tong\runtime' -and ($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs')){throw 'Fixed production entry required'}
+    if($RecoveryGrantId -and $RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid recovery grant identity'}
+    . (Join-Path $PSScriptRoot 'TongStartupProtocol.ps1')
+    Initialize-TongStartup 'launcher'
+    Assert-TongStartupActive
     if($Root -ceq 'D:\Tong\runtime') {
         if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
-        if($RecoveryGrantId){& $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null}else{& $NodeExe $Supervisor preflight-production | Out-Null}
-        if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
+        if($RecoveryGrantId){Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)}else{Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-production')}
     }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     if($RecoveryGrantId -and $RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid recovery grant identity'}
     $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$guardian+'" -Root "'+$Root+'" -RunId "'+$RunId+'" -NodeExe "'+$NodeExe+'" -Supervisor "'+$Supervisor+'"'
     if($RecoveryGrantId){$arguments+=' -RecoveryGrantId "'+$RecoveryGrantId+'"'}
+    $arguments+=' -OwnerJobName "Local\TongGuardian-'+$RunId+'"'
     # A new console alone still inherits the initiating application's Job.
     # Break away explicitly; refuse launch if that Job forbids breakaway.
     # Keep PS5.1 as the pinned production host; its .NET Framework security
     # helpers and the existing Task Scheduler action are validated together.
     $guardianShell=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    Add-Type -TypeDefinition @'
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-public static class TongIndependentGuardian {
- [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct Startup { public int size;public string reserved,desktop,title;public uint x,y,xSize,ySize,xChars,yChars,fill,flags;public short show,reservedSize;public IntPtr reservedPtr,input,output,error; }
- [StructLayout(LayoutKind.Sequential)] struct ProcessInfo { public IntPtr process,thread;public uint pid,tid; }
- [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool CreateProcess(string exe,StringBuilder args,IntPtr processAttrs,IntPtr threadAttrs,bool inherit,uint flags,IntPtr environment,string cwd,ref Startup startup,out ProcessInfo info);
- [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
- public static uint Start(string exe,string args,string cwd) {
-  var startup=new Startup();startup.size=Marshal.SizeOf(startup);startup.flags=1;startup.show=0;
-  ProcessInfo info;
-  if(!CreateProcess(exe,new StringBuilder("\""+exe+"\" "+args),IntPtr.Zero,IntPtr.Zero,false,0x01000010,IntPtr.Zero,cwd,ref startup,out info))throw new Exception("GUARDIAN_BREAKAWAY_FAILED:"+Marshal.GetLastWin32Error());
-  try{return info.pid;}finally{CloseHandle(info.thread);CloseHandle(info.process);}
- }
-}
-'@
-    $childId=[TongIndependentGuardian]::Start($guardianShell,$arguments,$Root)
+    Assert-TongStartupActive
+    Set-TongStartupStage 'create_guardian'
+    # From here until the creation result is persisted, absence is unknown.
+    $script:tongStartup.guardianCreated=$null
+    Set-TongStartupStage 'create_guardian'
+    $adoptionBudget=[int][Math]::Max(1,[Math]::Min(30000,($script:tongDeadline-[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())))
+    $childId=[TongStartupPreflight]::StartGuardian(('Local\TongGuardian-'+$RunId),$guardianShell,$arguments,$Root,$adoptionBudget)
+    $script:tongStartup.guardianCreated=$true
+    $script:tongStartup['guardian']=[ordered]@{pid=$childId;exe=$guardianShell;startTicks=[TongStartupPreflight]::GuardianStartTicks;markerMatches=$true}
+    $script:tongStartup['finishedAt']=[DateTime]::UtcNow.ToString('o')
+    Set-TongStartupStage 'guardian_created'
     [pscustomobject]@{pid=$childId} | ConvertTo-Json -Compress
 } catch {
     # This explicit negative acknowledgement is emitted only before CreateProcess
     # returned a child. The manager can release its lock without guessing about
     # an unobserved Guardian after a breakaway/validation failure.
-    if($childId -eq 0){[pscustomobject]@{runId=$RunId;guardianCreated=$false}|ConvertTo-Json -Compress}
+    if(Get-Variable tongStartup -Scope Script -ErrorAction SilentlyContinue){
+        $nativeFailure=$_.Exception
+        while($nativeFailure.InnerException){$nativeFailure=$nativeFailure.InnerException}
+        if($nativeFailure.Data.Contains('guardianPid')){
+            $childId=[int]$nativeFailure.Data['guardianPid']
+            $script:tongStartup['guardian']=[ordered]@{pid=$childId;exe=[string]$nativeFailure.Data['guardianExe'];startTicks=[string]$nativeFailure.Data['guardianStartTicks'];markerMatches=$true}
+            $script:tongStartup['guardianTreeCleanup']=[ordered]@{proven=($nativeFailure.Data['guardianTreeClean'] -ceq $true);jobName=('Local\TongGuardian-'+$RunId);stage='guardian_adoption';runId=$RunId}
+        }
+        # CreateProcess failure returned synchronously; a killed launcher cannot
+        # execute this catch and therefore cannot publish negative proof.
+        $script:tongStartup.guardianCreated=($childId -ne 0)
+        try{Complete-TongStartupFailure $_}catch{}
+        if($childId -eq 0 -and $script:tongStartup.preflightClean){[pscustomobject]@{runId=$RunId;guardianCreated=$false}|ConvertTo-Json -Compress}
+    }
     [Console]::Error.WriteLine('Runtime launch refused');exit 2
 }

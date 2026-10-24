@@ -2,14 +2,14 @@ import { spawn, fork } from 'node:child_process';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { open, readFile, writeFile, mkdir, rename, unlink, readdir } from 'node:fs/promises';
 import { createWriteStream, appendFileSync } from 'node:fs';
-import { join, resolve, isAbsolute, dirname, relative, sep } from 'node:path';
+import { join, resolve, isAbsolute, dirname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createConnection } from 'node:net';
 import { once } from 'node:events';
 import { Transform } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import { TongAgentDockClient } from './TongAgentDockClient.mjs';
-import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic, runtimeJobState } from './TongRuntimeSecurity.mjs';
+import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic, runtimeJobState, startupJobsState } from './TongRuntimeSecurity.mjs';
 import {PRODUCTION_ROOT,validateProductionProfile,loadApprovedProfile,verifyRuntimeApproval,initializeProductionRoot,recordApprovedEnabledState,readApprovedEnabledState} from './TongProductionProfile.mjs';
 import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.mjs';
 import {withLoginRecovery,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
@@ -67,7 +67,7 @@ export function waitForChildReadiness(child,{role,preserved:production,began=Dat
   });
 }
 const hash=async path=>createHash('sha256').update(await readFile(path)).digest('hex');
-async function json(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw fail('INVALID_STATE');}}
+async function json(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;const refused=fail('INVALID_STATE');refused.stateFailure={file:basename(path),operation:typeof error.code==='string'?'read':'parse',code:/^[A-Z_]{1,64}$/.test(error.code??'')?error.code:'JSON_PARSE_FAILED',...(Number.isSafeInteger(error.errno)?{errno:error.errno}:{})};throw refused;}}
 async function save(path,value){const tmp=path+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value,null,2)+'\n',{flag:'wx'});for(let n=0;n<10;n++){try{await rename(tmp,path);return;}catch(error){if(!['EPERM','EACCES','EBUSY'].includes(error.code)||n===9)throw fail('STATE_UNAVAILABLE');await delay(25);}}}
 function absoluteRoot(root){
   const approved=resolve('D:\\Tong\\state');
@@ -227,11 +227,16 @@ export async function runtimeDoctor(root){const profile=await layout(root),statu
 async function guardianComplete(root,runId) {
   const guardian=await json(join(root,'run','guardian.json'));
   if(guardian?.runId!==runId)return false;
+  // A legacy assigned-Job record cannot exclude descendants created before
+  // assignment. It needs a separately reviewed recovery, never an automatic
+  // upgrade to the atomic containment proof used by this protocol.
+  if(guardian.containment!=='create_process_job_list')return false;
+  if(guardian.jobName!==`Local\\TongRuntime-${runId}`||guardian.killOnJobClose!==true)return false;
   if(!guardian.finishedAt)return (await reconciliationComplete(root,await json(join(root,'run','runtime.json'))))===true;
   if(guardian.jobActiveAfterCleanup!==0||guardian.jobAssigned!==true)return false;
   const record=await json(join(root,'run','runtime.json'));
   if(record?.runId!==runId||guardian.nodePid!==record.supervisor?.pid)return false;
-  try{await oldRuntimeGone(root,record,guardian,{completed:guardian.jobName!==undefined});return true;}catch{return false;}
+  try{await oldRuntimeGone(root,record,guardian,{completed:true});return true;}catch{return false;}
 }
 export async function startRuntime(root,{startupTimeoutMs}={}) {
   if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
@@ -241,67 +246,177 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
   startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
   const held=await freeze(root);
-  let runId,child,launchedIdentity,deadline,release=true,launchConfirmedAbsent=false;
+  let runId,child,launchedIdentity,deadline,release=true,stage='previous_cleanup';
+  const diagnosticId=randomUUID();
+  const checkpoint=async name=>{stage=name;await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_checkpoint',diagnosticId,role:'manager',stage:name})+'\n',{flag:'a'});};
+  const receipt=async(id=runId)=>{
+    if(!validRunId(id))return null;
+    try{
+      const value=await json(join(root,'run',`launcher.${id}.json`));
+      if(value===null)return null;
+      if(value?.schemaVersion!==2||value.role!=='launcher'||value.runId!==id||!['initializing','preflight','preflight_complete','create_guardian','guardian_created'].includes(value.stage)
+        ||value.code!==undefined&&!/^[A-Z_]{1,64}$/.test(value.code))return {invalid:true};
+      if(value.guardianCreated===false&&value.stage==='guardian_created'||value.guardianCreated===true&&!['create_guardian','guardian_created'].includes(value.stage))return {invalid:true};
+      return value;
+    }catch{return {invalid:true};}
+  };
+  const launchComplete=async(id=runId,launcherPid=child?.pid,{signal}={})=>{
+    // A dead launcher or empty Job alone cannot exclude a raced CreateProcess.
+    // Require its terminal negative receipt, or the exact acknowledged Guardian
+    // to be gone, as well as both preflight Jobs and the runtime Job being empty.
+    const value=await receipt(id);
+    const validIdentity=identity=>Number.isInteger(identity?.pid)&&identity.pid>0&&typeof identity.exe==='string'&&isAbsolute(identity.exe)&&/^\d+$/.test(identity.startTicks)&&identity.markerMatches===true;
+    if(id===runId&&child?.exitCode===null)return false;
+    if(!value)return false;
+    if(value.invalid||!value.finishedAt||value.preflightClean!==true||!validIdentity(value.launcher)||launcherPid!==undefined&&value.launcher.pid!==launcherPid||sameProcess(await processIdentity(value.launcher.pid,'',{signal}),value.launcher))return false;
+    await assertProtectedPaths([join(root,'run',`launcher.${id}.json`)],{signal});
+    if(value.guardianCreated!==false){
+      if(value.guardianCreated!==true||!validIdentity(value.guardian)||sameProcess(await processIdentity(value.guardian.pid,'',{signal}),value.guardian))return false;
+      const creatorCleanup=value.guardianTreeCleanup;
+      if(creatorCleanup!==undefined){
+        if(creatorCleanup.proven!==true||creatorCleanup.runId!==id||creatorCleanup.jobName!==`Local\\TongGuardian-${id}`||creatorCleanup.stage!=='guardian_adoption')return false;
+      }else{
+      const guardianReceiptPath=join(root,'run',`guardian.${id}.json`),guardianReceipt=await json(guardianReceiptPath);
+      if(guardianReceipt?.schemaVersion!==2||guardianReceipt.role!=='guardian'||guardianReceipt.runId!==id||!guardianReceipt.finishedAt||guardianReceipt.preflightClean!==true
+        ||!validIdentity(guardianReceipt.owner)||!sameProcess(guardianReceipt.owner,value.guardian)||guardianReceipt.runtimeClean!==true
+        ||guardianReceipt.jobName!==`Local\\TongRuntime-${id}`||guardianReceipt.jobActiveAfterCleanup!==0
+        ||!['compile','initializing','preflight','preflight_complete','read-request','create-job','spawn-node','record-start','wait-node'].includes(guardianReceipt.stage))return false;
+      if(guardianReceipt.nodeCreated!==false){
+        if(guardianReceipt.nodeCreated!==true||!['spawn-node','record-start','wait-node'].includes(guardianReceipt.stage)||!validIdentity(guardianReceipt.node)||sameProcess(await processIdentity(guardianReceipt.node.pid,'',{signal}),guardianReceipt.node))return false;
+      }else if(['record-start','wait-node'].includes(guardianReceipt.stage))return false;
+      await assertProtectedPaths([guardianReceiptPath],{signal});
+      }
+    }
+    const jobs=await startupJobsState(id,{signal});
+    return jobs.owner===0&&jobs.launcher===0&&jobs.guardian===0&&jobs.runtime===0;
+  };
   try {
+    // Reading prior state is itself part of the proof. An ACL/CIM/Job failure
+    // must retain the lock even though this call has not created a child yet.
+    release=false;
+    await checkpoint('previous_status');
     const status=await runtimeStatus(root);
-    if(status.supervisorAlive)throw fail('ALREADY_RUNNING');
+    if(status.supervisorAlive){release=true;throw fail('ALREADY_RUNNING');}
     if(!['not_started','stopped','abnormal_exit'].includes(status.phase))throw fail('STALE_RECORD');
-    if(status.runId&&!await guardianComplete(root,status.runId))throw fail('CLEANUP_REQUIRED');
+    const previousRequest=await json(join(root,'run','request.json'));
+    if(previousRequest&&previousRequest.runId!==status.runId&&!await launchComplete(previousRequest.runId)){release=false;throw fail('CLEANUP_REQUIRED');}
+    if(status.runId&&!await guardianComplete(root,status.runId)){release=false;throw fail('CLEANUP_REQUIRED');}
     for(const identity of [...(status.children??[]),...(status.descendants??[])])
       if(sameProcess(await processIdentity(identity.pid),identity))throw fail('CHILD_STILL_ALIVE');
+    release=true;
+    await checkpoint('binary_hash');
     if(await hash(AGENTDOCK_EXE)!==AGENTDOCK_SHA256)throw fail('BINARY_CHANGED');
+    await checkpoint('ports');
     for(const port of [...(dockEnabled(profile)?[profile.agentdockPort]:[]),...(hasTong(profile)?[profile.gatewayPort,profile.upstreamPort]:[])])await unused(port);
+    await checkpoint('secrets');
     if(dockEnabled(profile))await readSecret(root,'agentdock');if(preserved(profile)?profile.mode==='production-simulation':profile.withTong)await readSecret(root,'oauth-owner');
+    await checkpoint('request');
     deadline=Date.now()+startupTimeoutMs;
     runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),startupDeadline:deadline,...(recoveryGrantId?{recoveryGrantId}:{})});
+    stage='launcher_start';
     child=spawn(join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),
       ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',preserved(profile)?join(profile.managerRoot,'scripts','TongRuntimeLaunch.ps1'):guardianScript,'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',preserved(profile)?join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs'):self,...(recoveryGrantId?['-RecoveryGrantId',recoveryGrantId]:[])],
       {cwd:root,env:{...safeEnvironment(root),USERPROFILE:process.env.USERPROFILE,APPDATA:process.env.APPDATA,LOCALAPPDATA:process.env.LOCALAPPDATA},windowsHide:true,detached:false,stdio:['ignore','pipe','pipe']});
     child.stderr.resume();let launchOutput='';child.stdout.on('data',chunk=>{launchOutput+=chunk;if(launchOutput.length>100)child.kill();});
-    let spawnError=false;child.once('error',()=>{spawnError=true;});
-    let launchTimer;
-    try{await Promise.race([once(child,'close'),new Promise((_,reject)=>{launchTimer=setTimeout(()=>{child.kill();reject(fail('SUPERVISOR_START_FAILED'));},15000);})]);}
-    finally{clearTimeout(launchTimer);}
+    let spawnError=false,launchClosed=false;child.once('error',()=>{spawnError=true;});child.once('close',()=>{launchClosed=true;});
+    // Preflight, CreateProcess and acknowledgement share the original total
+    // startup deadline. Cancel cooperatively; hard kill would destroy the only
+    // owner capable of proving whether a Guardian was created.
+    while(!launchClosed&&!spawnError){
+      const progress=await receipt();if(progress?.stage)stage=progress.stage;
+      if(Date.now()>=deadline)throw fail('START_TIMEOUT');
+      await delay(Math.min(100,Math.max(1,deadline-Date.now())));
+    }
     if(spawnError||child.exitCode!==0){
-      try{const refused=JSON.parse(launchOutput);launchConfirmedAbsent=refused.runId===runId&&refused.guardianCreated===false;}catch{}
       throw fail('SUPERVISOR_START_FAILED');
     }
-    const launched=JSON.parse(launchOutput);launchedIdentity=await processIdentity(launched.pid,runId);
+    stage='guardian_confirmation';
+    let launched;try{launched=JSON.parse(launchOutput);}catch{throw fail('SUPERVISOR_START_FAILED');}
+    launchedIdentity=await processIdentity(launched.pid,runId);
     if(!launchedIdentity?.markerMatches)throw fail('SUPERVISOR_START_FAILED');
     while(Date.now()<deadline) {
       if(spawnError)throw fail('SUPERVISOR_START_FAILED');
-      const guardian=await json(join(root,'run','guardian.json')),failure=await json(join(root,'run','guardian-failure.json'));
-      if(failure?.runId===runId||guardian?.runId===runId&&guardian.finishedAt)throw fail('START_FAILED');
+      const guardian=await json(join(root,'run','guardian.json')),failure=await json(join(root,'run',`guardian.${runId}.json`));
+      if(failure?.schemaVersion===2&&failure.runId===runId&&failure.failure||guardian?.runId===runId&&guardian.finishedAt)throw fail('START_FAILED');
       const record=await json(join(root,'run','runtime.json'));
       if(record?.runId===runId) {
-        if(record.phase==='ready')return record;
+        if(record.phase==='ready'&&Date.now()<deadline)return record;
         if(['abnormal_exit','cleanup_required'].includes(record.phase))throw fail('START_FAILED');
       }
       await delay(100);
     }
     throw fail('START_TIMEOUT');
   } catch(error) {
+    const originalCode=/^[A-Z_]{1,64}$/.test(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
+    const managerFailure={role:'manager',stage,code:originalCode,diagnosticId};
+    let cleanup={proven:release&&!child?.pid,proof:child?.pid||!release?'unresolved':'not_launched'};
+    // Any observation, abort write or diagnostic failure from here must retain
+    // the lock until positive evidence explicitly changes this decision.
+    if(child?.pid)release=false;
+    let diagnosticsWriteFailed=false;
     try{
     if(error.message==='START_TIMEOUT'&&runId){
       const current=await json(join(root,'run','runtime.json')),progress=current?.runId===runId?current.startupProgress:null;
       const durationMs=Date.now()-deadline+startupTimeoutMs;
       await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),runId,event:'startup_failure',code:'START_TIMEOUT',timeoutKind:'startup_total',role:progress?.role??'supervisor',stage:progress?.stage??'initializing',durationMs,budgetMs:startupTimeoutMs,stageDurationMs:progress?Date.now()-progress.stageStartedAt:durationMs})+'\n',{flag:'a'});
     }
-    }finally{
-    if(child?.pid&&!launchConfirmedAbsent) {
+    }catch{diagnosticsWriteFailed=true;}finally{
+    if(child?.pid) {
       // Cancel only this run's private Job; hold backup/start lock until completion.
-      await save(join(root,'run','abort.json'),{runId,requestedAt:new Date().toISOString(),reason:'START_ABORT'});
+      try{await save(join(root,'run','abort.json'),{runId,requestedAt:new Date().toISOString(),reason:'START_ABORT'});}catch{cleanup={proven:false,proof:'abort_write_failed'};}
       let complete=false;
-      for(let n=0;n<300;n++) {
-        if(await guardianComplete(root,runId)){complete=true;break;}
-        // If no Job record was ever published, require the exact launcher-owned identity to be gone.
-        const guardian=await json(join(root,'run','guardian.json'));
-        if(launchedIdentity&&guardian?.runId!==runId&&!sameProcess(await processIdentity(launchedIdentity.pid),launchedIdentity)){complete=true;break;}
-        await delay(100);
+      const cleanupDeadline=Date.now()+30000;
+      while(Date.now()<cleanupDeadline) {
+        let proofTimer;
+        const proofAbort=new AbortController();
+        try{
+          // Even a completed Guardian does not cover a still-running Launcher
+          // or preflight helper. Both owners must have finished this attempt.
+          // Read-only observations may finish late. Their eventual result must
+          // never release a lock after the shared cleanup budget has expired.
+          const proven=await Promise.race([launchComplete(runId,child?.pid,{signal:proofAbort.signal}),new Promise(resolve=>{proofTimer=setTimeout(()=>{proofAbort.abort();resolve(false);},cleanupDeadline-Date.now());})]);
+          if(proven&&Date.now()<cleanupDeadline){complete=true;cleanup={proven:true,proof:'launcher_terminal'};break;}
+        }catch{/* A failed observation is not cleanup evidence. */}
+        finally{clearTimeout(proofTimer);proofAbort.abort();}
+        if(Date.now()<cleanupDeadline)await delay(Math.min(100,cleanupDeadline-Date.now()));
       }
-      if(!complete){release=false;throw fail('CLEANUP_REQUIRED');}
+      if(!complete){
+        release=false;
+        // Closing an unresponsive owner's handles also closes its private
+        // preflight Job. Absence of a receipt still keeps the lock fail-closed.
+        if(child.exitCode===null)try{child.kill();}catch{cleanup.terminationFailed=true;}
+      }else release=true;
     }
     }
+    const latest=await receipt();
+    let runtimeFailure=null;
+    if(runId){
+      try{
+        const record=await json(join(root,'run','runtime.json')),guardianFailure=await json(join(root,'run',`guardian.${runId}.json`));
+        if(record?.runId===runId)runtimeFailure=record.startupFailure??record.startupProgress;
+        if(guardianFailure?.schemaVersion===2&&guardianFailure.role==='guardian'&&guardianFailure.runId===runId){
+          if(guardianFailure.failure)runtimeFailure={...guardianFailure.failure,...(Number.isInteger(guardianFailure.nodeExitCode)?{nodeExitCode:guardianFailure.nodeExitCode}:{})};
+          else if(Number.isInteger(guardianFailure.nodeExitCode))runtimeFailure={role:'supervisor',stage:runtimeFailure?.stage??guardianFailure.stage,code:'SUPERVISOR_EXIT',exitCode:guardianFailure.nodeExitCode,diagnosticId:runId+'/supervisor'};
+        }
+      }catch{/* Preserve the original exception even if diagnostic state is unreadable. */}
+    }
+    const observedStage=error.stateFailure?managerFailure.stage:runtimeFailure?.stage??latest?.failure?.stage??(stage==='guardian_confirmation'?stage:latest?.stage??stage);
+    const failureStage=/^[a-z][a-z_-]{0,63}$/.test(observedStage)?observedStage:stage;
+    const rawOrigin=runtimeFailure??latest?.failure;
+    // Metadata only: never copy exception messages, command lines, paths, or
+    // arbitrary properties from a diagnostic file into the public failure.
+    const observedRuntimeFailure=rawOrigin?Object.fromEntries(Object.entries(rawOrigin).filter(([key,value])=>
+      ['role','stage','code','exceptionType','errorId','diagnosticId'].includes(key)?typeof value==='string'&&/^[A-Za-z0-9_.:/-]{1,160}$/.test(value):
+      ['win32Error','hresult','exitCode','childExitCode','preflightExitCode','nodeExitCode'].includes(key)&&Number.isSafeInteger(value))):undefined;
+    // A state read/parse refusal happened in this Manager. An abort or exit
+    // observed during cleanup is separate evidence, never its original cause.
+    const origin=error.stateFailure?managerFailure:observedRuntimeFailure;
+    const startupFailure={runId:runId??null,diagnosticId,code:originalCode,stage:failureStage,managerFailure,...(origin?{origin}:{}),...(error.stateFailure&&observedRuntimeFailure?{observedRuntimeFailure}:{}),...(latest?.code?{launcherCode:latest.code}:{}),cleanup};
+    if(error.stateFailure)startupFailure.stateFailure=error.stateFailure;
+    if(diagnosticsWriteFailed)startupFailure.diagnosticsWriteFailed=true;
+    try{await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_result',...startupFailure})+'\n',{flag:'a'});}catch{startupFailure.diagnosticsWriteFailed=true;}
+    if(!cleanup.proven){const refused=fail('CLEANUP_REQUIRED');refused.startupFailure=startupFailure;throw refused;}
+    error.startupFailure=startupFailure;
     throw error;
   } finally {if(release)await releaseFreeze(root,held);else await held.close();}
 }
@@ -380,7 +495,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     if(result!==undefined)console.log(JSON.stringify(result));
   }catch(error){
     const code=['ACL_DENIED','PORT_OCCUPIED','ALREADY_RUNNING','STALE_RECORD','IDENTITY_MISMATCH','INIT_EXISTS','SECRET_UNAVAILABLE','RUNTIME_BUSY','CLEANUP_REQUIRED','STOP_TIMEOUT','START_TIMEOUT','START_FAILED','SUPERVISOR_START_FAILED','BINARY_CHANGED','INVALID_COMMAND','INVALID_ROOT','INVALID_RUN','APPROVAL_DENIED','CANDIDATE_DENIED','RECONCILIATION_DENIED','INVALID_STATE'].includes(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
-    if(args.includes('--error-json'))console.log(JSON.stringify({error:code}));else console.error(code);
+    if(args.includes('--error-json'))console.log(JSON.stringify({error:code,...(error.startupFailure?{startupFailure:error.startupFailure}:{})}));else console.error(code);
     process.exitCode=1;
   }
 }

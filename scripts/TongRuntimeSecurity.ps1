@@ -1,4 +1,4 @@
-param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job')][string]$Mode)
+param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job','startup-jobs')][string]$Mode)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
@@ -54,7 +54,7 @@ try {
             if ($null -eq $p) { return $null }
             [pscustomobject]@{pid=[int]$p.ProcessId;parentPid=[int]$p.ParentProcessId;exe=[string]$p.ExecutablePath;startTicks=$p.CreationDate.ToUniversalTime().Ticks.ToString()}
         }
-        if ($Mode -eq 'runtime-job') {
+        if ($Mode -eq 'runtime-job' -or $Mode -eq 'startup-jobs') {
             if([string]$inputData.runId -cnotmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid runtime Job identity'}
             Add-Type -TypeDefinition @'
 using System;
@@ -71,8 +71,12 @@ public static class TongRuntimeJobProbe {
  }
 }
 '@
-            $active=[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId))
-            [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
+            if($Mode -eq 'startup-jobs'){
+                [pscustomobject]@{owner=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongGuardian-'+[string]$inputData.runId)));launcher=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongPreflight-launcher-'+[string]$inputData.runId)));guardian=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongPreflight-guardian-'+[string]$inputData.runId)));runtime=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId)))}|ConvertTo-Json -Compress
+            }else{
+                $active=[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId))
+                [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
+            }
         } elseif ($Mode -eq 'descendants') {
             $all = @(Get-CimInstance Win32_Process)
             $byId = @{}; foreach ($p in $all) { $byId[[int]$p.ProcessId]=$p }

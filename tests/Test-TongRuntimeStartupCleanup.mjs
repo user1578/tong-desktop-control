@@ -6,6 +6,7 @@ import {createProductionSimulationProfile} from '../scripts/TongProductionProfil
 import {issueSimulationLoginRecovery,withLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
 import {startRuntime} from '../scripts/TongAgentDockRuntime.mjs';
 import {protectSecret,processIdentity} from '../scripts/TongRuntimeSecurity.mjs';
+import {spawnSync} from 'node:child_process';
 
 const {root,profile:initial}=await loginFixture({ports:{gatewayPort:27876,upstreamPort:27877,agentdockPort:28766}});
 // Replace only the synthetic Supervisor entry: actual manager/Guardian/launch
@@ -39,7 +40,13 @@ for(let attempt=0;attempt<3;attempt++){
 // Node/libuv may itself arrange breakaway from a calling test Job.
 const launchFile=pin.sourceFiles.find(f=>f.path==='scripts/TongRuntimeLaunch.ps1'),originalLaunch=await readFile(join(initial.managerRoot,launchFile.path));
 const originalPin=JSON.stringify(pin);
-const noChild=Buffer.from(`param($Root,$RunId,$NodeExe,$Supervisor,$RecoveryGrantId)\n[pscustomobject]@{runId=$RunId;guardianCreated=$false}|ConvertTo-Json -Compress\nexit 2\n`);
+const noChild=Buffer.from(`param($Root,$RunId,$NodeExe,$Supervisor,$RecoveryGrantId)
+. (Join-Path $PSScriptRoot 'TongStartupProtocol.ps1')
+Initialize-TongStartup 'launcher'
+try{throw 'SUPERVISOR_START_FAILED'}catch{Complete-TongStartupFailure $_}
+[pscustomobject]@{runId=$RunId;guardianCreated=$false}|ConvertTo-Json -Compress
+exit 2
+`);
 launchFile.sha256=sha(noChild);launchFile.size=noChild.length;
 for(const target of [initial.codeRoot,initial.managerRoot])await writeFile(join(target,launchFile.path),noChild);
 const refusedPin=JSON.stringify(pin),refusedProfile={...profile,releaseDigest:sha(refusedPin)};
@@ -54,4 +61,20 @@ for(const name of ['release-pin.json','manager-pin.json'])await writeFile(join(r
 await writeFile(join(root,'profile.json'),JSON.stringify(profile));await issueSimulationLoginRecovery(profile);
 await assert.rejects(withLoginRecovery(root,'start',()=>startRuntime(root)),/START_FAILED/);
 await assert.rejects(readFile(join(root,'run','backup.freeze')),{code:'ENOENT'});
-console.log(JSON.stringify({passed:true,root,earlySupervisorExit:true,missingAndPreviousRuntimeRecords:true,emptyJobLockReleased:true,retryNotWedged:true,noChildRefusalLockReleased:true}));
+// An actual CLI failure must retain the original cause alongside the cleanup
+// refusal. The private launcher exits without publishing either acknowledgement.
+const lost=Buffer.from('param($Root,$RunId,$NodeExe,$Supervisor,$RecoveryGrantId)\nexit 2\n');
+launchFile.sha256=sha(lost);launchFile.size=lost.length;
+for(const target of [initial.codeRoot,initial.managerRoot])await writeFile(join(target,launchFile.path),lost);
+const lostPin=JSON.stringify(pin),lostProfile={...profile,releaseDigest:sha(lostPin)};
+for(const name of ['release-pin.json','manager-pin.json'])await writeFile(join(root,'run',name),lostPin);
+await writeFile(join(root,'profile.json'),JSON.stringify(lostProfile));await issueSimulationLoginRecovery(lostProfile);
+const cli=spawnSync(process.execPath,[join(initial.managerRoot,'scripts','TongAgentDockRuntime.mjs'),'start','--root',root,'--login-recovery','--error-json'],{encoding:'utf8',windowsHide:true,timeout:90000});
+assert.equal(cli.status,1,cli.stderr);
+const failure=JSON.parse(cli.stdout);assert.equal(failure.error,'CLEANUP_REQUIRED');
+assert.equal(failure.startupFailure.code,'SUPERVISOR_START_FAILED');assert.equal(failure.startupFailure.stage,'launcher_start');
+assert.equal(failure.startupFailure.cleanup.proven,false);await readFile(join(root,'run','backup.freeze'));
+const requested=JSON.parse(await readFile(join(root,'run','request.json'),'utf8'));
+assert.equal(failure.startupFailure.runId,requested.runId);
+assert.notEqual(JSON.parse(await readFile(join(root,'run','runtime.json'),'utf8')).runId,requested.runId,'old terminal state must not prove this failed launch');
+console.log(JSON.stringify({passed:true,root,earlySupervisorExit:true,missingAndPreviousRuntimeRecords:true,emptyJobLockReleased:true,retryNotWedged:true,noChildRefusalLockReleased:true,lostReceiptLockRetained:true,cliOriginalFailure:true}));

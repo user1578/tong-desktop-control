@@ -12,16 +12,17 @@ export function safeEnvironment(root) {
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => keys.has(key.toUpperCase())));
   return { ...env, TEMP: join(root, 'temp'), TMP: join(root, 'temp'), USERPROFILE: join(root, 'home'), APPDATA: join(root, 'home', 'AppData', 'Roaming'), LOCALAPPDATA: join(root, 'home', 'AppData', 'Local') };
 }
-function launch(mode, input, root) {
+function launch(mode, input, root, signal) {
   // Keep metadata inspection read-only: synthetic USERPROFILE/TEMP made Windows
   // create directories while inspecting an otherwise empty target.
   const keys = new Set(['SYSTEMROOT','WINDIR','COMSPEC','SYSTEMDRIVE','PROGRAMDATA','PATH','PATHEXT','TEMP','TMP','USERPROFILE','APPDATA','LOCALAPPDATA','NUMBER_OF_PROCESSORS','PROCESSOR_ARCHITECTURE','OS']);
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => keys.has(key.toUpperCase())));
-  const child = spawn(powershell, ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',helper,'-Mode',mode], { windowsHide: true, env, stdio: ['pipe','pipe','pipe'] });
+  if(signal?.aborted)throw fail('SECURITY_UNAVAILABLE');
+  const child = spawn(powershell, ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',helper,'-Mode',mode], { windowsHide: true, env, signal, stdio: ['pipe','pipe','pipe'] });
   child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify(input)); return child;
 }
-async function run(mode, input, root = dirname(helper)) {
-  const child = launch(mode, input, root); let out = '', size = 0;
+async function run(mode, input, root = dirname(helper), signal) {
+  const child = launch(mode, input, root, signal); let out = '', size = 0;
   child.stdout.on('data', chunk => { size += chunk.length; if (size > 1048576) child.kill(); else out += chunk; });
   child.stderr.resume();
   return new Promise((ok, reject) => {
@@ -30,13 +31,13 @@ async function run(mode, input, root = dirname(helper)) {
     child.once('close', code => { clearTimeout(timer); if (code !== 0 || size > 1048576) reject(fail('SECURITY_UNAVAILABLE')); else { try { ok(out.trim() ? JSON.parse(out) : []); } catch { reject(fail('SECURITY_UNAVAILABLE')); } } });
   });
 }
-export async function inspectSecurity(paths) {
+export async function inspectSecurity(paths,{signal}={}) {
   if (process.platform !== 'win32' || !Array.isArray(paths) || !paths.length || paths.some(path => !isAbsolute(path))) throw fail('ACL_DENIED');
   for (const path of paths) { const info = await lstat(path); if (info.isSymbolicLink() || info.isFile() && info.nlink !== 1 || (await realpath(path)).toLowerCase() !== resolve(path).toLowerCase()) throw fail('ACL_DENIED'); }
-  return run('acl', { paths }, paths[0]);
+  return run('acl', { paths }, paths[0],signal);
 }
-export async function assertProtectedPaths(paths) {
-  const info = await inspectSecurity(paths);
+export async function assertProtectedPaths(paths,options) {
+  const info = await inspectSecurity(paths,options);
   if (info.items.length !== paths.length || info.items.some(item => !item.secure)) throw fail('ACL_DENIED');
   return info;
 }
@@ -75,12 +76,13 @@ export async function readSecret(root, purpose) {
     child.once('close', code => { if (code !== 0 || !socket) finish(true); });
   });
 }
-export async function processIdentity(pid, marker = '') {
-  const value=await run('identity', { pid, marker });
+export async function processIdentity(pid, marker = '',{signal}={}) {
+  const value=await run('identity', { pid, marker },undefined,signal);
   // Windows PowerShell emits no JSON for a missing CIM process; run() uses [].
   return value===null||Array.isArray(value)&&value.length===0?null:value;
 }
 export async function runtimeJobState(runId) { return run('runtime-job', { runId }); }
+export async function startupJobsState(runId,{signal}={}) { return run('startup-jobs', { runId },undefined,signal); }
 export function sameProcess(actual, expected) { return !!actual && actual.pid === expected?.pid && actual.exe?.toLowerCase() === expected.exe?.toLowerCase() && actual.startTicks === expected.startTicks; }
 export async function processDescendants(pid) { const result = await run('descendants', { pid }); return Array.isArray(result) ? result : result ? [result] : []; }
 export async function terminateOwnedProcess(identity) { return run('terminate', identity); }

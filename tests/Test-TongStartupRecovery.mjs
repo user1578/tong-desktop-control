@@ -6,7 +6,7 @@ import {randomBytes} from 'node:crypto';
 import {loginFixture,sha} from './fixtures/TongLoginRecoveryFixture.mjs';
 import {issueSimulationLoginRecovery,revokeSimulationLoginRecovery,withLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
 import {startRuntime} from '../scripts/TongAgentDockRuntime.mjs';
-import {protectSecret,readSecret,safeEnvironment,processIdentity,sameProcess,runtimeJobState} from '../scripts/TongRuntimeSecurity.mjs';
+import {protectSecret,readSecret,safeEnvironment,processIdentity,sameProcess,runtimeJobState,startupJobsState} from '../scripts/TongRuntimeSecurity.mjs';
 
 // Reuse only the validated, stopped synthetic dependency tree. The fixture
 // retains the previous run and source, and binds the final working-tree bytes.
@@ -40,9 +40,12 @@ for(const name of ['release-pin.json','manager-pin.json'])await writeFile(join(r
 await writeFile(join(root,'profile.json'),JSON.stringify(profile));await issueSimulationLoginRecovery(profile);
 const manager=join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs');
 async function command(action,args=[]){
-  const child=spawn(process.execPath,[manager,action,'--root',root,'--login-recovery','--error-json',...args],{cwd:root,env:safeEnvironment(root),windowsHide:true,stdio:['ignore','pipe','pipe']});
+  const began=Date.now();
+  const child=spawn(process.execPath,['--report-on-fatalerror','--report-exclude-env','--report-exclude-network','--report-directory='+root,manager,action,'--root',root,'--login-recovery','--error-json',...args],{cwd:root,env:safeEnvironment(root),windowsHide:true,stdio:['ignore','pipe','pipe']});
+  console.log(JSON.stringify({event:'manager_command_started',action,pid:child.pid,exe:process.execPath,at:new Date(began).toISOString()}));
   let stdout='',stderr='';child.stdout.on('data',data=>stdout+=data);child.stderr.on('data',data=>stderr+=data);
   const timeout=setTimeout(()=>child.kill(),180000);let code;try{code=await new Promise((ok,reject)=>{child.once('error',reject);child.once('close',ok);});}finally{clearTimeout(timeout);}
+  console.log(JSON.stringify({event:'manager_command_exited',action,pid:child.pid,code,hex:Number.isInteger(code)?'0x'+(code>>>0).toString(16).padStart(8,'0'):null,signal:child.signalCode,durationMs:Date.now()-began,stdoutBytes:Buffer.byteLength(stdout),stderrBytes:Buffer.byteLength(stderr)}));
   for(const secret of [token,owner])assert.ok(!stdout.includes(secret)&&!stderr.includes(secret));
   return {code,result:stdout.trim()?JSON.parse(stdout):null,stderr};
 }
@@ -73,6 +76,10 @@ try{
   }
   await writeFile(scenarioPath,JSON.stringify({mode:'normal'}));
   await assert.rejects(withLoginRecovery(root,'start',()=>startRuntime(root,{startupTimeoutMs:1})),/START_TIMEOUT/);
+  const attempted=await read('request.json'),receipt=await read(`launcher.${attempted.runId}.json`);
+  assert.equal(receipt.guardianCreated,false);assert.equal(receipt.preflightClean,true);assert.ok(receipt.finishedAt);
+  assert.deepEqual(await startupJobsState(attempted.runId),{owner:0,launcher:0,guardian:0,runtime:0});
+  await assert.rejects(readFile(join(root,'run','backup.freeze')),{code:'ENOENT'});
   await clean(await read('runtime.json'));
   const restored=await command('start');assert.equal(restored.code,0,JSON.stringify(restored));assert.equal((await command('doctor')).result.healthy,true);
   const run=await read('runtime.json');assert.equal((await command('stop-run',['--run-id',run.runId])).code,0);await clean(run);

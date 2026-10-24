@@ -42,7 +42,7 @@ export async function loginRecoveryDescriptor(root){
   const input={...(profile.mode==='production-simulation'?{simulationId:profile.simulationId,gatewayPort:profile.gatewayPort,upstreamPort:profile.upstreamPort,agentdockPort:profile.agentdockPort}:{}),sourceDigest:pin.files?.find(f=>f.path==='code/source.tar')?.sha256,releaseDigest:sha(pinBytes),agentdockEnabled:false};
   const managerProfile=profile.mode==='production'?createProductionProfile(input):createProductionSimulationProfile(input);
   await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true,reviewedManagerProfile:managerProfile});
-  const critical=['TongLoginRecovery.mjs','TongProductionProfile.mjs','TongProductionApproval.ps1','TongAgentDockRuntime.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongRuntimeServer.mjs','TongLoginRuntime.ps1'];
+  const critical=['TongLoginRecovery.mjs','TongProductionProfile.mjs','TongProductionApproval.ps1','TongAgentDockRuntime.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongStartupProtocol.ps1','TongRuntimeServer.mjs','TongLoginRuntime.ps1'];
   if(!/^[a-f0-9]{40}$/.test(pin.commit??'')||critical.some(name=>!pin.sourceFiles.some(file=>file.path==='scripts/'+name)))throw fail('CANDIDATE_DENIED');
   return validateLoginRecoveryDescriptor({schemaVersion:1,purpose,root,runtimeProfile:profile,managerProfile,runnerSha256:pin.sourceFiles.find(file=>file.path==='scripts/TongLoginRuntime.ps1').sha256,components,operations});
 }

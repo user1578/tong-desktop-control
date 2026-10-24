@@ -6,7 +6,7 @@ import {randomBytes} from 'node:crypto';
 import {loginFixture} from './fixtures/TongLoginRecoveryFixture.mjs';
 import {issueSimulationLoginRecovery,revokeSimulationLoginRecovery,withLoginRecovery} from '../scripts/TongLoginRecovery.mjs';
 import {startRuntime} from '../scripts/TongAgentDockRuntime.mjs';
-import {protectSecret,readSecret,processIdentity,sameProcess,terminateOwnedProcess,safeEnvironment} from '../scripts/TongRuntimeSecurity.mjs';
+import {protectSecret,readSecret,processIdentity,sameProcess,terminateOwnedProcess,safeEnvironment,startupJobsState} from '../scripts/TongRuntimeSecurity.mjs';
 
 // One real three-component runtime, one 601 MB dependency tree; no production
 // port, task, source, credentials, permission, process or Codex UI is modified.
@@ -52,7 +52,10 @@ let monitor,monitorError='',current;const crashed=[];
 try{
   assert.notEqual((await command('start',[],false)).code,0,'ordinary start has no maintenance receipt');
   await assert.rejects(withLoginRecovery(root,'start',()=>startRuntime(root,{startupTimeoutMs:1})),/START_TIMEOUT/);
-  const aborted=await read('guardian.json');assert.equal(aborted.jobActiveAfterCleanup,0);assert.ok(aborted.finishedAt);
+  const attempted=await read('request.json'),aborted=await read(`launcher.${attempted.runId}.json`);
+  assert.equal(aborted.guardianCreated,false);assert.equal(aborted.preflightClean,true);assert.ok(aborted.finishedAt);
+  assert.deepEqual(await startupJobsState(attempted.runId),{owner:0,launcher:0,guardian:0,runtime:0});
+  await assert.rejects(read('backup.freeze'),{code:'ENOENT'});
   const abortEvent=(await readFile(join(root,'logs','lifecycle.jsonl'),'utf8')).trim().split('\n').map(JSON.parse).find(e=>e.runId===aborted.runId&&e.event==='startup_failure');
   assert.equal(abortEvent.code,'START_TIMEOUT');assert.equal(abortEvent.budgetMs,1);assert.ok(abortEvent.durationMs>=1);assert.ok(Number.isFinite(abortEvent.stageDurationMs));
   let result=await command('start');assert.equal(result.code,0,result.stderr);current=result.result;

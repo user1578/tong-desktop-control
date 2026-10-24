@@ -1,4 +1,4 @@
-import {mkdir,cp,copyFile,readFile,writeFile,rename} from 'node:fs/promises';
+import {mkdir,mkdtemp,cp,copyFile,readFile,writeFile,rename,symlink} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import {dirname,join,basename,resolve} from 'node:path';
@@ -7,7 +7,23 @@ import {createProductionSimulationProfile} from '../../scripts/TongProductionPro
 import {assertProtectedPaths,processIdentity,runtimeJobState,sameProcess} from '../../scripts/TongRuntimeSecurity.mjs';
 const project=fileURLToPath(new URL('../../',import.meta.url));
 export const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+export async function protectedSyntheticRoot(prefix){
+  // Protect only a newly created, empty test parent; never alter D:\Tong\state
+  // or any prior fixture/production ACL. Its child inherits the real boundary.
+  const parent=await mkdtemp('D:\\Tong\\state\\synthetic-test-');
+  const encoded=Buffer.from(parent).toString('base64');
+  const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>key.toUpperCase()!=='PSMODULEPATH'));
+  const result=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`$ErrorActionPreference='Stop';$target=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}'));$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User;$acl=[Security.AccessControl.DirectorySecurity]::new();$acl.SetAccessRuleProtection($true,$false);$acl.SetOwner($sid);foreach($allow in @($sid.Value,'S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($allow),'FullControl','ContainerInherit,ObjectInherit','None','Allow'))};Set-Acl -LiteralPath $target -AclObject $acl`],{env,encoding:'utf8',windowsHide:true,timeout:10000});
+  if(result.status!==0)throw Error('FIXTURE_ACL_FAILED');
+  return mkdtemp(join(parent,prefix));
+}
 export async function loginFixture({full=false,sharedDependencies=false,ports={},reuseRoot,dependencyRoot=project}={}){
+  if(process.env.TONG_LOGIN_TEST_PORTS)ports={...JSON.parse(process.env.TONG_LOGIN_TEST_PORTS),...ports};
+  // Explicit development-suite option: share immutable dependencies while each
+  // fixture keeps its own DevSpace files, scripts, credentials and runtime state.
+  // No install/patch/build is run against the shared tree.
+  const sharedRoot=process.env.TONG_LOGIN_TEST_DEPENDENCIES;
+  if(full&&sharedRoot){sharedDependencies=true;dependencyRoot=sharedRoot;}
   const simulationId=reuseRoot?basename(reuseRoot):'b23-login-'+randomUUID().replaceAll('-','');
   const initial=createProductionSimulationProfile({simulationId,...ports,sourceDigest:'a'.repeat(64),releaseDigest:'b'.repeat(64),agentdockEnabled:true});
   const root=initial.root;
@@ -32,7 +48,7 @@ export async function loginFixture({full=false,sharedDependencies=false,ports={}
   const protectedRoot=reuseRoot?{status:0}:spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`$ErrorActionPreference='Stop'; $target=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User; $acl=[Security.AccessControl.DirectorySecurity]::new(); $acl.SetAccessRuleProtection($true,$false); $acl.SetOwner($sid); foreach($allow in @($sid.Value,'S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($allow),'FullControl','ContainerInherit,ObjectInherit','None','Allow'))}; Set-Acl -LiteralPath $target -AclObject $acl`],{env,encoding:'utf8',windowsHide:true,timeout:10000});
   if(protectedRoot.status!==0)throw Error('FIXTURE_ACL_FAILED:'+protectedRoot.stderr);
   for(const dir of ['backend-state','workspace','tong-policy/agentdock-operations','secrets','run','logs','temp','home','releases','tong/runtime','tong/demo-workspace','tong/home/.devspace','tong/oauth'])await mkdir(join(root,dir),{recursive:true});
-  const git=spawnSync('git',['ls-files','scripts'],{cwd:project,encoding:'utf8',windowsHide:true});
+  const git=spawnSync('git',['ls-files','--cached','--others','--exclude-standard','scripts'],{cwd:project,encoding:'utf8',windowsHide:true});
   if(git.status!==0)throw Error('FIXTURE_SOURCE_INVENTORY_FAILED');
   const names=git.stdout.trim().split(/\r?\n/);
   // New source under test is explicitly included before it is committed.
@@ -45,7 +61,10 @@ export async function loginFixture({full=false,sharedDependencies=false,ports={}
   const hashes={};
   // One ordinary, isolated dependency tree can serve both fixture releases.
   // Keep each release's relative DevSpace imports and pinned patch files local.
-  if(full&&sharedDependencies&&!reuseRoot)await cp(join(dependencyRoot,'node_modules'),join(root,'node_modules'),{recursive:true,force:false,errorOnExist:true});
+  if(full&&sharedDependencies&&!reuseRoot){
+    if(sharedRoot)await symlink(join(dependencyRoot,'node_modules'),join(root,'node_modules'),'junction');
+    else await cp(join(dependencyRoot,'node_modules'),join(root,'node_modules'),{recursive:true,force:false,errorOnExist:true});
+  }
   for(const target of [initial.codeRoot,initial.managerRoot]){
     if(full&&sharedDependencies){if(!reuseRoot)await cp(join(dependencyRoot,'node_modules','@waishnav','devspace'),join(target,'node_modules','@waishnav','devspace'),{recursive:true,force:false,errorOnExist:true});}
     else if(full)await cp(join(dependencyRoot,'node_modules'),join(target,'node_modules'),{recursive:true,force:false,errorOnExist:true});

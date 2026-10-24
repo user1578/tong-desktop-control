@@ -1,8 +1,10 @@
-param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$RunId,[Parameter(Mandatory)][string]$NodeExe,[Parameter(Mandatory)][string]$Supervisor,[string]$RecoveryGrantId)
+param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$RunId,[Parameter(Mandatory)][string]$NodeExe,[Parameter(Mandatory)][string]$Supervisor,[string]$RecoveryGrantId,[string]$OwnerJobName)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $job=[IntPtr]::Zero
 $stage='compile'
+$node=$null
+$nodeIdentity=$null
 $approvedRoot=$false
 function Write-GuardianEvent([string]$Event,$Details) {
     $entry=[ordered]@{at=[datetime]::UtcNow.ToString('o');runId=$RunId;event=$Event;guardianPid=$PID;stage=$stage}
@@ -13,16 +15,28 @@ try {
     if ($Root -match '["\r\n]' -or $RunId -notmatch '^[a-f0-9-]{36}$') { throw 'Invalid guardian settings' }
     $boundary='D:\Tong\state\'
     $Root=[IO.Path]::GetFullPath($Root)
+    if($Root -cne 'D:\Tong\runtime' -and -not $Root.StartsWith($boundary,[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
+    if($Root -ceq 'D:\Tong\runtime' -and ($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs')){throw 'Fixed production entry required'}
+    if($RecoveryGrantId -and $RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid recovery grant identity'}
+    . (Join-Path $PSScriptRoot 'TongStartupProtocol.ps1')
+    if($OwnerJobName){
+        if($OwnerJobName -cne ('Local\TongGuardian-'+$RunId)){throw 'GUARDIAN_JOB_MISMATCH'}
+        [TongStartupPreflight]::AdoptGuardian($OwnerJobName)
+    }
+    Initialize-TongStartup 'guardian'
+    Assert-TongStartupActive
+    $stage='preflight'
     if($Root -ceq 'D:\Tong\runtime') {
         if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
-        if($RecoveryGrantId){& $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null}else{& $NodeExe $Supervisor preflight-production | Out-Null}
-        if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
+        if($RecoveryGrantId){Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)}else{Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-production')}
     }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     $approvedRoot=$true
+    $stage='compile'
     Write-GuardianEvent 'guardian_started' $null
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
+using System.ComponentModel;
 public static class TongRuntimeJob {
   [StructLayout(LayoutKind.Sequential)] struct Basic { public long a,b; public uint flags; public UIntPtr c,d; public uint e; public UIntPtr f; public uint g,h; }
   [StructLayout(LayoutKind.Sequential)] struct IO { public ulong a,b,c,d,e,f; }
@@ -33,20 +47,22 @@ public static class TongRuntimeJob {
   [DllImport("kernel32.dll",SetLastError=true)] public static extern bool TerminateJobObject(IntPtr job,uint code);
   [DllImport("kernel32.dll",SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job,int type,IntPtr info,uint size,IntPtr returned);
   [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr handle);
-  public static IntPtr Create(string name) { var job=CreateJobObject(IntPtr.Zero,name); int error=Marshal.GetLastWin32Error(); if(job==IntPtr.Zero)throw new Exception("JOB_CREATE_FAILED"); if(error==183){CloseHandle(job);throw new Exception("JOB_ALREADY_EXISTS");} var data=new Extended(); data.basic.flags=0x2000; int size=Marshal.SizeOf(data); var ptr=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,ptr,false);if(!SetInformationJobObject(job,9,ptr,(uint)size)){CloseHandle(job);throw new Exception("JOB_CONFIG_FAILED");}}finally{Marshal.FreeHGlobal(ptr);}return job; }
-  public static int Active(IntPtr job) { var ptr=Marshal.AllocHGlobal(48);try{if(!QueryInformationJobObject(job,1,ptr,48,IntPtr.Zero))throw new Exception("JOB_QUERY_FAILED");return Marshal.ReadInt32(ptr,40);}finally{Marshal.FreeHGlobal(ptr);} }
+  public static IntPtr Create(string name) { var job=CreateJobObject(IntPtr.Zero,name); int error=Marshal.GetLastWin32Error(); if(job==IntPtr.Zero)throw new Win32Exception(error,"JOB_CREATE_FAILED"); if(error==183){CloseHandle(job);throw new Win32Exception(error,"JOB_ALREADY_EXISTS");} var data=new Extended(); data.basic.flags=0x2000; int size=Marshal.SizeOf(data); var ptr=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,ptr,false);if(!SetInformationJobObject(job,9,ptr,(uint)size)){int code=Marshal.GetLastWin32Error();CloseHandle(job);throw new Win32Exception(code,"JOB_CONFIG_FAILED");}}finally{Marshal.FreeHGlobal(ptr);}return job; }
+  public static int Active(IntPtr job) { var ptr=Marshal.AllocHGlobal(48);try{if(!QueryInformationJobObject(job,1,ptr,48,IntPtr.Zero))throw new Win32Exception(Marshal.GetLastWin32Error(),"JOB_QUERY_FAILED");return Marshal.ReadInt32(ptr,40);}finally{Marshal.FreeHGlobal(ptr);} }
 }
 '@
-    function Save-Json([string]$Path,$Value) { $tempPath=$Path+'.'+[guid]::NewGuid().ToString()+'.tmp'; [IO.File]::WriteAllText($tempPath,($Value | ConvertTo-Json -Depth 12),[Text.UTF8Encoding]::new($false)); Move-Item -LiteralPath $tempPath -Destination $Path -Force }
+    function Save-Json([string]$Path,$Value) { $tempPath=$Path+'.'+[guid]::NewGuid().ToString()+'.tmp'; [IO.File]::WriteAllText($tempPath,($Value | ConvertTo-Json -Depth 12),[Text.UTF8Encoding]::new($false)); [TongStartupPreflight]::AtomicReplace($tempPath,$Path) }
     $stage='read-request'
     $request=Get-Content -LiteralPath (Join-Path $Root 'run\request.json') -Raw | ConvertFrom-Json
     if ($request.runId -ne $RunId) { throw 'Run identity mismatch' }
     if($RecoveryGrantId){
         if($RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$' -or $request.recoveryGrantId -cne $RecoveryGrantId){throw 'Recovery grant identity mismatch'}
-        & $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null
-        if($LASTEXITCODE -ne 0){throw 'Recovery authorization refused'}
+        $stage='preflight'
+        Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)
+        $stage='read-request'
     }elseif($request.PSObject.Properties['recoveryGrantId']){throw 'Recovery request requires explicit guardian authorization'}
     $stage='create-job'
+    Assert-TongStartupActive
     $jobName='Local\TongRuntime-'+$RunId
     $job=[TongRuntimeJob]::Create($jobName)
     Write-GuardianEvent 'job_created' @{jobName=$jobName;killOnJobClose=$true}
@@ -57,15 +73,20 @@ public static class TongRuntimeJob {
     $info.EnvironmentVariables.Clear()
     foreach ($entry in [Environment]::GetEnvironmentVariables().GetEnumerator()) { if($entry.Key -match '^(SYSTEMROOT|WINDIR|COMSPEC|SYSTEMDRIVE|PROGRAMDATA|PATH|PATHEXT|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|NUMBER_OF_PROCESSORS|PROCESSOR_ARCHITECTURE|OS)$') { $info.EnvironmentVariables[[string]$entry.Key]=[string]$entry.Value } }
     $stage='spawn-node'
-    $node=[Diagnostics.Process]::new(); $node.StartInfo=$info; $null=$node.Start()
+    Assert-TongStartupActive
+    $script:tongStartup.nodeCreated=$null;Set-TongStartupStage $stage
+    $environment=(@($info.EnvironmentVariables.Keys | Sort-Object | ForEach-Object {$_+'='+$info.EnvironmentVariables[$_]}) -join [char]0)+[char]0+[char]0
+    $node=[TongStartupPreflight]::StartNode($job,$info.FileName,$info.Arguments,$Root,$environment)
+    $script:tongStartup.nodeCreated=$true
     $nodeTicks=$node.StartTime.ToUniversalTime().Ticks
     $nodeIdentity=[ordered]@{pid=$node.Id;parentPid=$PID;exe=$NodeExe;startTicks=($nodeTicks-($nodeTicks%10)).ToString();markerMatches=$true}
     Write-GuardianEvent 'node_spawned' @{nodePid=$node.Id}
-    $stage='assign-job'
-    if (-not [TongRuntimeJob]::AssignProcessToJobObject($job,$node.Handle)) { $node.Kill(); throw 'Job assignment failed' }
+    $script:tongStartup['node']=$nodeIdentity
+    Set-TongStartupStage 'node_bound'
     $selfInfo=Get-CimInstance Win32_Process -Filter ('ProcessId = '+$PID)
-    $guardian=[ordered]@{schemaVersion=1;runId=$RunId;pid=$PID;exe=$selfInfo.ExecutablePath;startTicks=$selfInfo.CreationDate.ToUniversalTime().Ticks.ToString();nodePid=$node.Id;jobAssigned=$true;jobName=$jobName;killOnJobClose=$true;startedAt=[datetime]::UtcNow.ToString('o')}
+    $guardian=[ordered]@{schemaVersion=1;containment='create_process_job_list';runId=$RunId;pid=$PID;exe=$selfInfo.ExecutablePath;startTicks=$selfInfo.CreationDate.ToUniversalTime().Ticks.ToString();nodePid=$node.Id;jobAssigned=$true;jobName=$jobName;killOnJobClose=$true;startedAt=[datetime]::UtcNow.ToString('o')}
     $stage='record-start'
+    Assert-TongStartupActive
     Save-Json (Join-Path $Root 'run\guardian.json') $guardian
     Write-GuardianEvent 'job_assigned' @{nodePid=$node.Id}
     $stage='wait-node'
@@ -99,5 +120,35 @@ public static class TongRuntimeJob {
         Save-Json $runtimePath $runtime
         Write-GuardianEvent 'supervisor_exit_before_record' @{nodePid=$node.Id;jobActiveAfterCleanup=$active}
     }elseif($runtime.supervisor.pid -eq $node.Id -and ($active -gt 0 -or $runtime.phase -in @('starting','ready','stopping'))){$runtime.phase=if($active -gt 0){'cleanup_required'}else{'abnormal_exit'};$runtime | Add-Member -NotePropertyName finishedAt -NotePropertyValue $guardian.finishedAt -Force;Save-Json $runtimePath $runtime}
-} catch { if($approvedRoot){try { $failure=[ordered]@{runId=$RunId;stage=$stage;at=[datetime]::UtcNow.ToString('o');exceptionType=$_.Exception.GetType().FullName;errorId=$_.FullyQualifiedErrorId;win32Error=[Runtime.InteropServices.Marshal]::GetLastWin32Error()}; [IO.File]::WriteAllText((Join-Path $Root 'run\guardian-failure.json'),($failure | ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false));Write-GuardianEvent 'guardian_failure' $failure } catch { }}; [Console]::Error.WriteLine('Tong runtime guardian failed; inspect protected lifecycle records'); exit 2 }
-finally { if($job -ne [IntPtr]::Zero){$null=[TongRuntimeJob]::CloseHandle($job);if($approvedRoot){try{Write-GuardianEvent 'job_handle_closed' $null}catch{}}} }
+} catch {
+    $originalFailure=$_
+    if(Get-Variable tongStartup -Scope Script -ErrorAction SilentlyContinue){
+        try{Complete-TongStartupFailure $originalFailure $stage}catch{}
+    }
+    if($approvedRoot){try{Write-GuardianEvent 'guardian_failure' $script:tongStartup.failure}catch{}}
+    [Console]::Error.WriteLine('Tong runtime guardian failed; inspect protected lifecycle records')
+    exit 2
+} finally {
+    # A preflight terminal receipt is never runtime cleanup evidence. Publish
+    # runtime evidence only after terminating AND observing the named Job empty.
+    if(Get-Variable tongStartup -Scope Script -ErrorAction SilentlyContinue){
+        try {
+            if($job -ne [IntPtr]::Zero){
+                if([TongRuntimeJob]::Active($job) -gt 0){if(-not [TongRuntimeJob]::TerminateJobObject($job,1)){throw 'JOB_CLEANUP_FAILED'}}
+                $until=[DateTime]::UtcNow.AddSeconds(10)
+                while([TongRuntimeJob]::Active($job) -gt 0 -and [DateTime]::UtcNow -lt $until){Start-Sleep -Milliseconds 50}
+                $script:tongStartup.jobActiveAfterCleanup=[TongRuntimeJob]::Active($job)
+                $script:tongStartup.runtimeClean=($script:tongStartup.jobActiveAfterCleanup -eq 0)
+            }elseif($script:tongStartup.nodeCreated -ceq $false){
+                $script:tongStartup.runtimeClean=$true
+                $script:tongStartup.jobActiveAfterCleanup=0
+            }
+            if($node){$script:tongStartup['node']=$nodeIdentity;$script:tongStartup['nodeExitCode']=$node.ExitCode}
+            $script:tongStartup['finishedAt']=[DateTime]::UtcNow.ToString('o')
+            Set-TongStartupStage $stage
+        }catch{# Keep the last incomplete receipt; absence is not proof.
+        }
+    }
+    if($job -ne [IntPtr]::Zero){$null=[TongRuntimeJob]::CloseHandle($job);if($approvedRoot){try{Write-GuardianEvent 'job_handle_closed' $null}catch{}}}
+    if($node){$node.Dispose()}
+}
