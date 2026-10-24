@@ -28,6 +28,7 @@ const state=()=>readFile(join(root,'logs','maintenance-transaction.json'),'utf8'
 async function retain(label){const tx=await state();assert.equal(tx.phase,'rolled-back');await rename(join(root,'logs','maintenance-transaction.json'),join(evidence,prefix+label+'.transaction.json'));return tx;}
 let tx;
 if(process.env.TONG_MAINTENANCE_BOUNDARY_RESUME!=='1'){
+if(process.env.TONG_MAINTENANCE_BOUNDARY_RESUME!=='native-crash'){
 // Real competing entry points must respect the same original freeze. After the
 // controller exits, a new matching native process must prevent any restoration.
 assert.equal((await command('boundary-race','run',null,'concurrent-lifecycle')).code,71);
@@ -47,14 +48,19 @@ const path=snapshot.entries.find(entry=>entry.path.startsWith(fx.baselineProfile
 const before=await readFile(path),changed=Buffer.from('EXTERNAL_TEST_EDIT:'+randomUUID());await writeFile(path,changed);await writeFile(join(evidence,prefix+'boundary-external-edit.bin'),changed,{flag:'wx'});
 const refused=await command('boundary-external','rollback',tx.transactionId);assert.equal(refused.code,1);assert.match(refused.stderr,/MAINTENANCE_EXTERNAL_CHANGE/);assert.deepEqual(await readFile(path),changed);
 await writeFile(path,before);
+}else{tx=await state();assert.equal(tx.phase,'controls');assert.equal(tx.candidateRunId,undefined);assert.equal(tx.startIntentAt,undefined);}
 // The original snapshot binds a 1ms real startup budget. Re-entry completes the
 // remaining install and records the native failure without another full copy.
 const failed=await command('boundary-startup-failure','apply',tx.transactionId);assert.equal(failed.code,1);assert.match(failed.stderr,/START_TIMEOUT/);tx=await state();
 assert.equal(tx.startFailure.cleanupProven,true);
 assert.equal((await command('boundary-reverse-interrupt','rollback',tx.transactionId,'rollback-installed')).code,71);
+const requestPath=join(root,'run','request.json'),replacement=Buffer.from(JSON.stringify({runId:randomUUID(),createdAt:new Date().toISOString(),testOnly:true}));
+await writeFile(requestPath,replacement,{flag:'wx'});
+const replaced=await command('boundary-replacement-request','rollback',tx.transactionId);assert.equal(replaced.code,1);assert.match(replaced.stderr,/MAINTENANCE_REPLACEMENT_RUN_PRESENT/);assert.deepEqual(await readFile(requestPath),replacement);
+await rename(requestPath,join(evidence,prefix+'boundary-external-request.json'));
 assert.equal((await command('boundary-reverse-resume','rollback',tx.transactionId)).code,0);
 }else{tx=await state();assert.equal(tx.phase,'rolled-back');}
 const restored=await withMaintenanceFreeze(fx.baselineProfile,{expectedSha256:sha(await readFile(join(root,'run','backup.freeze')))},()=>restoreProductionStateBackup(fx.baselineProfile,{backupRoot:tx.backupRoot,restoreRoot:join(root,'state-restore-'+tx.transactionId)}));
 assert.equal(restored.encryptedBackup,true);assert.equal(restored.executionDisabled,true);
 await writeFile(join(evidence,prefix+'boundary-dpapi-restore.json'),JSON.stringify(restored,null,2)+'\n',{flag:'wx'});await retain('boundary-startup');
-console.log(JSON.stringify({passed:true,root,continuedAfterRepair:process.env.TONG_MAINTENANCE_BOUNDARY_RESUME==='1',nativeConcurrentStartStopBackupDenied:true,newNativeIdentityRefused:true,externalEditPreserved:true,reverseCrashResumed:true,nativeStartupFailureRolledBack:true,nativeDpapiDecryptionVerified:true,productionExecutionAllowed:false}));
+console.log(JSON.stringify({passed:true,root,continuedAfterRepair:process.env.TONG_MAINTENANCE_BOUNDARY_RESUME==='1',continuedAfterNativeCrash:process.env.TONG_MAINTENANCE_BOUNDARY_RESUME==='native-crash',nativeConcurrentStartStopBackupDenied:true,newNativeIdentityRefused:true,externalEditPreserved:true,reverseCrashResumed:true,nativeStartupFailureRolledBack:true,nativeDpapiDecryptionVerified:true,productionExecutionAllowed:false}));

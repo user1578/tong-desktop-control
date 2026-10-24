@@ -22,10 +22,12 @@ await api.withMaintenanceFreeze(fx.profile, { expectedSha256: sha256 }, async le
   const worker = `import {open,rename} from 'node:fs/promises';const path=${JSON.stringify(path)};let refused=0;try{await open(path,'wx');}catch(e){if(e.code==='EEXIST')refused++;}try{await rename(path,path+'.unexpected');}catch(e){if(['EPERM','EACCES','EBUSY'].includes(e.code))refused++;}console.log(JSON.stringify({refused}));process.exitCode=refused===2?0:3;`;
   const child = spawnSync(process.execPath, ['--input-type=module', '-e', worker], { windowsHide: true, encoding: 'utf8', timeout: 10000 });
   assert.equal(child.status, 0, child.stderr + child.stdout);
+  const contender=`import {withMaintenanceFreeze} from ${JSON.stringify(new URL('../scripts/TongLifecycleFreeze.mjs',import.meta.url).href)};try{await withMaintenanceFreeze(${JSON.stringify(fx.profile)},{expectedSha256:${JSON.stringify(sha256)}},()=>{throw Error('SECOND_MAINTAINER_ENTERED')});process.exitCode=3;}catch(error){if(error.message!=='LIFECYCLE_FREEZE_UNAVAILABLE')throw error;console.log(JSON.stringify({secondMaintainerRefused:true}));}`;
+  const second=spawnSync(process.execPath,['--input-type=module','-e',contender],{windowsHide:true,encoding:'utf8',timeout:15000});assert.equal(second.status,0,second.stderr+second.stdout);
   await assert.rejects(api.withMaintenanceFreeze(fx.profile, { expectedSha256: sha256 }, async () => {}), /LIFECYCLE_REENTRANT_MAINTENANCE_DENIED/);
   assert.equal((await lease.proof()).holderPid, holderPid);
 });
 assert.deepEqual(await readFile(path), original, 'old freeze survives release and failures');
 await assert.rejects(api.withMaintenanceFreeze(fx.profile, { expectedSha256: 'f'.repeat(64) }, async () => {}), /LIFECYCLE_FREEZE_CHANGED/);
 await api.withMaintenanceFreeze(fx.profile, { expectedSha256: sha256 }, async lease => assert.equal((await lease.proof()).exclusiveWriter, true));
-console.log(JSON.stringify({ passed: true, root: fx.root, holderPid, existingFreezeNeverMoved: true, nativeRenameDenied: true, competingStartDenied: true, nestedOperationsBorrowed: true, mismatchedFreezeDenied: true, productionExecutionAllowed: false }));
+console.log(JSON.stringify({ passed: true, root: fx.root, holderPid, existingFreezeNeverMoved: true, nativeRenameDenied: true, competingStartDenied: true, secondNativeMaintainerDenied:true, nestedOperationsBorrowed: true, mismatchedFreezeDenied: true, productionExecutionAllowed: false }));

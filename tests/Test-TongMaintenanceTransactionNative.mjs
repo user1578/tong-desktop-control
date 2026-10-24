@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto';
 import { maintenanceNativeFixture,rebindMaintenanceNativeFixture } from './fixtures/TongMaintenanceNativeFixture.mjs';
 import { processIdentity } from '../scripts/TongRuntimeSecurity.mjs';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+if(process.env.TONG_MAINTENANCE_TEST_ROOT!==undefined)assert.match(process.env.TONG_MAINTENANCE_TEST_ROOT,/^D:\\Tong\\state\\b23-maint-native-[a-f0-9]{32}$/,'NATIVE_FIXTURE_SCOPE');
+assert.match(process.env.TONG_MAINTENANCE_TEST_LABEL_PREFIX??'',/^[a-z0-9-]{0,64}$/,'NATIVE_LABEL_SCOPE');
 let fx=process.env.TONG_MAINTENANCE_TEST_ROOT?JSON.parse(await readFile(join(process.env.TONG_MAINTENANCE_TEST_ROOT,'maintenance-native-fixture.json'),'utf8')):await maintenanceNativeFixture(process.env.TONG_MAINTENANCE_TEST_COMMIT);
 if(process.env.TONG_MAINTENANCE_REBIND_COMMIT)fx=await rebindMaintenanceNativeFixture(fx.root,process.env.TONG_MAINTENANCE_REBIND_COMMIT);
 assert.match(fx.root,/^D:\\Tong\\state\\b23-maint-native-[a-f0-9]{32}$/);
