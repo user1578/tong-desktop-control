@@ -7,9 +7,17 @@ import {join} from 'node:path';
 const require=createRequire(import.meta.url),sha=value=>createHash('sha256').update(value).digest('hex');
 const baseline='024d5b0920d9ad8f1a2baf2e55640a5666ad4739';
 const git=args=>{const r=spawnSync('git',args,{encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
-const allowed=['TongAgentDockRuntime.mjs','TongLoginRecovery.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongRuntimeSecurity.mjs','TongRuntimeSecurity.ps1','TongStartupProtocol.ps1','Tong024LegacyRecovery.mjs'].map(name=>'scripts/'+name).sort();
+const startup=['TongAgentDockRuntime.mjs','TongLoginRecovery.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongRuntimeSecurity.mjs','TongRuntimeSecurity.ps1','TongStartupProtocol.ps1'];
+// The separately invoked maintenance adapter is this branch's authorized
+// addition. Keep the reviewed startup candidate Git content unchanged and disconnected
+// from it; no other product file is added to the scope.
+const allowed=[...startup,'Tong024LegacyRecovery.mjs','Tong024ProductionMaintenance.mjs'].map(name=>'scripts/'+name).sort();
 const changed=[...new Set((git(['diff','--name-only',baseline,'--','scripts'])+'\n'+git(['ls-files','--others','--exclude-standard','scripts'])).split(/\r?\n/).filter(Boolean))].sort();
 assert.deepEqual(changed,allowed,'only dependency-closed startup and incident recovery product files may differ');
+for(const name of startup){
+  assert.equal(git(['diff','34e26801876d8b1a2fc874dddce72b0939924e87','--','scripts/'+name]),'','reviewed startup core unchanged: '+name);
+  assert.ok(!(await readFile(join(process.cwd(),'scripts',name),'utf8')).includes('Tong024ProductionMaintenance'),'ordinary startup must not import maintenance');
+}
 for(const file of ['scripts/TongLoginRuntime.ps1','scripts/TongRuntimeServer.mjs','scripts/TongRuntimeCandidate.mjs','scripts/TongProductionProfile.mjs','scripts/TongProductionApproval.ps1','scripts/TongRuntimeRelease.mjs','package.json','package-lock.json'])assert.equal(git(['diff',baseline,'--',file]),'','024 baseline kept: '+file);
 // Read only the non-secret production release inventory. No production command,
 // credential read, task/ACL operation, install or production write occurs here.

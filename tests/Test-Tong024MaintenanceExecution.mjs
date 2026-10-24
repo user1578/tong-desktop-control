@@ -6,6 +6,7 @@ import { createProductionProfile } from '../scripts/TongProductionProfile.mjs';
 import { maintenanceFixture, legacyRuntime, legacyGuardian, legacyRequest, legacyAbort } from './fixtures/Tong024MaintenanceFixture.mjs';
 
 const goneSecurity = {
+  listProcesses: async () => [], // Model fixture; this is not a native inventory.
   processIdentity: async () => null,
   startupJobsState: async () => ({ owner: 0, launcher: 0, guardian: 0, runtime: 0 }),
   sameProcess: (a, b) => !!a && a.pid === b?.pid && a.exe?.toLowerCase() === b?.exe?.toLowerCase() && a.startTicks === b?.startTicks,
@@ -14,11 +15,12 @@ const portFree = async () => true;
 const monitorStopped = async () => true;
 const evidence = () => ({ baselineCommit: maintenance.baselineCommit, runtime: legacyRuntime(), guardian: legacyGuardian(), request: legacyRequest(), abort: legacyAbort() });
 
-// (1) real-format observation of a quiescent site is accepted
+// (1) quiescence is observable, but cannot prove a held lifecycle lease
 {
   const fx = await maintenanceFixture();
   const obs = await observeProductionSite(fx.profile, { security: goneSecurity, checkPort: portFree, checkMonitor: monitorStopped });
-  assert.equal(obs.lifecycleExclusive, true, 'backup.freeze must be observed as the held lifecycle mutex');
+  assert.equal(obs.quiescent, true);
+  assert.equal(obs.lifecycleExclusive, false, 'a process/Job snapshot does not hold a mutex');
   assert.equal(obs.monitorStopped, true);
   assert.equal(obs.processInventoryComplete, true);
   assert.equal(obs.matchingProcesses.length, 0);
@@ -26,7 +28,7 @@ const evidence = () => ({ baselineCommit: maintenance.baselineCommit, runtime: l
   assert.equal(obs.jobs.length, 12);
   assert.equal(obs.ports.length, 3);
   assert.equal(obs.productionExecutionAllowed, false);
-  assert.deepEqual(assessMaintenanceSite({ ...evidence(), observation: obs }), []);
+  assert.ok(assessMaintenanceSite({ ...evidence(), observation: obs }).includes('LIVE_OBSERVATION_REQUIRED'));
 }
 
 // (2) live process identity -> matchingProcesses non-empty -> refused
@@ -34,6 +36,7 @@ const evidence = () => ({ baselineCommit: maintenance.baselineCommit, runtime: l
   const fx = await maintenanceFixture();
   const g = legacyGuardian();
   const live = {
+    listProcesses: async () => [],
     processIdentity: async pid => (pid === g.pid ? { ...g, markerMatches: true } : null),
     startupJobsState: async () => ({ owner: 0, launcher: 0, guardian: 0, runtime: 0 }),
     sameProcess: (a, b) => !!a && a.pid === b?.pid && a.exe?.toLowerCase() === b?.exe?.toLowerCase() && a.startTicks === b?.startTicks,
@@ -91,10 +94,10 @@ const evidence = () => ({ baselineCommit: maintenance.baselineCommit, runtime: l
   const prod = createProductionProfile({ sourceDigest: 'a'.repeat(64), releaseDigest: 'b'.repeat(64), agentdockEnabled: false });
   const fx = await maintenanceFixture();
   await assert.rejects(runProductionRecovery(fx.profile, { backupRoot: 'D:\\Tong\\state\\b', releaseRoot: 'D:\\Tong\\state\\r', restoreRoot: 'D:\\Tong\\state\\s' }), /MAINTENANCE_PRODUCTION_ONLY/);
-  await assert.rejects(runProductionRecovery(prod, {}), /MAINTENANCE_BACKUP_ROOT_REQUIRED/);
-  await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b' }), /MAINTENANCE_RELEASE_ROOT_REQUIRED/);
-  await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b', releaseRoot: 'D:\\Tong\\state\\r' }), /MAINTENANCE_RESTORE_ROOT_REQUIRED/);
+  await assert.rejects(runProductionRecovery(prod, {}), /MAINTENANCE_NOT_READY/);
+  await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b' }), /MAINTENANCE_NOT_READY/);
+  await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b', releaseRoot: 'D:\\Tong\\state\\r' }), /MAINTENANCE_NOT_READY/);
   await assert.rejects(executeRollback(fx.profile, {}), /MAINTENANCE_TRANSACTION_MISSING/);
 }
 
-console.log(JSON.stringify({ passed: true, observerQuiescentAccepted: true, liveProcessRefused: true, busyJobRefused: true, busyPortRefused: true, presentReceiptRecorded: true, planBound: true, productionEntryFailClosed: true, completeEntryFailClosed: true, productionExecutionAllowed: false }));
+console.log(JSON.stringify({ passed: true, quiescenceDoesNotProveExclusion: true, liveProcessRefused: true, busyJobRefused: true, busyPortRefused: true, presentReceiptRecorded: true, planBound: true, productionEntryFailClosed: true, completeEntryFailClosed: true, productionExecutionAllowed: false }));

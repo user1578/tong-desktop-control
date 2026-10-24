@@ -4,18 +4,18 @@ import { join, resolve, sep, isAbsolute, dirname } from 'node:path';
 import { connect } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { verifyRuntimeCandidate, pinRuntimeRelease } from './TongRuntimeCandidate.mjs';
-import { validateProductionProfile, verifyRuntimeApproval, PRODUCTION_ROOT } from './TongProductionProfile.mjs';
+import { validateProductionProfile, verifyRuntimeApproval, productionProfileDigest, PRODUCTION_ROOT } from './TongProductionProfile.mjs';
 import { assertProtectedPaths, processIdentity, startupJobsState, sameProcess } from './TongRuntimeSecurity.mjs';
 import { assessLegacyRecovery, incident } from './Tong024LegacyRecovery.mjs';
 
-// Formal production maintenance adapter for the 024 startup-recovery incident.
+// Draft maintenance adapter for the 024 startup-recovery incident. Production
+// mutation is disabled pending the missing lease/restore integration below.
 //
 // The offline rehearsal (Tong024LegacyRecovery.mjs) deliberately refuses the
 // production root and only exercises a simulation marker. This module is a
-// separate, clearly bounded maintenance entry that wires the same incident
-// evidence model and the proven archive/rollback ordering into the existing
-// production machinery: candidate/release binding, native DPAPI approval
-// receipts, protected-path ACL checks and the backup.freeze lifecycle mutex.
+// separate maintenance entry with an incident evidence model and simulation
+// archive/rollback ordering. Native primitives are not a complete production
+// transaction; describeMaintenance explicitly reports the remaining blockers.
 //
 // It NEVER mints a permission. Production steps only verify an existing typed
 // approval receipt (verifyRuntimeApproval); the human challenge is performed
@@ -25,6 +25,18 @@ import { assessLegacyRecovery, incident } from './Tong024LegacyRecovery.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const fail = code => { const error = new Error(code); error.code = code; throw error; };
+
+// The reviewed startup/state APIs each acquire backup.freeze themselves. There
+// is no supported continuous maintenance lease/handoff or code/pin restoration
+// transaction yet. A successful simulation must never enable production I/O.
+const executionBlockers = Object.freeze([
+  'CONTINUOUS_LIFECYCLE_HANDOFF_UNSUPPORTED',
+  'SOURCE_NATIVE_PROFILE_PIN_PERMISSION_RESTORE_UNSUPPORTED',
+  'NATIVE_PROCESS_AND_MONITOR_INVENTORY_NOT_CONNECTED',
+]);
+function denyProductionExecution(profile) {
+  if (profile.mode === 'production') fail('MAINTENANCE_NOT_READY');
+}
 
 export const maintenance = Object.freeze({
   kind: '024-startup-recovery-maintenance',
@@ -86,6 +98,7 @@ export async function verifyMaintenanceBaseline(profile, { managerProfile } = {}
 
 export async function switchMaintenanceRelease(profile, releaseRoot, { approve }) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
   await approve('manager');
   const app = await pinRuntimeRelease(valid, releaseRoot, { replace: true });
   const manager = await pinRuntimeRelease(valid, releaseRoot, { replace: true, manager: true });
@@ -115,7 +128,8 @@ export function assessStartupSite(observation) {
   if (observation.monitorStopped !== true) failures.push('MONITOR_STOPPED_REQUIRED');
   if (observation.processInventoryComplete !== true) failures.push('PROCESS_INVENTORY_REQUIRED');
   if (!Array.isArray(observation.matchingProcesses) || observation.matchingProcesses.length) failures.push('UNKNOWN_PROCESS_PRESENT');
-  if (!Array.isArray(observation.jobs) || observation.jobs.some(job => job.active !== 0)) failures.push('JOB_PROOF_REQUIRED');
+  const expectedJobs = [maintenance.oldRunId, maintenance.firstFailedRunId, maintenance.failedRunId].flatMap(runId => ['runtime', 'owner', 'launcher', 'guardian'].map(role => runId + ':' + role));
+  if (!Array.isArray(observation.jobs) || observation.jobs.length !== expectedJobs.length || expectedJobs.some(key => observation.jobs.filter(job => job?.runId + ':' + job?.role === key && job.active === 0).length !== 1)) failures.push('JOB_PROOF_REQUIRED');
   if (!Array.isArray(observation.ports) || maintenance.ports.some(port => !observation.ports.some(p => p.port === port && p.free === true))) failures.push('PORT_PROOF_REQUIRED');
   return failures;
 }
@@ -134,6 +148,7 @@ async function absent(path) { try { await lstat(path); return false; } catch (er
 
 function rootPolicy(profile) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
   if (valid.mode === 'production') {
     if (valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_ROOT_DENIED');
     return { production: true, root: valid.root, guard: async () => { await assertProtectedPaths([valid.root, join(valid.root, 'run')]); } };
@@ -266,6 +281,7 @@ export async function openControlRecordArchive({ profile, observe, authorize, co
 
 export async function openMaintenanceSession({ profile, managerProfile, observe, authorize, confirm, start, stop, doctor, verifyBaseline }) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
   const production = valid.mode === 'production';
   if (production && valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_ROOT_DENIED');
   const session = { production, mode: valid.mode, root: valid.root, phase: 'new', journal: [], started: false, productionExecutionAllowed: false };
@@ -353,7 +369,10 @@ export async function openMaintenanceSession({ profile, managerProfile, observe,
 
     async rollback() {
       requirePhase('archived', 'reverified', 'starting', 'failed');
-      if (session.started && typeof stop === 'function') { try { await stop(); } catch { /* already stopped */ } }
+      if (session.started) {
+        if (typeof stop !== 'function') fail('MAINTENANCE_STOP_REQUIRED');
+        await stop();
+      }
       if (session.archive?.archive) { const result = await session.archive.archive.rollback(); session.phase = 'rolled-back'; record('rolled_back'); return result; }
       session.phase = 'rolled-back'; record('rolled_back', { note: 'no archive to restore' });
       return { phase: 'rolled-back' };
@@ -373,8 +392,9 @@ function defaultPortFree(port) {
   return new Promise((resolve, reject) => {
     const socket = connect({ host: '127.0.0.1', port, timeout: 750 });
     socket.once('connect', () => { socket.destroy(); resolve(false); });
-    socket.once('timeout', () => { socket.destroy(); reject(fail('MAINTENANCE_PORT_PROBE_FAILED')); });
-    socket.once('error', error => { socket.destroy(); error?.code === 'ECONNREFUSED' ? resolve(true) : reject(fail('MAINTENANCE_PORT_PROBE_FAILED')); });
+    const refused = () => Object.assign(new Error('MAINTENANCE_PORT_PROBE_FAILED'), { code: 'MAINTENANCE_PORT_PROBE_FAILED' });
+    socket.once('timeout', () => { socket.destroy(); reject(refused()); });
+    socket.once('error', error => { socket.destroy(); error?.code === 'ECONNREFUSED' ? resolve(true) : reject(refused()); });
   });
 }
 
@@ -384,10 +404,10 @@ export async function observeProductionSite(profile, { security, checkPort = def
   const pid = security?.processIdentity ?? processIdentity;
   const jobsState = security?.startupJobsState ?? startupJobsState;
   const same = security?.sameProcess ?? sameProcess;
-  // Complete process inventory: enumerates processes matching the old-run marker.
-  // Defaults to empty; the production driver must supply a real enumerator. Any
-  // process found that is not a recorded identity is an unknown -> reject.
-  const listProcesses = security?.listProcesses ?? (async () => []);
+  // The enumerator must cover all incident IDs, roots and legacy entrypoints.
+  // Missing or incomplete native observation is a refusal, never an empty list.
+  const listProcesses = security?.listProcesses;
+  if (typeof listProcesses !== 'function') fail('MAINTENANCE_PROCESS_INVENTORY_REQUIRED');
   if (typeof checkMonitor !== 'function') fail('MAINTENANCE_MONITOR_CHECK_REQUIRED');
 
   const record = async name => { try { return JSON.parse(await readFile(join(run, name), 'utf8')); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } };
@@ -398,17 +418,20 @@ export async function observeProductionSite(profile, { security, checkPort = def
 
   const owned = [guardian, runtime?.supervisor, ...(runtime?.children ?? []), ...(runtime?.descendants ?? [])].filter(id => Number.isSafeInteger(id?.pid) && id.pid > 0);
   const identities = [], matchingProcesses = [];
-  const ownedPids = new Set();
   for (const id of owned) {
-    ownedPids.add(id.pid);
     const actual = await pid(id.pid, id.marker ?? maintenance.oldRunId);
-    const alive = same(actual, id) && actual?.markerMatches === true;
+    if (actual !== null && (!actual || actual.pid !== id.pid || !isAbsolute(actual.exe ?? '') || !/^\d+$/.test(actual.startTicks ?? ''))) fail('MAINTENANCE_PROCESS_IDENTITY_UNKNOWN');
+    // PID + executable + creation time already identify the recorded process.
+    // A missing/unreadable command marker cannot turn that process into 'gone'.
+    const alive = same(actual, id);
     identities.push({ ...id, state: alive ? 'alive' : 'gone' });
     if (alive) matchingProcesses.push(actual);
   }
-  for (const extra of await listProcesses(maintenance.oldRunId)) {
-    if (!extra || !Number.isSafeInteger(extra.pid)) continue;
-    if (!ownedPids.has(extra.pid)) { matchingProcesses.push(extra); identities.push({ ...extra, state: 'alive', unknown: true }); }
+  const inventory = await listProcesses({ root, codeRoot: valid.codeRoot, managerRoot: valid.managerRoot, runIds: [maintenance.oldRunId, maintenance.firstFailedRunId, maintenance.failedRunId] });
+  if (!Array.isArray(inventory)) fail('MAINTENANCE_PROCESS_INVENTORY_UNKNOWN');
+  for (const extra of inventory) {
+    if (!extra || !Number.isSafeInteger(extra.pid) || extra.pid <= 0 || typeof extra.exe !== 'string' || !extra.exe || !/^\d+$/.test(extra.startTicks ?? '')) fail('MAINTENANCE_PROCESS_INVENTORY_UNKNOWN');
+    if (!matchingProcesses.some(actual => same(actual, extra))) { matchingProcesses.push(extra); identities.push({ ...extra, state: 'alive', unknown: true }); }
   }
 
   const jobs = [];
@@ -433,14 +456,14 @@ export async function observeProductionSite(profile, { security, checkPort = def
 
   const launcherReceipt = !(await absent(join(run, 'launcher.' + maintenance.failedRunId + '.json')));
   const guardianReceipt = !(await absent(join(run, 'guardian.' + maintenance.failedRunId + '.json')));
-  // Lifecycle exclusivity is derived from the real process/Job inventory, never
-  // from the mere existence of a lock file (a stale lock proves nothing about a
-  // running instance).
-  const lifecycleExclusive = matchingProcesses.length === 0 && jobs.every(job => job.active === 0);
+  // Quiescence describes this instant. It cannot prevent a concurrent starter.
+  const quiescent = matchingProcesses.length === 0 && jobs.every(job => job.active === 0);
+  const lifecycleExclusive = false; // Observation does not hold a lifecycle lease.
 
   return {
     observedAt: new Date().toISOString(),
     lifecycleExclusive,
+    quiescent,
     monitorStopped,
     processInventoryComplete: true,
     matchingProcesses,
@@ -450,6 +473,9 @@ export async function observeProductionSite(profile, { security, checkPort = def
     failedAttemptReceipts: (!launcherReceipt && !guardianReceipt) ? 'absent-legacy' : 'present-legacy',
     records: { runtimeRunId: runtime?.runId ?? null, guardianRunId: guardian?.runId ?? null, requestRunId: request?.runId ?? null, abortRunId: abort?.runId ?? null },
     productionExecutionAllowed: false,
+    executionReadiness: 'NOT READY',
+    executionBlockers: [...executionBlockers],
+    executionOrderStatus: 'PROPOSED_NOT_EXECUTABLE',
   };
 }
 
@@ -458,6 +484,8 @@ export async function observeProductionSite(profile, { security, checkPort = def
 export function describeMaintenance() {
   return {
     kind: maintenance.kind,
+    executionReadiness: 'NOT READY',
+    executionBlockers: [...executionBlockers],
     baselineCommit: maintenance.baselineCommit,
     candidateCommit: maintenance.candidateCommit,
     productionRoot: PRODUCTION_ROOT,
@@ -507,6 +535,7 @@ async function loadProfile(root) {
 export async function productionMaintenanceEntry(profile, { security, checkPort, checkMonitor } = {}) {
   const valid = validateProductionProfile(profile);
   if (valid.mode !== 'production' || valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_PRODUCTION_ONLY');
+  denyProductionExecution(valid);
   const observe = () => observeProductionSite(valid, { security, checkPort, checkMonitor });
   const authorize = action => verifyMaintenanceApproval(valid, action);
   const runtime = await import('./TongAgentDockRuntime.mjs');
@@ -531,19 +560,20 @@ const PHASES = new Set(['planned', 'verified', 'observed', 'sealed', 'snapshotte
 function transactionPath(root) { return join(root, 'logs', TRANSACTION_FILE); }
 
 async function readTransaction(root) {
-  try { return JSON.parse(await readFile(transactionPath(root), 'utf8')); }
+  try { return JSON.parse(await bytes(transactionPath(root))); }
   catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
 
 async function writeTransaction(root, txn) {
   const path = transactionPath(root);
   await mkdir(dirname(path), { recursive: true });
+  await ordinary(dirname(path), true);
   const temporary = path + '.' + randomUUID() + '.tmp';
   await writeFile(temporary, JSON.stringify(txn, null, 2) + '\n', { flag: 'wx' });
   await rename(temporary, path);
 }
 
-export function validateMaintenanceTransaction(txn, { baselineCommit, candidateCommit } = {}) {
+export function validateMaintenanceTransaction(txn, { baselineCommit, candidateCommit, profile } = {}) {
   const errors = [];
   if (!txn || typeof txn !== 'object') return { ok: false, errors: ['TRANSACTION_MISSING'] };
   if (txn.schemaVersion !== 1 || txn.kind !== maintenance.kind) errors.push('TRANSACTION_KIND_MISMATCH');
@@ -553,18 +583,21 @@ export function validateMaintenanceTransaction(txn, { baselineCommit, candidateC
   if (!Array.isArray(txn.journal)) errors.push('TRANSACTION_JOURNAL_MISSING');
   if (!Number.isFinite(Date.parse(txn.createdAt ?? ''))) errors.push('TRANSACTION_CREATED_INVALID');
   if (!PHASES.has(txn.phase)) errors.push('TRANSACTION_PHASE_INVALID');
-  if (txn.profileDigest && !/^[a-f0-9]{64}$/.test(txn.profileDigest)) errors.push('TRANSACTION_PROFILE_DIGEST_INVALID');
+  if (!/^[a-f0-9]{64}$/.test(txn.profileDigest ?? '')) errors.push('TRANSACTION_PROFILE_DIGEST_INVALID');
+  if (!validateMaintenancePlan(txn.plan).ok) errors.push('TRANSACTION_PLAN_INVALID');
+  if (profile && (txn.root !== profile.root || txn.profileDigest !== productionProfileDigest(profile) || productionProfileDigest(txn.plan.profile) !== productionProfileDigest(profile))) errors.push('TRANSACTION_PROFILE_MISMATCH');
   return errors.length ? { ok: false, errors } : { ok: true, txn };
 }
 
 async function openTransaction(profile, { transactionId, plan, backupRoot, releaseRoot, restoreRoot }) {
   const valid = validateProductionProfile(profile);
-  const existing = await readTransaction(valid.root);
-  const txn = existing ?? {
+  if (!await absent(transactionPath(valid.root))) fail('MAINTENANCE_TRANSACTION_EXISTS');
+  const txn = {
     schemaVersion: 1,
     kind: maintenance.kind,
     transactionId: transactionId ?? randomUUID(),
     root: valid.root,
+    profileDigest: productionProfileDigest(valid),
     createdAt: new Date().toISOString(),
     phase: 'planned',
     plan,
@@ -593,8 +626,29 @@ async function copyVerified(source, target, expectedSha) {
 
 export async function realCopyRelease(profile, releaseRoot, manifest) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
+  await rootPolicy(valid).guard();
+  const names = new Set();
+  for (const entry of [...manifest.sourceFiles, ...manifest.native]) {
+    if (typeof entry.path !== 'string' || !entry.path || entry.path.includes('\\') || entry.path.includes(':') || entry.path.split('/').some(p => !p || p === '.' || p === '..' || /[<>"|?*\x00-\x1f]/.test(p) || /[. ]$/.test(p) || /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(p)) || names.has(entry.path.toLowerCase())) fail('MAINTENANCE_PATH_DENIED');
+    if (!/^[a-f0-9]{64}$/.test(entry.sha256) || !Number.isSafeInteger(entry.size) || entry.size < 0) fail('MAINTENANCE_MANIFEST_INVALID');
+    names.add(entry.path.toLowerCase());
+  }
   const sourceDir = join(releaseRoot, 'code', 'source');
   const nativeDir = join(releaseRoot, 'native');
+  // Preflight every input and existing destination ancestor before writing.
+  // This simulation helper still has no production installation snapshot.
+  for (const [base, entries] of [[sourceDir, manifest.sourceFiles], [nativeDir, manifest.native]]) for (const entry of entries) {
+    const source = await bytes(join(base, ...entry.path.split('/')));
+    if (source.length !== entry.size || sha(source) !== entry.sha256) fail('MAINTENANCE_SOURCE_HASH_MISMATCH');
+    for (const target of [valid.codeRoot, valid.managerRoot]) {
+      const destination = join(target, ...entry.path.split('/'));
+      for (let path = destination; path !== valid.root; path = dirname(path)) {
+        try { await ordinary(path, path !== destination); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+      }
+    }
+  }
   for (const target of [valid.codeRoot, valid.managerRoot]) {
     for (const entry of manifest.sourceFiles) await copyVerified(join(sourceDir, ...entry.path.split('/')), join(target, ...entry.path.split('/')), entry.sha256);
   }
@@ -606,6 +660,7 @@ export async function realCopyRelease(profile, releaseRoot, manifest) {
 
 export async function installMaintenanceRelease(profile, releaseRoot, { approve, manifest, copy } = {}) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
   await approve('manager');
   const m = manifest ?? await (await import('./TongRuntimeRelease.mjs')).verifyRelease({ releaseRoot });
   if (m.commit !== maintenance.candidateCommit) fail('MAINTENANCE_CANDIDATE_COMMIT_MISMATCH');
@@ -617,63 +672,74 @@ export async function installMaintenanceRelease(profile, releaseRoot, { approve,
   return { commit: m.commit, sourceDigest: m.sourceDigest ?? null, releaseDigest: m.releaseDigest ?? null, ...copied, installed: true, productionExecutionAllowed: false };
 }
 
-// ---- freeze coordination with createProductionStateBackup (#2) ----
-// createProductionStateBackup acquires run/backup.freeze with 'wx'; a stale 024
-// startup lock would make it fail with STATE_BUSY. The stale lock is sealed and
-// temporarily moved aside (never deleted) so the state snapshot can lock, then
-// restored byte-identically so ordinary startup stays blocked until archive.
-
-async function releaseFreeze(root) {
-  const freeze = join(root, 'run', 'backup.freeze');
-  const hold = join(root, 'run', 'backup.freeze.hold');
-  try { await rename(freeze, hold); return { released: true, hold }; }
-  catch (error) { if (error.code === 'ENOENT') return { released: false, hold }; throw error; }
-}
-async function restoreFreeze(root, hold) {
-  try { await rename(hold, join(root, 'run', 'backup.freeze')); }
-  catch (error) { if (error.code === 'ENOENT') return; throw error; }
-}
+// Keep the stale freeze in place. Native state backup must reject STATE_BUSY
+// until a supported continuous lease handoff exists; renaming this file is not
+// a mutex and creates an unsafe ordinary-start window.
 
 function maintenancePlanFor(profile) {
-  return { baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit, runIds: { oldRunId: maintenance.oldRunId, firstFailedRunId: maintenance.firstFailedRunId, failedRunId: maintenance.failedRunId }, ports: [...maintenance.ports], window: { issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 3600000).toISOString() }, profile };
+  const issuedAt = Date.now();
+  return { baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit, runIds: { oldRunId: maintenance.oldRunId, firstFailedRunId: maintenance.firstFailedRunId, failedRunId: maintenance.failedRunId }, ports: [...maintenance.ports], window: { issuedAt: new Date(issuedAt).toISOString(), expiresAt: new Date(issuedAt + 3600000).toISOString() }, profile };
 }
 
 // ---- complete single-entry production recovery (one controlled run) ----
 // Sequences the full 024 maintenance window: verify -> observe -> snapshot ->
 // switch -> archive -> reverify -> start -> accept. Every mutating step is gated
 // by a real typed receipt (verifyRuntimeApproval). snapshot/switchRelease/
-// stateRestore default to the real state/switch machinery and are injectable so
-// the isolation test can assert the fail-closed gates without native access.
+// state primitives are not yet connected through a continuous lifecycle lease.
+// Injected simulation success cannot enable the production entry.
 
 // ---- stateless control-record rollback from the sealed snapshot (#6) ----
 
 export async function restoreControlRecordsFromSnapshot(root, archiveRoot, seal, { observe, approve }) {
   if (typeof root !== 'string' || !isAbsolute(root)) fail('MAINTENANCE_ROOT_REQUIRED');
+  if (resolve(root).toLowerCase() === resolve(PRODUCTION_ROOT).toLowerCase()) fail('MAINTENANCE_NOT_READY');
+  const stateRoot = resolve('D:\\Tong\\state');
+  if (dirname(resolve(root)).toLowerCase() !== stateRoot.toLowerCase() || !/^b23-[a-zA-Z0-9_-]+$/.test(resolve(root).slice(stateRoot.length + 1))) fail('MAINTENANCE_SIMULATION_ONLY');
   if (typeof archiveRoot !== 'string' || !isAbsolute(archiveRoot)) fail('MAINTENANCE_ARCHIVE_REQUIRED');
+  if (dirname(resolve(archiveRoot)).toLowerCase() !== resolve(root).toLowerCase() || !/^maintenance-evidence-[a-f0-9-]{36}$/.test(resolve(archiveRoot).slice(resolve(root).length + 1))) fail('MAINTENANCE_PATH_DENIED');
+  await ordinary(root, true);
+  if (JSON.parse(await bytes(join(root, 'runtime-synthetic.json'))).scope !== simulationMarker) fail('MAINTENANCE_SIMULATION_ONLY');
+  await ordinary(join(root, 'run'), true); await ordinary(archiveRoot, true);
+  await ordinary(join(archiveRoot, 'original'), true); await ordinary(join(archiveRoot, 'retired'), true);
   if (typeof observe !== 'function') fail('MAINTENANCE_OBSERVER_REQUIRED');
   if (typeof approve !== 'function') fail('MAINTENANCE_AUTHORIZER_REQUIRED');
-  const snapshotBytes = await readFile(join(archiveRoot, 'snapshot.json'), 'utf8');
-  if (sha(Buffer.from(snapshotBytes)) !== seal) fail('MAINTENANCE_SNAPSHOT_CHANGED');
+  const snapshotBytes = await bytes(join(archiveRoot, 'snapshot.json'));
+  if (sha(snapshotBytes) !== seal) fail('MAINTENANCE_SNAPSHOT_CHANGED');
   const snapshot = JSON.parse(snapshotBytes);
-  if (snapshot.schemaVersion !== 1 || snapshot.kind !== maintenance.kind || !Array.isArray(snapshot.files)) fail('MAINTENANCE_SNAPSHOT_INVALID');
+  if (snapshot.schemaVersion !== 1 || snapshot.kind !== maintenance.kind || snapshot.root !== root || snapshot.baselineCommit !== maintenance.baselineCommit || snapshot.candidateCommit !== maintenance.candidateCommit || snapshot.oldRunId !== maintenance.oldRunId || snapshot.firstFailedRunId !== maintenance.firstFailedRunId || snapshot.failedRunId !== maintenance.failedRunId || !Array.isArray(snapshot.files)) fail('MAINTENANCE_SNAPSHOT_INVALID');
+  const names = snapshot.files.map(file => file.name);
+  if (new Set(names).size !== names.length || maintenance.requiredRecords.some(name => !names.includes(name)) || names.some(name => ![...maintenance.requiredRecords, ...maintenance.optionalRecords].includes(name))) fail('MAINTENANCE_SNAPSHOT_INVALID');
   const moved = [];
   for (const file of snapshot.files) {
-    if (!/^[a-f0-9]{64}$/.test(file.sha256) || !Number.isSafeInteger(file.size)) fail('MAINTENANCE_SNAPSHOT_INVALID');
-    if (sha(await readFile(join(archiveRoot, 'original', file.name))) !== file.sha256) fail('MAINTENANCE_SNAPSHOT_CHANGED');
+    if (!/^[a-f0-9]{64}$/.test(file.sha256) || !Number.isSafeInteger(file.size) || file.size < 0) fail('MAINTENANCE_SNAPSHOT_INVALID');
+    const original = await bytes(join(archiveRoot, 'original', file.name));
+    if (original.length !== file.size || sha(original) !== file.sha256) fail('MAINTENANCE_SNAPSHOT_CHANGED');
     const retiredPath = join(archiveRoot, 'retired', file.name);
-    try { if (sha(await readFile(retiredPath)) !== file.sha256) fail('MAINTENANCE_SNAPSHOT_CHANGED'); moved.push(file.name); }
+    try { if (sha(await bytes(retiredPath)) !== file.sha256) fail('MAINTENANCE_SNAPSHOT_CHANGED'); moved.push(file.name); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
+  const checkDestinations = async () => {
+    for (const file of snapshot.files) {
+      const path = join(root, 'run', file.name);
+      if (await absent(path)) { if (!moved.includes(file.name)) fail('MAINTENANCE_CONFLICT'); }
+      else if (sha(await bytes(path)) !== file.sha256) fail('MAINTENANCE_CONFLICT');
+    }
+  };
+  await checkDestinations();
   const observation = await observe();
   if (assessStartupSite(observation).length) fail('MAINTENANCE_PROOF_REQUIRED');
   await approve('restore');
+  await checkDestinations();
+  if (assessStartupSite(await observe()).length) fail('MAINTENANCE_PROOF_REQUIRED');
   // Restore the freeze first, then the remaining records, only where archived.
   const order = ['backup.freeze', ...snapshot.files.map(file => file.name).filter(name => name !== 'backup.freeze')];
   for (const name of order) {
     if (!moved.includes(name)) continue;
     const path = join(root, 'run', name);
-    if (!await absent(path)) fail('MAINTENANCE_CONFLICT');
-    await writeFile(path, await readFile(join(archiveRoot, 'original', name)), { flag: 'wx' });
+    if (!await absent(path)) continue; // A previously restored, hash-checked file.
+    const file = snapshot.files.find(file => file.name === name), original = await bytes(join(archiveRoot, 'original', name));
+    if (sha(original) !== file.sha256) fail('MAINTENANCE_SNAPSHOT_CHANGED');
+    await writeFile(path, original, { flag: 'wx' });
   }
   return { phase: 'rolled-back', restored: moved, productionExecutionAllowed: false };
 }
@@ -689,9 +755,20 @@ async function loadRecords(root) {
   return records;
 }
 
+function validateStateTargets(profile, backupRoot, restoreRoot) {
+  const inside = (parent, child) => resolve(child).toLowerCase().startsWith(resolve(parent).toLowerCase() + sep);
+  for (const path of [backupRoot, restoreRoot]) {
+    if (typeof path !== 'string' || !isAbsolute(path) || !inside(profile.root, path) || [profile.codeRoot, join(profile.root, 'run'), join(profile.root, 'tong-policy'), join(profile.root, 'logs'), join(profile.root, 'secrets')].some(denied => resolve(path).toLowerCase() === resolve(denied).toLowerCase() || inside(denied, path) || inside(path, denied))) fail('STATE_PATH_DENIED');
+  }
+  if (resolve(backupRoot).toLowerCase() === resolve(restoreRoot).toLowerCase() || inside(backupRoot, restoreRoot) || inside(restoreRoot, backupRoot)) fail('STATE_PATH_DENIED');
+}
+
 export async function executeRecovery(profile, { backupRoot, releaseRoot, restoreRoot, transactionId, deps = {} } = {}) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
   for (const [flag, value] of [['backup', backupRoot], ['release', releaseRoot], ['restore', restoreRoot]]) if (typeof value !== 'string' || !isAbsolute(value)) fail('MAINTENANCE_' + flag.toUpperCase() + '_ROOT_REQUIRED');
+  validateStateTargets(valid, backupRoot, restoreRoot);
+  await rootPolicy(valid).guard();
   const plan = maintenancePlanFor(valid);
   if (!validateMaintenancePlan(plan).ok) fail('MAINTENANCE_PLAN_REJECTED');
 
@@ -704,18 +781,17 @@ export async function executeRecovery(profile, { backupRoot, releaseRoot, restor
   const doctor = deps.doctor;
   const snapshot = deps.snapshot;
   const install = deps.install;
-  const stateRestore = deps.stateRestore;
   const approveAction = async action => {
     if (valid.mode === 'production') { if (typeof authorize !== 'function') fail('MAINTENANCE_AUTHORIZER_REQUIRED'); return authorize(action); }
     if (typeof confirm !== 'function') fail('MAINTENANCE_CONFIRMER_REQUIRED');
-    const receipt = await confirm({ action, root: valid.root, mode: valid.mode });
-    if (receipt?.kind !== 'simulation-only' || !Number.isSafeInteger(receipt.expiresAt) || receipt.expiresAt <= Date.now()) fail('MAINTENANCE_APPROVAL_REQUIRED');
+    const binding = { action, root: valid.root, mode: valid.mode };
+    const receipt = await confirm(binding);
+    if (receipt?.kind !== 'simulation-only' || !Number.isSafeInteger(receipt.expiresAt) || receipt.expiresAt <= Date.now() || receipt.expiresAt > Date.now() + 300000 || Object.entries(binding).some(([key, value]) => receipt[key] !== value)) fail('MAINTENANCE_APPROVAL_REQUIRED');
     return receipt;
   };
 
   const txn = await openTransaction(valid, { transactionId, plan, backupRoot, releaseRoot, restoreRoot });
   let archive = null;
-  let freezeHold = null;
 
   try {
     await verifyBaseline(valid); await txn.setPhase('verified');
@@ -729,14 +805,15 @@ export async function executeRecovery(profile, { backupRoot, releaseRoot, restor
     txn.state.archive = { seal: prepared.seal, archiveRoot: prepared.archiveRoot, phase: prepared.phase };
     await txn.setPhase('sealed');
 
-    // #2 freeze coordination: temporarily move the stale lock aside so the
-    // state snapshot can acquire its own lock; never delete, always restore.
-    const released = await releaseFreeze(valid.root);
-    freezeHold = released.hold;
-    try { if (snapshot) await snapshot({ backupRoot, restoreRoot }); }
-    finally { if (released.released) await restoreFreeze(valid.root, released.hold); }
+    if (typeof snapshot !== 'function') fail('MAINTENANCE_SNAPSHOT_REQUIRED');
+    const backupEvidence = await snapshot({ backupRoot, restoreRoot });
+    if (!backupEvidence || typeof backupEvidence !== 'object') fail('MAINTENANCE_SNAPSHOT_REQUIRED');
+    txn.state.stateBackup = { backupRoot, restoreRoot, evidence: backupEvidence };
     await txn.setPhase('snapshotted');
 
+    // Persist the intent before the first write: a crash/throw inside install
+    // must not be mistaken for 'nothing installed' by a later process.
+    txn.state.installAttempted = true; await txn.persist();
     const installEvidence = install ? await install({ releaseRoot, approve: approveAction }) : await installMaintenanceRelease(valid, releaseRoot, { approve: approveAction });
     txn.state.release = { releaseRoot, ...(installEvidence ?? {}) };
     await txn.setPhase('installed');
@@ -763,7 +840,6 @@ export async function executeRecovery(profile, { backupRoot, releaseRoot, restor
 
     return { state: txn.state, productionExecutionAllowed: false };
   } catch (error) {
-    if (freezeHold && !(await absent(join(valid.root, 'run', 'backup.freeze.hold')))) { try { await restoreFreeze(valid.root, freezeHold); } catch {} }
     await txn.markFailed(error);
     throw error;
   }
@@ -773,29 +849,38 @@ export async function executeRecovery(profile, { backupRoot, releaseRoot, restor
 
 export async function executeRollback(profile, { transactionId, deps = {} } = {}) {
   const valid = validateProductionProfile(profile);
+  denyProductionExecution(valid);
+  await rootPolicy(valid).guard();
   const txn = await readTransaction(valid.root);
   if (!txn) fail('MAINTENANCE_TRANSACTION_MISSING');
   if (transactionId && txn.transactionId !== transactionId) fail('MAINTENANCE_TRANSACTION_ID_MISMATCH');
-  const check = validateMaintenanceTransaction(txn, { baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit });
+  let check;
+  try { check = validateMaintenanceTransaction(txn, { baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit, profile: valid }); validateStateTargets(valid, txn.backupRoot, txn.restoreRoot); }
+  catch { fail('MAINTENANCE_TRANSACTION_INVALID'); }
   if (!check.ok) fail('MAINTENANCE_TRANSACTION_INVALID');
+  if (txn.installAttempted || txn.release || ['installed', 'archived', 'reverified', 'started', 'accepted'].includes(txn.phase)) fail('MAINTENANCE_RELEASE_RESTORE_UNSUPPORTED');
   if (txn.phase === 'rolled-back') return { state: txn, productionExecutionAllowed: false };
 
   const observe = deps.observe ?? (() => observeProductionSite(valid));
-  const authorize = deps.authorize;
   const confirm = deps.confirm;
   const stop = deps.stop;
-  const stateRestore = deps.stateRestore;
 
   // 1. stop the candidate run if it was started (even if a later phase failed)
-  if ((txn.startedRunId || ['started', 'accepted'].includes(txn.phase)) && typeof stop === 'function') { try { await stop(); } catch {} }
+  if (txn.startedRunId || ['started', 'accepted'].includes(txn.phase)) {
+    if (typeof stop !== 'function') fail('MAINTENANCE_STOP_REQUIRED');
+    await stop({ expectedRunId: txn.startedRunId });
+  }
   // 2. restore archived control records from the sealed snapshot (freeze first)
   if (txn.archive?.archiveRoot && txn.archive?.seal) {
-    await restoreControlRecordsFromSnapshot(valid.root, txn.archive.archiveRoot, txn.archive.seal, { observe, approve: action => (valid.mode === 'production' ? authorize(action) : confirm({ action, root: valid.root, archiveRoot: txn.archive.archiveRoot, seal: txn.archive.seal, oldRunId: maintenance.oldRunId, failedRunId: maintenance.failedRunId })) });
+    await restoreControlRecordsFromSnapshot(valid.root, txn.archive.archiveRoot, txn.archive.seal, { observe, approve: async action => {
+      if (typeof confirm !== 'function') fail('MAINTENANCE_CONFIRMER_REQUIRED');
+      const binding = { action, root: valid.root, archiveRoot: txn.archive.archiveRoot, seal: txn.archive.seal, oldRunId: maintenance.oldRunId, failedRunId: maintenance.failedRunId };
+      const receipt = await confirm(binding);
+      if (receipt?.kind !== 'simulation-only' || !Number.isSafeInteger(receipt.expiresAt) || receipt.expiresAt <= Date.now() || receipt.expiresAt > Date.now() + 300000 || Object.entries(binding).some(([key, value]) => receipt[key] !== value)) fail('MAINTENANCE_APPROVAL_REQUIRED');
+    } });
   }
-  // 3. restore state if a state backup was taken
-  if (txn.stateBackup?.backupRoot && txn.stateBackup?.restoreRoot && typeof stateRestore === 'function') {
-    await stateRestore({ backupRoot: txn.stateBackup.backupRoot, restoreRoot: txn.stateBackup.restoreRoot });
-  }
+  // This path only restores sealed control records before installation. The
+  // state API stages sanitized data; it is not a code/pin/permission rollback.
   const fresh = await readTransaction(valid.root);
   fresh.phase = 'rolled-back'; fresh.updatedAt = new Date().toISOString();
   await writeTransaction(valid.root, fresh);
@@ -805,12 +890,14 @@ export async function executeRollback(profile, { transactionId, deps = {} } = {}
 export async function runProductionRecovery(profile, { backupRoot, releaseRoot, restoreRoot, transactionId, deps = {} } = {}) {
   const valid = validateProductionProfile(profile);
   if (valid.mode !== 'production' || valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_PRODUCTION_ONLY');
+  denyProductionExecution(valid);
   return executeRecovery(valid, { backupRoot, releaseRoot, restoreRoot, transactionId, deps: { ...(await productionDeps(valid)), ...deps } });
 }
 
 export async function rollbackProductionRecovery(profile, { transactionId, deps = {} } = {}) {
   const valid = validateProductionProfile(profile);
   if (valid.mode !== 'production' || valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_PRODUCTION_ONLY');
+  denyProductionExecution(valid);
   return executeRollback(valid, { transactionId, deps: { ...(await productionDeps(valid)), ...deps } });
 }
 

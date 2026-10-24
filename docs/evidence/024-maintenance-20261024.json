@@ -1,0 +1,352 @@
+{
+  "schemaVersion": 1,
+  "outcome": "NOT READY",
+  "generatedAt": "2026-10-24T09:47:03.332Z",
+  "reviewedHead": "5a87bdcc91aac506fed4893315de80e31989793c",
+  "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "candidate": "34e26801876d8b1a2fc874dddce72b0939924e87",
+  "branch": "codex/024-maintenance-adapter-20261024",
+  "sourceFiles": [
+    {
+      "path": "scripts/Tong024ProductionMaintenance.mjs",
+      "bytes": 57764,
+      "sha256": "837dd37f55bede2322ac6e6ad8b9a3de6646479b96682839c2cf1a3d27630d37"
+    },
+    {
+      "path": "tests/Test-Tong024BaselineBinding.mjs",
+      "bytes": 4161,
+      "sha256": "30b583673d743a2c3e9789dadce732014b46e622dd4e8359e2fe19249874acc9"
+    },
+    {
+      "path": "tests/Test-Tong024MaintenanceBinding.mjs",
+      "bytes": 4667,
+      "sha256": "c9fcdd4d4b6e48eae65af224b583551a652186bdbf6cc2f8bde6322d66e29bce"
+    },
+    {
+      "path": "tests/Test-Tong024MaintenanceExecution.mjs",
+      "bytes": 6121,
+      "sha256": "a0c60a8fabf7e2736f8340e19cba36ef2ef39f52a5de3ee3a51c186cefa45d44"
+    },
+    {
+      "path": "tests/Test-Tong024MaintenanceRecovery.mjs",
+      "bytes": 10502,
+      "sha256": "c19e69c8800d577eccbf0b8f3a3fb1fff32c05e4293fe884eed535187db9b9eb"
+    },
+    {
+      "path": "tests/Test-Tong024MaintenanceSafety.mjs",
+      "bytes": 17147,
+      "sha256": "0ce9ac846ccd69184b5e2914d7543bb58f622670a9fe03ae6a1eade7cbfe0f65"
+    },
+    {
+      "path": "tests/Test-Tong024MaintenanceNative.mjs",
+      "bytes": 10229,
+      "sha256": "87fc33e51d0a56a70f9fa2b1d1d103a1dd6c17752111d49526bc62b5d3ec14fe"
+    }
+  ],
+  "notes": [
+    "stdout/stderr are exact UTF-8 capture text; re-encoding each string gives the recorded SHA256.",
+    "native-integration exited 1 because the test used stop instead of stop-run; native-completion reused its ready/doctor evidence and exited 0.",
+    "login-auto-regression exited 1 on Guardian-loss CLEANUP_REQUIRED; later read-only inspection is not a successful retry.",
+    "Full native maintenance transaction and post-install rollback remain unsupported; production mutation entrypoints are disabled."
+  ],
+  "runs": [
+    {
+      "label": "safety-before",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "--test",
+        "tests/Test-Tong024MaintenanceSafety.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T09:20:42.385Z",
+      "durationMs": 618,
+      "stdoutSha256": "256345f74f6340fafe7f83f66769fad077f88c90bf59dbb3d97038b361cadbbe",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "✖ snapshot retains the stale freeze continuously (31.7615ms)\n✖ missing snapshot implementation cannot advance to installation (59.7331ms)\n✖ backup evidence is persisted before installation (29.731ms)\n✖ state paths outside the runtime root are rejected before transaction creation (56.8816ms)\n✖ a second invocation cannot rewrite an existing transaction (13.3339ms)\n✖ rollback rejects a transaction rebound to another root (23.4596ms)\n✖ partial installation cannot be reported as rolled back without a release restore (36.1031ms)\n✖ empty Job inventory cannot prove a safe startup site (7.6313ms)\n✖ process inventory cannot default to empty success (8.8945ms)\n✖ the recorded live identity is unsafe even when its command marker is unreadable (8.0839ms)\n✖ quiescence is never represented as a held lifecycle lease (7.5543ms)\n✖ stateless restore preflights every conflict before restoring freeze (19.1189ms)\n✖ raw release copy rejects traversal before writing a target (14.8035ms)\n✖ production recovery is disabled before touching any production file (126.8047ms)\nℹ tests 14\nℹ suites 0\nℹ pass 0\nℹ fail 14\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 533.9407\n\n✖ failing tests:\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:22:1\n✖ snapshot retains the stale freeze continuously (31.7615ms)\n  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /SNAPSHOT_SAFE_REFUSAL/. Input:\n  \n  \"ENOENT: no such file or directory, open 'D:\\\\Tong\\\\state\\\\b23-maint-EDxvQr\\\\run\\\\backup.freeze'\"\n  \n      at file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:28:84\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:25:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: \"ENOENT: no such file or directory, open 'D:\\\\Tong\\\\state\\\\b23-maint-EDxvQr\\\\run\\\\backup.freeze'\",\n    expected: /SNAPSHOT_SAFE_REFUSAL/,\n    operator: 'match',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:32:1\n✖ missing snapshot implementation cannot advance to installation (59.7331ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:34:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /MAINTENANCE_SNAPSHOT_REQUIRED/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:38:1\n✖ backup evidence is persisted before installation (29.731ms)\n  TypeError: Cannot read properties of null (reading 'backupRoot')\n      at TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:42:34)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:47:1\n✖ state paths outside the runtime root are rejected before transaction creation (56.8816ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:49:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /STATE_PATH_DENIED/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:53:1\n✖ a second invocation cannot rewrite an existing transaction (13.3339ms)\n  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /MAINTENANCE_TRANSACTION_EXISTS/. Input:\n  \n  'Error: INITIAL_REFUSAL'\n  \n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:58:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: Error: INITIAL_REFUSAL\n        at verifyBaseline (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:55:65)\n        at executeRecovery (file:///D:/Tong/development/tong-024-startup-recovery/scripts/Tong024ProductionMaintenance.mjs:721:11)\n        at async waitForActual (node:assert:646:5)\n        at async strict.rejects (node:assert:769:25)\n        at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:58:3)\n        at async Test.run (node:internal/test_runner/test:1208:7)\n        at async Test.processPendingSubtests (node:internal/test_runner/test:831:7),\n    expected: /MAINTENANCE_TRANSACTION_EXISTS/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:62:1\n✖ rollback rejects a transaction rebound to another root (23.4596ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:67:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /MAINTENANCE_TRANSACTION_INVALID/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:70:1\n✖ partial installation cannot be reported as rolled back without a release restore (36.1031ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:75:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /MAINTENANCE_RELEASE_RESTORE_UNSUPPORTED/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:80:1\n✖ empty Job inventory cannot prove a safe startup site (7.6313ms)\n  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n  \n    assert.ok(assessStartupSite(goodObservation({ jobs: [] })).includes('JOB_PROOF_REQUIRED'))\n  \n      at TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:81:10)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1201:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n      at Test.postRun (node:internal/test_runner/test:1330:19)\n      at Test.run (node:internal/test_runner/test:1258:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: false,\n    expected: true,\n    operator: '==',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:84:1\n✖ process inventory cannot default to empty success (8.8945ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:87:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /MAINTENANCE_PROCESS_INVENTORY_REQUIRED/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:90:1\n✖ the recorded live identity is unsafe even when its command marker is unreadable (8.0839ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  0 !== 3\n  \n      at TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:94:10)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 0,\n    expected: 3,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:98:1\n✖ quiescence is never represented as a held lifecycle lease (7.5543ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  true !== false\n  \n      at TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:102:10)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: true,\n    expected: false,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:105:1\n✖ stateless restore preflights every conflict before restoring freeze (19.1189ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:120:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: { code: 'ENOENT' },\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:123:1\n✖ raw release copy rejects traversal before writing a target (14.8035ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:127:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /MAINTENANCE_PATH_DENIED/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:131:1\n✖ production recovery is disabled before touching any production file (126.8047ms)\n  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /MAINTENANCE_NOT_READY/. Input:\n  \n  'Error: MUST_NOT_REACH'\n  \n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:133:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: Error: MUST_NOT_REACH\n        at verifyBaseline (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:133:237)\n        at executeRecovery (file:///D:/Tong/development/tong-024-startup-recovery/scripts/Tong024ProductionMaintenance.mjs:721:11)\n        at async waitForActual (node:assert:646:5)\n        at async strict.rejects (node:assert:769:25)\n        at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:133:3)\n        at async Test.run (node:internal/test_runner/test:1208:7)\n        at async Test.processPendingSubtests (node:internal/test_runner/test:831:7),\n    expected: /MAINTENANCE_NOT_READY/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n",
+      "stderr": ""
+    },
+    {
+      "label": "path-before",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "--test",
+        "tests/Test-Tong024MaintenanceSafety.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T09:34:33.098Z",
+      "durationMs": 699,
+      "stdoutSha256": "0233930fe8589910c9419df3e6280d4be9241dcf3cb26929a3272d47a0ef665d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "✔ snapshot retains the stale freeze continuously (31.0026ms)\n✔ missing snapshot implementation cannot advance to installation (23.8585ms)\n✔ backup evidence is persisted before installation (29.4098ms)\n✔ state paths outside the runtime root are rejected before transaction creation (2.8759ms)\n✖ an invalid simulation marker cannot create a transaction on denial (19.8811ms)\n✔ a second invocation cannot rewrite an existing transaction (14.9441ms)\n✔ rollback rejects a transaction rebound to another root (18.5774ms)\n✔ partial installation cannot be reported as rolled back without a release restore (29.4811ms)\n✔ empty Job inventory cannot prove a safe startup site (0.5048ms)\n✔ process inventory cannot default to empty success (3.4644ms)\n✔ the recorded live identity is unsafe even when its command marker is unreadable (8.5827ms)\n✔ quiescence is never represented as a held lifecycle lease (9.0726ms)\n✔ unreadable live identity metadata cannot prove disappearance (9.9618ms)\n✔ a matching inventoried process with a recycled recorded PID is still unsafe (9.28ms)\n✔ native observation errors and uncertain ports propagate as refusal (9.9096ms)\n✔ pre-install rollback is independently reloadable, with simulated observation explicitly labelled (115.7895ms)\n✔ crash inside installation leaves a durable intent for a new rollback process (103.9061ms)\n✔ stateless restore preflights every conflict before restoring freeze (15.1804ms)\n✔ raw release copy rejects traversal before writing a target (3.7921ms)\n✖ raw release copy refuses a junction target before overwriting its destination (13.8551ms)\n✔ production recovery is disabled before touching any production file (77.9449ms)\nℹ tests 21\nℹ suites 0\nℹ pass 19\nℹ fail 2\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 630.3587\n\n✖ failing tests:\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:53:1\n✖ an invalid simulation marker cannot create a transaction on denial (19.8811ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:57:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: { code: 'ENOENT' },\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:179:1\n✖ raw release copy refuses a junction target before overwriting its destination (13.8551ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:185:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /MAINTENANCE_PATH_DENIED/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n",
+      "stderr": ""
+    },
+    {
+      "label": "transaction-before",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "--test",
+        "--test-name-pattern",
+        "a second invocation",
+        "tests/Test-Tong024MaintenanceSafety.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T09:38:19.489Z",
+      "durationMs": 174,
+      "stdoutSha256": "2dbb6977e760e87be7ca33a8c78d7c871db5a8c7981ec25cad4cd627de0c719c",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "✖ a second invocation cannot rewrite an existing transaction (24.3823ms)\nℹ tests 1\nℹ suites 0\nℹ pass 0\nℹ fail 1\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 102.186\n\n✖ failing tests:\n\ntest at tests\\Test-Tong024MaintenanceSafety.mjs:60:1\n✖ a second invocation cannot rewrite an existing transaction (24.3823ms)\n  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /MAINTENANCE_TRANSACTION_EXISTS/. Input:\n  \n  'Error: INITIAL_REFUSAL'\n  \n      at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:68:3)\n      at async Test.run (node:internal/test_runner/test:1208:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: Error: INITIAL_REFUSAL\n        at verifyBaseline (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:62:65)\n        at executeRecovery (file:///D:/Tong/development/tong-024-startup-recovery/scripts/Tong024ProductionMaintenance.mjs:796:11)\n        at async waitForActual (node:assert:646:5)\n        at async strict.rejects (node:assert:769:25)\n        at async TestContext.<anonymous> (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceSafety.mjs:68:3)\n        at async Test.run (node:internal/test_runner/test:1208:7)\n        at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3),\n    expected: /MAINTENANCE_TRANSACTION_EXISTS/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n",
+      "stderr": ""
+    },
+    {
+      "label": "final-adapter",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "--test",
+        "tests/Test-Tong024MaintenanceSafety.mjs",
+        "tests/Test-Tong024MaintenanceBinding.mjs",
+        "tests/Test-Tong024MaintenanceExecution.mjs",
+        "tests/Test-Tong024MaintenanceGuard.mjs",
+        "tests/Test-Tong024MaintenanceRecovery.mjs",
+        "tests/Test-Tong024MaintenanceStartup.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:38:38.408Z",
+      "durationMs": 867,
+      "stdoutSha256": "8bd3a655883d993176185d68cd82e6b6f4ccba8ad4a47da72f0c6b39b0d1a987",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"passed\":true,\"baselineBound\":true,\"candidateBound\":true,\"committedArchiveVerified\":true,\"runIdsHonest\":true,\"receiptAbsenceRecorded\":true,\"productionBoundaryRefused\":true,\"nonMaintenanceRootRefused\":true}\n✔ tests\\Test-Tong024MaintenanceBinding.mjs (92.6943ms)\n{\"passed\":true,\"quiescenceDoesNotProveExclusion\":true,\"liveProcessRefused\":true,\"busyJobRefused\":true,\"busyPortRefused\":true,\"presentReceiptRecorded\":true,\"planBound\":true,\"productionEntryFailClosed\":true,\"completeEntryFailClosed\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024MaintenanceExecution.mjs (170.2082ms)\n{\"passed\":true,\"unsafeSiteRefused\":true,\"authorizationDeniedExpiredReboundRefused\":true,\"snapshotTamperRefused\":true,\"archiveRestoreVerified\":true,\"interruptionRollback\":true,\"partialRollbackRetry\":true,\"externalChangeConflict\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024MaintenanceGuard.mjs (536.7933ms)\n{\"passed\":true,\"injectedSuccessPathAccepted\":true,\"verifyFailureStops\":true,\"snapshotFailureRetainsFreeze\":true,\"installFailureStops\":true,\"unsupportedReleaseRollbackRefused\":true,\"planCommitBindingValidated\":true,\"installCommitMismatchRejected\":true,\"snapshotTamperRejected\":true,\"realSourceNativeCopyVerified\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024MaintenanceRecovery.mjs (472.1647ms)\n✔ snapshot retains the stale freeze continuously (52.8644ms)\n✔ missing snapshot implementation cannot advance to installation (40.5475ms)\n✔ backup evidence is persisted before installation (47.03ms)\n✔ state paths outside the runtime root are rejected before transaction creation (4.6708ms)\n✔ an invalid simulation marker cannot create a transaction on denial (5.881ms)\n✔ a second invocation cannot rewrite an existing transaction (20.4966ms)\n✔ rollback rejects a transaction rebound to another root (22.33ms)\n✔ partial installation cannot be reported as rolled back without a release restore (40.8724ms)\n✔ empty Job inventory cannot prove a safe startup site (0.7271ms)\n✔ process inventory cannot default to empty success (4.2518ms)\n✔ the recorded live identity is unsafe even when its command marker is unreadable (10.9401ms)\n✔ quiescence is never represented as a held lifecycle lease (8.3569ms)\n✔ unreadable live identity metadata cannot prove disappearance (12.4344ms)\n✔ a matching inventoried process with a recycled recorded PID is still unsafe (11.4467ms)\n✔ native observation errors and uncertain ports propagate as refusal (14.6886ms)\n✔ pre-install rollback is independently reloadable, with simulated observation explicitly labelled (136.5287ms)\n✔ crash inside installation leaves a durable intent for a new rollback process (109.3176ms)\n✔ stateless restore preflights every conflict before restoring freeze (18.4324ms)\n✔ raw release copy rejects traversal before writing a target (5.6356ms)\n✔ raw release copy refuses a junction target before overwriting its destination (10.5711ms)\n✔ production recovery is disabled before touching any production file (79.01ms)\n{\"passed\":true,\"controlledStartAccepted\":true,\"readyDoctorSimulated\":true,\"acceptanceFailureRolledBack\":true,\"stopBeforeRollback\":true,\"journalOrdered\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024MaintenanceStartup.mjs (282.9671ms)\nℹ tests 26\nℹ suites 0\nℹ pass 26\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 781.3018\n",
+      "stderr": ""
+    },
+    {
+      "label": "native-integration",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024MaintenanceNative.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T09:24:31.399Z",
+      "durationMs": 184142,
+      "stdoutSha256": "aec02a34b2a45b641493f8bbe05054e8d29e990f5e8835420cdf412ec4cef0c6",
+      "stderrSha256": "c99d0715f65bec5f3c932b5a7b0a67e237b089f6a51257de4aa53cfb8b7176e2",
+      "stdout": "{\"event\":\"native_fixture_verified\",\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\",\"evidence\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\\\native-review-d410da66-5fd1-40eb-994e-3ea5daced594\",\"priorRunId\":\"7f5289e6-e46d-4a8d-9f91-e9fe1a8f54fe\",\"processIdentity\":true,\"startupJobsState\":true,\"verifyRelease\":true,\"sourceFiles\":299,\"nativeFiles\":23,\"sourceDigest\":\"d38ee4d6141f430666088d08638f7d5022961e21097f153b915b990cd53b66d9\",\"releaseDigest\":\"83c6b49346b3947c6baa6cd65b97ea9c3f3932de797cd2468829a81f589e080f\"}\n{\"event\":\"native_backup_verified\",\"backupRoot\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\\\native-backup-de8b86a8-766b-4ff7-980c-a5347a7bdb98\",\"files\":5,\"manifestSha256\":\"4a33570e817a0611212e5de2fea7e3c455a13031532f264e87e20e99204f006f\",\"dpapiApprovalVerified\":true,\"mismatchedApprovalDenied\":true,\"heldFreezeRefused\":true,\"freezePreserved\":true}\n",
+      "stderr": "file:///D:/Tong/development/tong-024-startup-recovery/scripts/TongLoginRecovery.mjs:12\r\nconst fail=code=>new Error(code),sha=bytes=>createHash('sha256').update(bytes).digest('hex');\r\n                 ^\r\n\r\nError: APPROVAL_DENIED\r\n    at fail (file:///D:/Tong/development/tong-024-startup-recovery/scripts/TongLoginRecovery.mjs:12:18)\r\n    at withLoginRecovery (file:///D:/Tong/development/tong-024-startup-recovery/scripts/TongLoginRecovery.mjs:76:55)\r\n    at file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024MaintenanceNative.mjs:95:37\r\n\r\nNode.js v24.15.0\r\n"
+    },
+    {
+      "label": "native-completion",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024MaintenanceNative.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:29:01.609Z",
+      "durationMs": 65469,
+      "stdoutSha256": "5a5363f3496a323bee328e3e163494293dbd9ac6c216f0dc531656c3c7c2e733",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"event\":\"continue_verified_native_run\",\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\",\"evidence\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\\\native-review-d410da66-5fd1-40eb-994e-3ea5daced594\",\"runId\":\"75ba018d-93f4-4687-858f-7f6b91ce2988\",\"priorEvidence\":\"native-integration stdout and encrypted-backup manifest retained\"}\n{\"event\":\"native_start_doctor_stop_verified\",\"runId\":\"75ba018d-93f4-4687-858f-7f6b91ce2988\",\"phase\":\"stopped\",\"healthy\":true,\"roles\":[\"agentdock\",\"devspace\",\"gateway\"],\"jobsEmpty\":true,\"originalIdentitiesGone\":true}\n{\"passed\":true,\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\",\"evidence\":\"D:\\\\Tong\\\\state\\\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\\\native-review-d410da66-5fd1-40eb-994e-3ea5daced594\",\"fullRuntimeSuccess\":true,\"independentNativeStartupFailureCleaned\":true,\"failureRunId\":\"08682941-f5cd-4eee-9b34-2111b9c0278d\",\"maintenanceTransactionRollback\":\"NOT VERIFIED - continuous lease and release restore unsupported\",\"productionExecutionAllowed\":false}\n",
+      "stderr": ""
+    },
+    {
+      "label": "login-auto-regression",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-TongLoginAutoRecovery.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T09:31:37.448Z",
+      "durationMs": 452636,
+      "stdoutSha256": "c6b77aa02e9674c2be74d6ab2fb1f52de05a7fb88c7b4e6da836603533553ba9",
+      "stderrSha256": "b7f02570561288b1448271b63130703a2db1ce1358e4dba3ff27f9f7a0cddfd7",
+      "stdout": "{\"event\":\"fixture_ready\",\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\"}\n{\"event\":\"recovered\",\"fault\":\"supervisor\",\"from\":\"74e625a3-4767-4d20-8699-d3cf344ed79a\",\"to\":\"558ac4e9-828f-4c8e-b6f0-a0fa8bd54338\"}\n",
+      "stderr": "file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-TongLoginAutoRecovery.mjs:41\r\n    if(monitor?.exitCode!==null)throw Error('Monitor exited: '+monitorError);\r\n                                      ^\r\n\r\nError: Monitor exited: Tong manager refused start: CLEANUP_REQUIRED\r\r\n\r\n    at waitReady (file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-TongLoginAutoRecovery.mjs:41:39)\r\n    at async file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-TongLoginAutoRecovery.mjs:82:13\r\n\r\nNode.js v24.15.0\r\n"
+    },
+    {
+      "label": "login-failure-inspection",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/inspect-login-failure.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:42:22.998Z",
+      "durationMs": 19580,
+      "stdoutSha256": "21198ec70978a7af7c4f59d94d5a47bcb15ed46913064663c3d0588495ab1d85",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\",\"runId\":\"558ac4e9-828f-4c8e-b6f0-a0fa8bd54338\",\"identities\":[{\"expected\":{\"schemaVersion\":1,\"containment\":\"create_process_job_list\",\"runId\":\"558ac4e9-828f-4c8e-b6f0-a0fa8bd54338\",\"pid\":37448,\"exe\":\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\",\"startTicks\":\"639284314009224820\",\"nodePid\":15912,\"jobAssigned\":true,\"jobName\":\"Local\\\\TongRuntime-558ac4e9-828f-4c8e-b6f0-a0fa8bd54338\",\"killOnJobClose\":true,\"startedAt\":\"2026-10-24T09:36:51.6300836Z\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":15912,\"parentPid\":37448,\"exe\":\"D:\\\\node\\\\node.exe\",\"startTicks\":\"639284314114847360\",\"markerMatches\":true},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"role\":\"agentdock\",\"pid\":21796,\"parentPid\":15912,\"exe\":\"D:\\\\Tong\\\\runtime\\\\agentdock\\\\agentdock.exe\",\"startTicks\":\"639284314258831330\",\"markerMatches\":true,\"stdoutLog\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\\\\logs\\\\558ac4e9-828f-4c8e-b6f0-a0fa8bd54338-agentdock.stdout.log\",\"stderrLog\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\\\\logs\\\\558ac4e9-828f-4c8e-b6f0-a0fa8bd54338-agentdock.stderr.log\",\"tokenInArgv\":false},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"role\":\"devspace\",\"pid\":35320,\"parentPid\":15912,\"exe\":\"D:\\\\node\\\\node.exe\",\"startTicks\":\"639284314296175650\",\"markerMatches\":true,\"stdoutLog\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\\\\logs\\\\558ac4e9-828f-4c8e-b6f0-a0fa8bd54338-devspace.stdout.log\",\"stderrLog\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\\\\logs\\\\558ac4e9-828f-4c8e-b6f0-a0fa8bd54338-devspace.stderr.log\",\"tokenInArgv\":false},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"role\":\"gateway\",\"pid\":31716,\"parentPid\":15912,\"exe\":\"D:\\\\node\\\\node.exe\",\"startTicks\":\"639284314404441590\",\"markerMatches\":true,\"stdoutLog\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\\\\logs\\\\558ac4e9-828f-4c8e-b6f0-a0fa8bd54338-gateway.stdout.log\",\"stderrLog\":\"D:\\\\Tong\\\\state\\\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e\\\\logs\\\\558ac4e9-828f-4c8e-b6f0-a0fa8bd54338-gateway.stderr.log\",\"tokenInArgv\":false},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":18448,\"parentPid\":15912,\"exe\":\"C:\\\\Windows\\\\system32\\\\conhost.exe\",\"startTicks\":\"639284314114932330\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":21796,\"parentPid\":15912,\"exe\":\"D:\\\\Tong\\\\runtime\\\\agentdock\\\\agentdock.exe\",\"startTicks\":\"639284314258831330\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":43832,\"parentPid\":21796,\"exe\":\"C:\\\\Windows\\\\system32\\\\conhost.exe\",\"startTicks\":\"639284314258898830\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":35320,\"parentPid\":15912,\"exe\":\"D:\\\\node\\\\node.exe\",\"startTicks\":\"639284314296175650\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":43000,\"parentPid\":35320,\"exe\":\"C:\\\\Windows\\\\system32\\\\conhost.exe\",\"startTicks\":\"639284314296250640\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":31716,\"parentPid\":15912,\"exe\":\"D:\\\\node\\\\node.exe\",\"startTicks\":\"639284314404441590\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":25560,\"parentPid\":31716,\"exe\":\"C:\\\\Windows\\\\system32\\\\conhost.exe\",\"startTicks\":\"639284314404484730\"},\"actual\":null,\"sameProcess\":false},{\"expected\":{\"pid\":12740,\"parentPid\":43488,\"exe\":\"C:\\\\Windows\\\\system32\\\\conhost.exe\",\"startTicks\":\"639284314857863980\"},\"actual\":null,\"sameProcess\":false}],\"jobs\":{\"owner\":0,\"launcher\":0,\"guardian\":0,\"runtime\":0},\"ports\":[{\"port\":29761,\"free\":true},{\"port\":29762,\"free\":true},{\"port\":29763,\"free\":true}],\"status\":{\"phase\":\"abnormal_exit\",\"supervisorAlive\":false,\"guardianAlive\":false,\"reconciled\":true},\"proof\":{\"observedAt\":\"2026-10-24T09:38:27.577Z\",\"identityCount\":13,\"runtimeHashMatches\":true,\"guardianHashMatches\":true},\"observationOnly\":true}\n{\"isolatedRunStopped\":true,\"simulationRecoveryGrantRevoked\":true,\"staleRecordsAndFreezeRetained\":true}\n",
+      "stderr": ""
+    },
+    {
+      "label": "baseline-before",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024BaselineBinding.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-24T09:33:12.100Z",
+      "durationMs": 181,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "94d33839627cd522925f9d8a859e35407606f93c59e4a603b911f259add4322c",
+      "stdout": "",
+      "stderr": "node:internal/modules/run_main:107\r\n    triggerUncaughtException(\r\n    ^\r\n\r\nAssertionError [ERR_ASSERTION]: only dependency-closed startup and incident recovery product files may differ\r\n+ actual - expected\r\n\r\n  [\r\n    'scripts/Tong024LegacyRecovery.mjs',\r\n+   'scripts/Tong024ProductionMaintenance.mjs',\r\n    'scripts/TongAgentDockRuntime.mjs',\r\n    'scripts/TongLoginRecovery.mjs',\r\n    'scripts/TongRuntimeGuardian.ps1',\r\n    'scripts/TongRuntimeLaunch.ps1',\r\n    'scripts/TongRuntimeSecurity.mjs',\r\n\r\n    at file:///D:/Tong/development/tong-024-startup-recovery/tests/Test-Tong024BaselineBinding.mjs:12:8\r\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\r\n    at async node:internal/modules/esm/loader:639:26\r\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\r\n  generatedMessage: false,\r\n  code: 'ERR_ASSERTION',\r\n  actual: [\r\n    'scripts/Tong024LegacyRecovery.mjs',\r\n    'scripts/Tong024ProductionMaintenance.mjs',\r\n    'scripts/TongAgentDockRuntime.mjs',\r\n    'scripts/TongLoginRecovery.mjs',\r\n    'scripts/TongRuntimeGuardian.ps1',\r\n    'scripts/TongRuntimeLaunch.ps1',\r\n    'scripts/TongRuntimeSecurity.mjs',\r\n    'scripts/TongRuntimeSecurity.ps1',\r\n    'scripts/TongStartupProtocol.ps1'\r\n  ],\r\n  expected: [\r\n    'scripts/Tong024LegacyRecovery.mjs',\r\n    'scripts/TongAgentDockRuntime.mjs',\r\n    'scripts/TongLoginRecovery.mjs',\r\n    'scripts/TongRuntimeGuardian.ps1',\r\n    'scripts/TongRuntimeLaunch.ps1',\r\n    'scripts/TongRuntimeSecurity.mjs',\r\n    'scripts/TongRuntimeSecurity.ps1',\r\n    'scripts/TongStartupProtocol.ps1'\r\n  ],\r\n  operator: 'deepStrictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.15.0\r\n"
+    },
+    {
+      "label": "baseline-final",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024BaselineBinding.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:33:24.769Z",
+      "durationMs": 1747,
+      "stdoutSha256": "21cc75b370c7e9da1ff84d9714cbb395c3948c80de83655a665f2a794de15639",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"passed\":true,\"baseline\":\"024d5b0920d9ad8f1a2baf2e55640a5666ad4739\",\"productFiles\":[\"scripts/Tong024LegacyRecovery.mjs\",\"scripts/Tong024ProductionMaintenance.mjs\",\"scripts/TongAgentDockRuntime.mjs\",\"scripts/TongLoginRecovery.mjs\",\"scripts/TongRuntimeGuardian.ps1\",\"scripts/TongRuntimeLaunch.ps1\",\"scripts/TongRuntimeSecurity.mjs\",\"scripts/TongRuntimeSecurity.ps1\",\"scripts/TongStartupProtocol.ps1\"],\"baselineSourceFiles\":283,\"nativeFiles\":23,\"nodeBound\":true,\"sqliteNativeLoaded\":true,\"conptyNativeLoaded\":true,\"productionReadOnly\":true}\n",
+      "stderr": ""
+    },
+    {
+      "label": "startup-unit-regression",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "--test",
+        "tests/Test-TongLauncherBudget.mjs",
+        "tests/Test-TongRuntimeReadiness.mjs",
+        "tests/Test-Tong024LegacyRecovery.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:32:12.054Z",
+      "durationMs": 771,
+      "stdoutSha256": "67148fada9503cb3fd6bd3ee50f55ba486ee221adbca5dc97e6800d3133dfcb9",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"passed\":true,\"parent\":\"D:\\\\Tong\\\\state\\\\legacy-024-L4JOrR\",\"separateOldAndFailedIdentity\":true,\"missingLegacyReceiptNotInvented\":true,\"proofsRequired\":true,\"approvalBound\":true,\"confirmationReobserved\":true,\"pathReplacementRefused\":true,\"originalEvidencePreserved\":true,\"partialRetirementRollback\":true,\"partialRestoreRetry\":true,\"rollbackVerified\":true,\"productionExecutionAllowed\":false}\n✔ tests\\Test-Tong024LegacyRecovery.mjs (690.0956ms)\n{\"passed\":true,\"virtualTime\":true,\"slowPreflight\":true,\"lostReceiptFailClosed\":true,\"previousRunNotProof\":true,\"originalFailureRetained\":true}\n✔ tests\\Test-TongLauncherBudget.mjs (207.1388ms)\n{\"passed\":true,\"normal\":true,\"slowAbove45s\":true,\"stageStall\":true,\"duplicatesDoNotRenew\":true,\"exit\":true,\"spawnFailure\":true,\"childTotal\":true,\"startupTotal\":true,\"lateReadyRejected\":true,\"handlersCleaned\":true}\n✔ tests\\Test-TongRuntimeReadiness.mjs (215.6043ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 695.7637\n",
+      "stderr": ""
+    },
+    {
+      "label": "artifact-binding",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-TongStartupArtifactBinding.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:44:08.781Z",
+      "durationMs": 13163,
+      "stdoutSha256": "d53656165543e493d09e51ddcc40c5bdf7bbfd6708fc2427caadeb3061902fb4",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"passed\":true,\"root\":\"D:\\\\Tong\\\\state\\\\b23-login-8f3fce896c274b7fa3c1d584b3cf4720\",\"sourceFiles\":95,\"nativeFiles\":23,\"releaseDigest\":\"d444116132c6b3d9aa15ea755583a28cfc944db4bfaccca079fca0c522842b51\",\"appManagerBound\":true,\"nativeTamperRejected\":true,\"helperTamperRejected\":true,\"managerPinMismatchRejected\":true,\"syntheticCommitOnly\":true}\n",
+      "stderr": ""
+    },
+    {
+      "label": "core-binding",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/verify-core.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-24T09:47:02.804Z",
+      "durationMs": 452,
+      "stdoutSha256": "3490513ec2edc81d63f7ef89e68a082f9a39bdae4c6d3cb9093ec213841d262f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "{\"path\":\"scripts/TongAgentDockRuntime.mjs\",\"rawBytesEqual\":false,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"3b7ab8ab21914f16a1f83633468df02b5424a567e23a6064c103a59118ce0694\",\"commitSha256\":\"af7430b786817756cd3f9129460111c24d41621ab97f0f9203d9ca1bb737b51a\"}\n{\"path\":\"scripts/TongLoginRecovery.mjs\",\"rawBytesEqual\":false,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"5bc9f5fa3d71c24862193b7a398fa61b38903e14aee1f1faee156116688b9097\",\"commitSha256\":\"fe107fa566ca85e2f2fd7cc9ee13e0c68b9c58da48deca1b434d5fc2cece659d\"}\n{\"path\":\"scripts/TongRuntimeLaunch.ps1\",\"rawBytesEqual\":false,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"fb61000f28c4b95ee5929765e7ce57e41cb3355db968dd6dd45d2eebfb6e9394\",\"commitSha256\":\"954d807bc5120f91a8e3932dc3759031a15feff1d15467c8e24076a3589f4ad3\"}\n{\"path\":\"scripts/TongRuntimeGuardian.ps1\",\"rawBytesEqual\":false,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"8f324c8ab1eaaebb9335c38ed2c4e2cfd976f8d67e345e8b1865ca2e24b2cc3f\",\"commitSha256\":\"b5ebf2b786f958fdbafca9a53afead412544fc4e06f3ebdefc084362c711a033\"}\n{\"path\":\"scripts/TongRuntimeSecurity.mjs\",\"rawBytesEqual\":false,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"4f5036a6f4b2a631a4d9ed96e961511ffec8abaa1c7f03e0b89cf9fd7f545aa1\",\"commitSha256\":\"fc4ab94f28dd57bd0afb45da5cd8fc872b67a69536067910d8135772295fdfaf\"}\n{\"path\":\"scripts/TongRuntimeSecurity.ps1\",\"rawBytesEqual\":false,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"c9662fd7ae065d29e8ed8b5e2a316c1b49c613ee9fec5001d94cbc80d2421160\",\"commitSha256\":\"34355cac45e5a06a2778f545b5070c2d170fcd58d6b9df0694be3827217245f0\"}\n{\"path\":\"scripts/TongStartupProtocol.ps1\",\"rawBytesEqual\":true,\"lfNormalizedBytesEqual\":true,\"workingSha256\":\"d0d26e4c49bbd6e974f3689aa96d1880fa43ce87aa6246b74d3bf21cb742acea\",\"commitSha256\":\"d0d26e4c49bbd6e974f3689aa96d1880fa43ce87aa6246b74d3bf21cb742acea\"}\n",
+      "stderr": ""
+    }
+  ],
+  "nativeRoot": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+  "nativeEvidence": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\native-review-d410da66-5fd1-40eb-994e-3ea5daced594",
+  "nativeArtifacts": [
+    {
+      "name": "ready-runtime.json",
+      "bytes": 4065,
+      "sha256": "e34d596409f034ab28139a862b981961eaf0fd3f776f89be9a475f07ac4baf85"
+    },
+    {
+      "name": "doctor.json",
+      "bytes": 9117,
+      "sha256": "567e2d4ab2c92c6518414acd3ecfb9bce7f49b80ce70d44ec64905658567ece3"
+    },
+    {
+      "name": "stopped-runtime.json",
+      "bytes": 4166,
+      "sha256": "7a0b5a04c58bbfb3e4edf36553d364ae4c436eb37df88edb64790c1e8736833c"
+    },
+    {
+      "name": "stopped-guardian.json",
+      "bytes": 662,
+      "sha256": "c1429c6992dcb61198dc825b32109f93d34330c8e584a55f30cd0943e2c8c343"
+    },
+    {
+      "name": "timeout-launcher.json",
+      "bytes": 969,
+      "sha256": "a025001947a92ae020b6b3cb2bf1d97c7b89ace5a4461fd1101092a51c34dc8d"
+    },
+    {
+      "name": "timeout-worker.stdout.log",
+      "bytes": 25,
+      "sha256": "c30e4ea93bb3ba4d8c38bb98fd8d8e6150d8bb20b420d14921ee617aff970992"
+    },
+    {
+      "name": "timeout-worker.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "timeout-worker.exit.json",
+      "bytes": 188,
+      "sha256": "adeecb13e3caea48855f3beb1c1247c600e33a7ef9f3444406261c002c8690f8"
+    }
+  ],
+  "backup": {
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\native-backup-de8b86a8-766b-4ff7-980c-a5347a7bdb98",
+    "manifestSha256": "4a33570e817a0611212e5de2fea7e3c455a13031532f264e87e20e99204f006f",
+    "encrypted": true,
+    "fileCount": 5
+  },
+  "loginRoot": "D:\\Tong\\state\\b23-login-5b7bc475924e49dbbf5f6e26ec32752e",
+  "retainedLoginFailure": [
+    {
+      "name": "runtime.json",
+      "bytes": 4066,
+      "sha256": "3a09c5c2c74395163eaaf8ae471d9d80f08376b96bb7e494cc5797b7802e2fe8"
+    },
+    {
+      "name": "guardian.json",
+      "bytes": 481,
+      "sha256": "2df9fa5f8304dc07a55cca2acc678440a592b2db4469d7f84ea7171225ce2d52"
+    },
+    {
+      "name": "request.json",
+      "bytes": 194,
+      "sha256": "8b65cf47cf00bf82cc2162b22becc23d708b451e3cc4b196b68061309b7813aa"
+    },
+    {
+      "name": "backup.freeze",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "stale-reconciliation.558ac4e9-828f-4c8e-b6f0-a0fa8bd54338.json",
+      "bytes": 5547,
+      "sha256": "25f022281816acb90394b6a5d1d53542c2adf207e1aa0d079cf4ef69e5c14d8a"
+    }
+  ],
+  "safetyIncident": {
+    "unauthorizedProductionWrite": true,
+    "path": "D:\\Tong\\runtime\\logs\\maintenance-transaction.json",
+    "bytes": 2107,
+    "createdAt": "2026-10-24T09:20:42.9730408Z",
+    "sha256": "76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473",
+    "phase": "failed",
+    "error": "MUST_NOT_REACH",
+    "transactionId": "9288f925-ebbb-4768-9365-551cf0080f18",
+    "preserved": true
+  }
+}

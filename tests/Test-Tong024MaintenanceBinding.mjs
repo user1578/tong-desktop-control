@@ -73,8 +73,8 @@ for (const mutate of [
 const productionProfile = createProductionProfile({ sourceDigest: 'a'.repeat(64), releaseDigest: 'b'.repeat(64), agentdockEnabled: false });
 await assert.rejects(
   openControlRecordArchive({ profile: productionProfile, observe: async () => goodObservation() }),
-  /MAINTENANCE_AUTHORIZER_REQUIRED/,
-  'production archive must require a native authorizer before any access'
+  /MAINTENANCE_NOT_READY/,
+  'unvalidated production execution must be disabled before any access'
 );
 await assert.rejects(verifyMaintenanceApproval(base.profile, 'bogus-action'), /MAINTENANCE_APPROVAL_ACTION_DENIED/);
 const wrong = await maintenanceFixture();

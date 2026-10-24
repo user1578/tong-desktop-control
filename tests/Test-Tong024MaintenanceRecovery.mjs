@@ -6,9 +6,8 @@ import { maintenance, executeRecovery, executeRollback, validateMaintenancePlan,
 import { maintenanceFixture, goodObservation, legacyRuntime, legacyGuardian, legacyRequest, legacyAbort } from './fixtures/Tong024MaintenanceFixture.mjs';
 
 const exists = async path => { try { await readFile(path); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } };
-const B = 'D:/Tong/state/backup-root';
 const R = 'D:/Tong/state/release-root';
-const S = 'D:/Tong/state/restore-root';
+const paths = fx => ({ backupRoot: join(fx.root, 'state-backup'), releaseRoot: R, restoreRoot: join(fx.root, 'state-restore') });
 
 function depsFor(fx, overrides = {}) {
   const calls = [];
@@ -19,7 +18,7 @@ function depsFor(fx, overrides = {}) {
       confirm,
       observe: async () => goodObservation(),
       verifyBaseline: async () => ({ commit: maintenance.candidateCommit, appVerified: true, managerVerified: true }),
-      snapshot: async ({ backupRoot }) => { calls.push('snapshot'); assert.equal(backupRoot, B); return { ok: true, backupRoot }; },
+      snapshot: async ({ backupRoot }) => { calls.push('snapshot'); assert.equal(backupRoot, paths(fx).backupRoot); return { ok: true, backupRoot }; },
       install: async ({ releaseRoot, approve }) => { calls.push('install'); assert.equal(releaseRoot, R); assert.equal(typeof approve, 'function'); return { commit: maintenance.candidateCommit, installed: true, appFiles: 1, managerFiles: 1 }; },
       start: async () => { calls.push('start'); return { runId: '11111111-2222-3333-4444-555555555555', phase: 'ready' }; },
       stop: async () => { calls.push('stop'); },
@@ -33,7 +32,7 @@ function depsFor(fx, overrides = {}) {
 {
   const fx = await maintenanceFixture();
   const { calls, deps } = depsFor(fx);
-  const result = await executeRecovery(fx.profile, { backupRoot: B, releaseRoot: R, restoreRoot: S, deps });
+  const result = await executeRecovery(fx.profile, { ...paths(fx), deps });
   assert.equal(result.state.phase, 'accepted');
   assert.equal(result.productionExecutionAllowed, false);
   assert.deepEqual(calls, ['snapshot', 'install', 'start', 'doctor']);
@@ -50,45 +49,45 @@ function depsFor(fx, overrides = {}) {
 {
   const fx = await maintenanceFixture();
   const { deps } = depsFor(fx, { verifyBaseline: async () => { throw Error('MAINTENANCE_CANDIDATE_DENIED'); } });
-  await assert.rejects(executeRecovery(fx.profile, { backupRoot: B, releaseRoot: R, restoreRoot: S, deps }), /MAINTENANCE_CANDIDATE_DENIED/);
+  await assert.rejects(executeRecovery(fx.profile, { ...paths(fx), deps }), /MAINTENANCE_CANDIDATE_DENIED/);
   const txn = JSON.parse(await readFile(join(fx.root, 'logs', 'maintenance-transaction.json'), 'utf8'));
   assert.equal(txn.phase, 'failed');
   assert.equal(txn.error.code, 'MAINTENANCE_CANDIDATE_DENIED');
   for (const name of ['runtime.json', 'backup.freeze']) assert.equal(await exists(join(fx.root, 'run', name)), true, name + ' untouched');
 }
 
-// (3) snapshot failure: stale freeze is restored (never deleted), phase failed
+// (3) snapshot failure: stale freeze is retained continuously, phase failed
 {
   const fx = await maintenanceFixture();
   const { deps } = depsFor(fx, { snapshot: async () => { throw Error('SIMULATED_SNAPSHOT_FAILURE'); } });
-  await assert.rejects(executeRecovery(fx.profile, { backupRoot: B, releaseRoot: R, restoreRoot: S, deps }), /SIMULATED_SNAPSHOT_FAILURE/);
-  assert.equal(await exists(join(fx.root, 'run', 'backup.freeze')), true, 'stale freeze must be restored after snapshot failure');
-  assert.equal(await exists(join(fx.root, 'run', 'backup.freeze.hold')), false, 'hold file must be cleared');
+  await assert.rejects(executeRecovery(fx.profile, { ...paths(fx), deps }), /SIMULATED_SNAPSHOT_FAILURE/);
+  assert.equal(await exists(join(fx.root, 'run', 'backup.freeze')), true, 'stale freeze must remain after snapshot failure');
+  assert.equal(await exists(join(fx.root, 'run', 'backup.freeze.hold')), false, 'no lock renaming is permitted');
 }
 
 // (4) install failure stops before archive
 {
   const fx = await maintenanceFixture();
   const { deps } = depsFor(fx, { install: async () => { throw Error('MAINTENANCE_INSTALL_VERIFY_FAILED'); } });
-  await assert.rejects(executeRecovery(fx.profile, { backupRoot: B, releaseRoot: R, restoreRoot: S, deps }), /MAINTENANCE_INSTALL_VERIFY_FAILED/);
+  await assert.rejects(executeRecovery(fx.profile, { ...paths(fx), deps }), /MAINTENANCE_INSTALL_VERIFY_FAILED/);
   const txn = JSON.parse(await readFile(join(fx.root, 'logs', 'maintenance-transaction.json'), 'utf8'));
   assert.equal(txn.phase, 'failed');
   // not archived yet: old records still present
   assert.equal(await exists(join(fx.root, 'run', 'runtime.json')), true);
 }
 
-// (5) health acceptance failure -> independent rollback restores from sealed snapshot
+// (5) health failure retains evidence; code/pin restoration is unsupported.
 {
   const fx = await maintenanceFixture();
   const { calls, deps } = depsFor(fx, { doctor: async () => { calls.push('doctor'); return { healthy: false }; } });
-  await assert.rejects(executeRecovery(fx.profile, { backupRoot: B, releaseRoot: R, restoreRoot: S, deps }), /MAINTENANCE_HEALTH_FAILED/);
+  await assert.rejects(executeRecovery(fx.profile, { ...paths(fx), deps }), /MAINTENANCE_HEALTH_FAILED/);
   assert.deepEqual(calls, ['snapshot', 'install', 'start', 'doctor']);
   // records were archived before start
   for (const name of ['runtime.json', 'guardian.json', 'request.json', 'abort.json', 'backup.freeze']) assert.equal(await exists(join(fx.root, 'run', name)), false);
-  // fresh-process rollback recovers from the persisted transaction + sealed snapshot
-  const rollback = await executeRollback(fx.profile, { deps: { observe: async () => goodObservation(), confirm: async binding => ({ ...binding, kind: 'simulation-only', expiresAt: Date.now() + 60000 }), stop: async () => {} } });
-  assert.equal(rollback.state.phase, 'rolled-back');
-  for (const name of ['runtime.json', 'guardian.json', 'request.json', 'abort.json', 'backup.freeze']) assert.equal(await exists(join(fx.root, 'run', name)), true, name + ' restored');
+  await assert.rejects(executeRollback(fx.profile, { deps: { observe: async () => goodObservation(), confirm: async binding => ({ ...binding, kind: 'simulation-only', expiresAt: Date.now() + 60000 }), stop: async () => {} } }), /MAINTENANCE_RELEASE_RESTORE_UNSUPPORTED/);
+  const txn = JSON.parse(await readFile(join(fx.root, 'logs', 'maintenance-transaction.json'), 'utf8'));
+  assert.equal(txn.phase, 'failed');
+  for (const name of ['runtime.json', 'guardian.json', 'request.json', 'abort.json', 'backup.freeze']) assert.equal(await exists(join(txn.archive.archiveRoot, 'original', name)), true, name + ' evidence retained');
 }
 
 // (6) plan validation rejects wrong baseline/candidate commit
@@ -118,7 +117,7 @@ function depsFor(fx, overrides = {}) {
 {
   const fx = await maintenanceFixture();
   const { deps } = depsFor(fx);
-  await executeRecovery(fx.profile, { backupRoot: B, releaseRoot: R, restoreRoot: S, deps }).catch(() => {});
+  await executeRecovery(fx.profile, { ...paths(fx), deps });
   const txn = JSON.parse(await readFile(join(fx.root, 'logs', 'maintenance-transaction.json'), 'utf8'));
   // tamper with the sealed original -> stateless restore refuses
   const tampered = structuredClone(txn);
@@ -152,4 +151,4 @@ function depsFor(fx, overrides = {}) {
   await assert.rejects(realCopyRelease(fx.profile, releaseRoot, manifest), /MAINTENANCE_SOURCE_HASH_MISMATCH/);
 }
 
-console.log(JSON.stringify({ passed: true, successPathAccepted: true, verifyFailureStops: true, snapshotFailureRestoresFreeze: true, installFailureStops: true, acceptanceFailureRolledBack: true, planCommitBindingValidated: true, installCommitMismatchRejected: true, snapshotTamperRejected: true, realSourceNativeInstallVerified: true, productionExecutionAllowed: false }));
+console.log(JSON.stringify({ passed: true, injectedSuccessPathAccepted: true, verifyFailureStops: true, snapshotFailureRetainsFreeze: true, installFailureStops: true, unsupportedReleaseRollbackRefused: true, planCommitBindingValidated: true, installCommitMismatchRejected: true, snapshotTamperRejected: true, realSourceNativeCopyVerified: true, productionExecutionAllowed: false }));
