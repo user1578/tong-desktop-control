@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { maintenance, observeProductionSite, assessMaintenanceSite, describeMaintenance, productionMaintenanceEntry } from '../scripts/Tong024ProductionMaintenance.mjs';
+import { maintenance, observeProductionSite, assessMaintenanceSite, describeMaintenance, productionMaintenanceEntry, runProductionRecovery, rollbackProductionRecovery } from '../scripts/Tong024ProductionMaintenance.mjs';
+import { createProductionProfile } from '../scripts/TongProductionProfile.mjs';
 import { maintenanceFixture, legacyRuntime, legacyGuardian, legacyRequest, legacyAbort } from './fixtures/Tong024MaintenanceFixture.mjs';
 
 const goneSecurity = {
@@ -85,4 +86,15 @@ const evidence = () => ({ baselineCommit: maintenance.baselineCommit, runtime: l
   await assert.rejects(productionMaintenanceEntry(fx.profile), /MAINTENANCE_PRODUCTION_ONLY/);
 }
 
-console.log(JSON.stringify({ passed: true, observerQuiescentAccepted: true, liveProcessRefused: true, busyJobRefused: true, busyPortRefused: true, presentReceiptRecorded: true, planBound: true, productionEntryFailClosed: true, productionExecutionAllowed: false }));
+// (8) complete single-entry recovery gates fail closed before any native access
+{
+  const prod = createProductionProfile({ sourceDigest: 'a'.repeat(64), releaseDigest: 'b'.repeat(64), agentdockEnabled: false });
+  const fx = await maintenanceFixture();
+  await assert.rejects(runProductionRecovery(fx.profile, { backupRoot: 'D:\\Tong\\state\\b', releaseRoot: 'D:\\Tong\\state\\r', restoreRoot: 'D:\\Tong\\state\\s' }), /MAINTENANCE_PRODUCTION_ONLY/);
+  await assert.rejects(runProductionRecovery(prod, {}), /MAINTENANCE_BACKUP_ROOT_REQUIRED/);
+  await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b' }), /MAINTENANCE_RELEASE_ROOT_REQUIRED/);
+  await assert.rejects(runProductionRecovery(prod, { backupRoot: 'D:\\Tong\\state\\b', releaseRoot: 'D:\\Tong\\state\\r' }), /MAINTENANCE_RESTORE_ROOT_REQUIRED/);
+  await assert.rejects(rollbackProductionRecovery(prod, {}), /MAINTENANCE_BACKUP_ROOT_REQUIRED/);
+}
+
+console.log(JSON.stringify({ passed: true, observerQuiescentAccepted: true, liveProcessRefused: true, busyJobRefused: true, busyPortRefused: true, presentReceiptRecorded: true, planBound: true, productionEntryFailClosed: true, completeEntryFailClosed: true, productionExecutionAllowed: false }));

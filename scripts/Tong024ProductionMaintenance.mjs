@@ -491,6 +491,63 @@ export async function verifyMaintenanceApproval(profile, action) {
   return { kind: 'production-receipt', action, verifiedAt: new Date().toISOString() };
 }
 
+// ---- complete single-entry production recovery (one controlled run) ----
+// Sequences the full 024 maintenance window: verify -> observe -> snapshot ->
+// switch -> archive -> reverify -> start -> accept. Every mutating step is gated
+// by a real typed receipt (verifyRuntimeApproval). snapshot/switchRelease/
+// stateRestore default to the real state/switch machinery and are injectable so
+// the isolation test can assert the fail-closed gates without native access.
+
+function maintenancePlanFor(profile) {
+  return { baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit, runIds: { oldRunId: maintenance.oldRunId, firstFailedRunId: maintenance.firstFailedRunId, failedRunId: maintenance.failedRunId }, ports: [...maintenance.ports], window: { issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 3600000).toISOString() }, profile };
+}
+
+export async function runProductionRecovery(profile, { backupRoot, releaseRoot, restoreRoot, deps = {} } = {}) {
+  const valid = validateProductionProfile(profile);
+  if (valid.mode !== 'production' || valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_PRODUCTION_ONLY');
+  for (const [flag, value] of [['backup', backupRoot], ['release', releaseRoot], ['restore', restoreRoot]]) if (typeof value !== 'string' || !isAbsolute(value)) fail('MAINTENANCE_' + flag.toUpperCase() + '_ROOT_REQUIRED');
+  const { createProductionStateBackup, restoreProductionStateBackup, applyRestoredProductionState } = await import('./TongProductionState.mjs');
+  const runtime = await import('./TongAgentDockRuntime.mjs');
+  const observe = deps.observe ?? (() => observeProductionSite(valid));
+  const authorize = deps.authorize ?? (action => verifyMaintenanceApproval(valid, action));
+  const verifyBaseline = deps.verifyBaseline ?? (() => verifyMaintenanceBaseline(valid));
+  const start = deps.start ?? (() => runtime.startRuntime(valid.root));
+  const stop = deps.stop ?? (() => runtime.stopRuntime(valid.root));
+  const doctor = deps.doctor ?? (() => runtime.runtimeDoctor(valid.root));
+  const snapshot = deps.snapshot ?? (() => createProductionStateBackup(valid, { backupRoot }));
+  const switchRelease = deps.switchRelease ?? (() => switchMaintenanceRelease(valid, releaseRoot, { approve: action => verifyMaintenanceApproval(valid, action) }));
+  const session = await openMaintenanceSession({ profile: valid, observe, authorize, verifyBaseline, start, stop, doctor });
+  await session.plan(maintenancePlanFor(valid));
+  await session.verify();
+  await session.observe();
+  const snapshotEvidence = await snapshot();
+  const switchEvidence = await switchRelease();
+  await session.archive();
+  await session.reverify();
+  await session.start();
+  await session.accept();
+  return { state: session.state, backupRoot, releaseRoot, restoreRoot, snapshotEvidence, switchEvidence, productionExecutionAllowed: false };
+}
+
+export async function rollbackProductionRecovery(profile, { backupRoot, restoreRoot, deps = {} } = {}) {
+  const valid = validateProductionProfile(profile);
+  if (valid.mode !== 'production' || valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_PRODUCTION_ONLY');
+  for (const [flag, value] of [['backup', backupRoot], ['restore', restoreRoot]]) if (typeof value !== 'string' || !isAbsolute(value)) fail('MAINTENANCE_' + flag.toUpperCase() + '_ROOT_REQUIRED');
+  const { restoreProductionStateBackup, applyRestoredProductionState } = await import('./TongProductionState.mjs');
+  const runtime = await import('./TongAgentDockRuntime.mjs');
+  const observe = deps.observe ?? (() => observeProductionSite(valid));
+  const authorize = deps.authorize ?? (action => verifyMaintenanceApproval(valid, action));
+  const verifyBaseline = deps.verifyBaseline ?? (() => verifyMaintenanceBaseline(valid));
+  const start = deps.start ?? (() => runtime.startRuntime(valid.root));
+  const stop = deps.stop ?? (() => runtime.stopRuntime(valid.root));
+  const doctor = deps.doctor ?? (() => runtime.runtimeDoctor(valid.root));
+  const stateRestore = deps.stateRestore ?? (async () => { await restoreProductionStateBackup(valid, { backupRoot, restoreRoot }); await applyRestoredProductionState(valid, { restoreRoot }); });
+  const session = await openMaintenanceSession({ profile: valid, observe, authorize, verifyBaseline, start, stop, doctor });
+  await session.rollback();
+  const stateEvidence = await stateRestore();
+  return { state: session.state, backupRoot, restoreRoot, stateEvidence, productionExecutionAllowed: false };
+}
+
 // ---- CLI entry ----
 if (process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) {
   const [command, ...args] = process.argv.slice(2);
@@ -507,16 +564,12 @@ if (process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(
       console.log(JSON.stringify(await verifyMaintenanceBaseline(profile), null, 2));
     } else if (command === 'run') {
       const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
-      const session = await productionMaintenanceEntry(profile);
-      await session.plan({ baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit, runIds: { oldRunId: maintenance.oldRunId, firstFailedRunId: maintenance.firstFailedRunId, failedRunId: maintenance.failedRunId }, ports: [...maintenance.ports], window: { issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 3600000).toISOString() }, profile });
-      await session.verify(); await session.observe(); await session.archive(); await session.reverify();
-      await session.start(); await session.accept();
-      console.log(JSON.stringify({ ok: true, state: session.state }, null, 2));
+      const result = await runProductionRecovery(profile, { backupRoot: option('--backup-root'), releaseRoot: option('--release-root'), restoreRoot: option('--restore-root') });
+      console.log(JSON.stringify({ ok: true, state: result.state }, null, 2));
     } else if (command === 'rollback') {
       const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
-      const session = await productionMaintenanceEntry(profile);
-      await session.rollback();
-      console.log(JSON.stringify({ ok: true, state: session.state }, null, 2));
+      const result = await rollbackProductionRecovery(profile, { backupRoot: option('--backup-root'), restoreRoot: option('--restore-root') });
+      console.log(JSON.stringify({ ok: true, state: result.state }, null, 2));
     } else {
       fail('MAINTENANCE_BAD_COMMAND');
     }
