@@ -278,7 +278,8 @@ async function stopCandidate(root, state, manifest) {
   const requestIsOld = oldRequest && fingerprint(await maybe(join(root, 'run', 'request.json'))) === oldRequest.beforeSha256;
   const candidateId = state.candidateRunId ?? state.startedRunId;
   if (candidateId && !idPattern.test(candidateId)) fail('MAINTENANCE_NEW_RUN_UNKNOWN');
-  if(candidateId&&!requestIsOld&&(request?.runId!==candidateId||sha(await data(join(root,'run','request.json')))!==state.requestSha256))fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
+  const archivedRequest=state.phase==='rolling-back'&&request===null&&state.candidateControls?.some(file=>file.name==='request.json'&&file.sha256===state.requestSha256)&&fingerprint(await maybe(join(root,'maintenance-transactions',state.transactionId,'retired','control-request.json')))===state.requestSha256;
+  if(candidateId&&!requestIsOld&&!archivedRequest&&(request?.runId!==candidateId||sha(await data(join(root,'run','request.json')))!==state.requestSha256))fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');
   const status = await runtimeStatus(root);
   if (status.supervisorAlive) {
     if (!candidateId || status.runId !== candidateId) fail('MAINTENANCE_REPLACEMENT_RUN_PRESENT');

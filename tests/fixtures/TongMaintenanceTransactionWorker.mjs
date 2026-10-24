@@ -28,7 +28,7 @@ try{
   }
   console.log(JSON.stringify({event:'native_concurrent_lifecycle_refused',results}));
  }else{
- const result=action==='run'?await executeRecovery(fx.baselineProfile,{candidateProfile:fx.candidateProfile,candidateCommit:fx.candidateCommit,releaseRoot:fx.releaseRoot,onCheckpoint,...(fault==='startup-timeout'?{startupTimeoutMs:1}:{})}):action==='rollback'?await resumeMaintenanceTransaction(fx.baselineProfile,{transactionId,action:'rollback',onCheckpoint}):await resumeMaintenanceTransaction(fx.baselineProfile,{transactionId,action});
+ const result=action==='run'?await executeRecovery(fx.baselineProfile,{candidateProfile:fx.candidateProfile,candidateCommit:fx.candidateCommit,releaseRoot:fx.releaseRoot,onCheckpoint,...(['startup-timeout','concurrent-lifecycle'].includes(fault)?{startupTimeoutMs:1}:{})}):action==='rollback'?await resumeMaintenanceTransaction(fx.baselineProfile,{transactionId,action:'rollback',onCheckpoint}):await resumeMaintenanceTransaction(fx.baselineProfile,{transactionId,action,onCheckpoint});
  console.log(JSON.stringify({event:'maintenance_worker_result',action,...result}));
  }
 }catch(error){console.error(JSON.stringify({event:'maintenance_worker_error',action,code:error.message,startupFailure:error.startupFailure}));process.exitCode=1;}
