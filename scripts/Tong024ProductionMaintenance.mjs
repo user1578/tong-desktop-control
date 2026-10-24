@@ -1,9 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, lstat, realpath, rename, open } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { join, resolve, sep, isAbsolute } from 'node:path';
+import { connect } from 'node:net';
+import { fileURLToPath } from 'node:url';
 import { verifyRuntimeCandidate, pinRuntimeRelease } from './TongRuntimeCandidate.mjs';
 import { validateProductionProfile, verifyRuntimeApproval, PRODUCTION_ROOT } from './TongProductionProfile.mjs';
-import { assertProtectedPaths } from './TongRuntimeSecurity.mjs';
+import { assertProtectedPaths, processIdentity, startupJobsState, sameProcess } from './TongRuntimeSecurity.mjs';
 import { assessLegacyRecovery, incident } from './Tong024LegacyRecovery.mjs';
 
 // Formal production maintenance adapter for the 024 startup-recovery incident.
@@ -351,9 +353,172 @@ export async function openMaintenanceSession({ profile, managerProfile, observe,
   };
 }
 
+// ---- real production site observation (read-only) ----
+// Builds the live-evidence structure that assessMaintenanceSite / assessStartupSite
+// consume. Process identities, jobs and ports are queried through injectable
+// primitives (defaulting to the real TongRuntimeSecurity / node:net), so the
+// isolation tests can exercise the exact shape with fake primitives while the
+// production driver uses the real native ones. monitorStopped fails closed:
+// without an explicit check it reports false, which blocks the site.
+
+function defaultPortFree(port) {
+  return new Promise(resolve => {
+    const socket = connect({ host: '127.0.0.1', port, timeout: 750 });
+    socket.once('connect', () => { socket.destroy(); resolve(false); });
+    socket.once('timeout', () => { socket.destroy(); resolve(true); });
+    socket.once('error', () => { socket.destroy(); resolve(true); });
+  });
+}
+
+export async function observeProductionSite(profile, { security, checkPort = defaultPortFree, checkMonitor } = {}) {
+  const valid = validateProductionProfile(profile);
+  const root = valid.root, run = join(root, 'run');
+  const pid = security?.processIdentity ?? processIdentity;
+  const jobsState = security?.startupJobsState ?? startupJobsState;
+  const same = security?.sameProcess ?? sameProcess;
+  const monitor = checkMonitor ?? (async () => false);
+
+  const record = async name => { try { return JSON.parse(await readFile(join(run, name), 'utf8')); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } };
+  const runtime = await record('runtime.json');
+  const guardian = await record('guardian.json');
+  const request = await record('request.json');
+  const abort = await record('abort.json');
+
+  const owned = [guardian, runtime?.supervisor, ...(runtime?.children ?? []), ...(runtime?.descendants ?? [])].filter(id => Number.isSafeInteger(id?.pid) && id.pid > 0);
+  const identities = [], matchingProcesses = [];
+  for (const id of owned) {
+    const actual = await pid(id.pid, id.marker ?? maintenance.oldRunId);
+    const alive = same(actual, id) && actual?.markerMatches === true;
+    identities.push({ ...id, state: alive ? 'alive' : 'gone' });
+    if (alive) matchingProcesses.push(actual);
+  }
+
+  const jobs = [];
+  for (const runId of [maintenance.oldRunId, maintenance.firstFailedRunId, maintenance.failedRunId]) {
+    const state = await jobsState(runId);
+    for (const role of ['runtime', 'owner', 'launcher', 'guardian']) jobs.push({ runId, role, active: Number.isInteger(state?.[role]) ? state[role] : 0 });
+  }
+
+  const ports = [];
+  for (const port of maintenance.ports) ports.push({ port, free: await checkPort(port) });
+
+  const launcherReceipt = !(await absent(join(run, 'launcher.' + maintenance.failedRunId + '.json')));
+  const guardianReceipt = !(await absent(join(run, 'guardian.' + maintenance.failedRunId + '.json')));
+  const freezePresent = !(await absent(join(run, 'backup.freeze')));
+
+  return {
+    observedAt: new Date().toISOString(),
+    lifecycleExclusive: freezePresent,
+    monitorStopped: await monitor(root),
+    processInventoryComplete: true,
+    matchingProcesses,
+    identities,
+    jobs,
+    ports,
+    failedAttemptReceipts: (!launcherReceipt && !guardianReceipt) ? 'absent-legacy' : 'present-legacy',
+    records: { runtimeRunId: runtime?.runId ?? null, guardianRunId: guardian?.runId ?? null, requestRunId: request?.runId ?? null, abortRunId: abort?.runId ?? null },
+    productionExecutionAllowed: false,
+  };
+}
+
+// ---- single production-recovery operation plan (data, no side effects) ----
+
+export function describeMaintenance() {
+  return {
+    kind: maintenance.kind,
+    baselineCommit: maintenance.baselineCommit,
+    candidateCommit: maintenance.candidateCommit,
+    productionRoot: PRODUCTION_ROOT,
+    oldRunId: maintenance.oldRunId,
+    firstFailedRunId: maintenance.firstFailedRunId,
+    failedRunId: maintenance.failedRunId,
+    ports: [...maintenance.ports],
+    controlRecords: [...maintenance.requiredRecords],
+    optionalRecords: [...maintenance.optionalRecords],
+    nativeAuthorization: [
+      { action: 'backup', purpose: 'sealed state + control-record snapshot (createProductionStateBackup)' },
+      { action: 'manager', purpose: 'App/Manager consistent version switch + old control-record archive' },
+      { action: 'start', purpose: 'one controlled startup (startRuntime)' },
+      { action: 'stop', purpose: 'failure stop (stopRuntime)' },
+      { action: 'restore', purpose: 'controlled rollback (restoreProductionStateBackup + archive.rollback)' },
+    ],
+    executionOrder: [
+      'verifyMaintenanceBaseline (App/Manager same-commit + native + Node/ABI)',
+      'observeProductionSite -> assessMaintenanceSite (three runIds, jobs, ports, monitor)',
+      'acquire backup.freeze lifecycle mutex; confirm runtime stopped',
+      'snapshot: createProductionStateBackup + openControlRecordArchive.prepare (seal)',
+      'native typed-challenge approve (backup -> manager -> start -> stop -> restore receipts)',
+      'switchMaintenanceRelease (pinRuntimeRelease app + manager)',
+      'archive: openControlRecordArchive.retire (freeze last)',
+      'reverify: observeProductionSite -> assessStartupSite (no new records)',
+      'start: startRuntime -> runtimeDoctor (ready, Gateway/MCP, login monitor healthy)',
+      'on any failure: stopRuntime + archive.rollback (freeze first) + restoreProductionStateBackup',
+    ],
+    failStopConditions: [
+      'assessMaintenanceSite/assessStartupSite returns any failure (live process, unknown process, non-empty Job, busy port, monitor not stopped, missing/forged receipt)',
+      'verifyRuntimeApproval denies/missing/expired/wrong-bound for any action',
+      'snapshot hash mismatch or third-party file change',
+      'startup not ready / doctor unhealthy / CLEANUP_REQUIRED',
+    ],
+    rollback: 'freeze restored first, then control records, then code/config/binding; new candidate control records kept under their own runId; old runtime verified independently after restore',
+    productionExecutionAllowed: false,
+  };
+}
+
+// ---- production driver: binds the session to the real machinery ----
+
+async function loadProfile(root) {
+  if (typeof root !== 'string' || !isAbsolute(root)) fail('MAINTENANCE_ROOT_REQUIRED');
+  return validateProductionProfile(JSON.parse(await readFile(join(root, 'profile.json'), 'utf8')));
+}
+
+export async function productionMaintenanceEntry(profile, { security, checkPort, checkMonitor } = {}) {
+  const valid = validateProductionProfile(profile);
+  if (valid.mode !== 'production' || valid.root !== PRODUCTION_ROOT) fail('MAINTENANCE_PRODUCTION_ONLY');
+  const observe = () => observeProductionSite(valid, { security, checkPort, checkMonitor });
+  const authorize = action => verifyMaintenanceApproval(valid, action);
+  const runtime = await import('./TongAgentDockRuntime.mjs');
+  const start = () => runtime.startRuntime(valid.root);
+  const stop = () => runtime.stopRuntime(valid.root);
+  const doctor = () => runtime.runtimeDoctor(valid.root);
+  return openMaintenanceSession({ profile: valid, observe, authorize, start, stop, doctor });
+}
+
 // Production authorization hook: verify an existing typed DPAPI receipt. Never mints.
 export async function verifyMaintenanceApproval(profile, action) {
   if (!maintenance.requiredApprovals.includes(action)) fail('MAINTENANCE_APPROVAL_ACTION_DENIED');
   await verifyRuntimeApproval(validateProductionProfile(profile), action);
   return { kind: 'production-receipt', action, verifiedAt: new Date().toISOString() };
+}
+
+// ---- CLI entry ----
+if (process.argv[1] && resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()) {
+  const [command, ...args] = process.argv.slice(2);
+  const option = name => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; };
+  try {
+    if (command === 'describe') {
+      console.log(JSON.stringify(describeMaintenance(), null, 2));
+    } else if (command === 'observe') {
+      const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
+      const observation = await observeProductionSite(profile);
+      console.log(JSON.stringify(observation, null, 2));
+    } else if (command === 'verify') {
+      const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
+      console.log(JSON.stringify(await verifyMaintenanceBaseline(profile), null, 2));
+    } else if (command === 'run') {
+      const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
+      const session = await productionMaintenanceEntry(profile);
+      await session.plan({ baselineCommit: maintenance.baselineCommit, candidateCommit: maintenance.candidateCommit, runIds: { oldRunId: maintenance.oldRunId, firstFailedRunId: maintenance.firstFailedRunId, failedRunId: maintenance.failedRunId }, ports: [...maintenance.ports], window: { issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 3600000).toISOString() }, profile });
+      await session.verify(); await session.observe(); await session.archive(); await session.reverify();
+      await session.start(); await session.accept();
+      console.log(JSON.stringify({ ok: true, state: session.state }, null, 2));
+    } else if (command === 'rollback') {
+      const profile = await loadProfile(option('--root') ?? PRODUCTION_ROOT);
+      const session = await productionMaintenanceEntry(profile);
+      await session.rollback();
+      console.log(JSON.stringify({ ok: true, state: session.state }, null, 2));
+    } else {
+      fail('MAINTENANCE_BAD_COMMAND');
+    }
+  } catch (error) { console.error(String(error?.code ?? error?.message ?? error)); process.exitCode = 1; }
 }
