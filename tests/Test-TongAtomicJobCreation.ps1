@@ -1,6 +1,7 @@
+param([string]$ScriptsRoot)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
-$scripts=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\scripts'))
+$scripts=if($ScriptsRoot){[IO.Path]::GetFullPath($ScriptsRoot)}else{[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\scripts'))}
 $testRoot=Join-Path 'D:\Tong\state' ('atomic-job-'+[guid]::NewGuid().ToString('N'))
 $null=New-Item -ItemType Directory -Path $testRoot
 $protocol=Get-Content (Join-Path $scripts 'TongStartupProtocol.ps1') -Raw
@@ -26,7 +27,7 @@ foreach($mode in @('preflight','supervisor','guardian')){
         $body+="`$child=[TongStartupPreflight]::StartGuardian(('Local\TongGuardian-'+`$RunId),'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe','"+$arguments.Replace("'","''")+"',`$Root,30000)"
     }
     $worker=Join-Path $root 'worker.ps1';[IO.File]::WriteAllText($worker,$body)
-    $info=[Diagnostics.ProcessStartInfo]::new('C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',('-NoProfile -NonInteractive -File "'+$worker+'" -Root "'+$root+'" -RunId '+$runId))
+    $info=[Diagnostics.ProcessStartInfo]::new('C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$worker+'" -Root "'+$root+'" -RunId '+$runId))
     $info.UseShellExecute=$false;$info.CreateNoWindow=$true
     $owner=[Diagnostics.Process]::Start($info);$childId=0
     try{

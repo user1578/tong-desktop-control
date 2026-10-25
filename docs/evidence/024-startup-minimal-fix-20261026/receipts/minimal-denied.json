@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 2,
+  "runId": "190b0041-891b-49ce-b790-2636d864dcc3",
+  "role": "launcher",
+  "owner": {
+    "pid": 23860,
+    "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "startTicks": "639285431162249800",
+    "markerMatches": true
+  },
+  "launcher": {
+    "pid": 23860,
+    "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "startTicks": "639285431162249800",
+    "markerMatches": true
+  },
+  "stage": "preflight",
+  "guardianCreated": false,
+  "preflightClean": true,
+  "nodeCreated": false,
+  "runtimeClean": false,
+  "jobName": "Local\\TongRuntime-190b0041-891b-49ce-b790-2636d864dcc3",
+  "jobActiveAfterCleanup": null,
+  "at": "2026-10-25T16:38:37.9533072Z",
+  "preflight": {
+    "startedAt": "2026-10-25T16:38:37.2112436Z",
+    "elapsedMs": 725,
+    "exitCode": 1,
+    "child": {
+      "pid": 32312,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639285431172186400"
+    },
+    "jobName": "Local\\TongPreflight-launcher-190b0041-891b-49ce-b790-2636d864dcc3",
+    "jobActiveAfterCleanup": 0,
+    "failure": {
+      "role": "launcher",
+      "stage": "preflight",
+      "code": "APPROVAL_DENIED",
+      "win32Error": null
+    }
+  },
+  "failure": {
+    "role": "launcher",
+    "stage": "preflight",
+    "code": "APPROVAL_DENIED",
+    "exceptionType": "System.Management.Automation.RuntimeException",
+    "errorId": "APPROVAL_DENIED",
+    "hresult": -2146233087,
+    "win32Error": null,
+    "exitCode": 2,
+    "diagnosticId": "190b0041-891b-49ce-b790-2636d864dcc3/launcher",
+    "preflightExitCode": 1
+  },
+  "finishedAt": "2026-10-25T16:38:37.9523075Z",
+  "code": "APPROVAL_DENIED"
+}

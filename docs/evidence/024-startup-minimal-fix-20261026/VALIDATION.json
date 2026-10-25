@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "productionModified": false,
+  "productionStarted": false,
+  "productionReady": false,
+  "productionDoctorHealthy": "NOT_CHECKED_THIS_TURN",
+  "productionRootCause": "UNKNOWN",
+  "hypothesis": "Fixed 15000ms Launcher wait can cut off a longer production-only preflight, destroying terminal proof; original incident cause not established.",
+  "baselineObservation": {
+    "sourceCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "isolatedRoot": "D:/Tong/state/b23-login-e63f3c0dfb1248bbb29efa3160e76232",
+    "runId": "899fbada-48e5-4b5f-b29b-b3840ffeebc6",
+    "launcherElapsedMs": 8400,
+    "preflightPassed": true,
+    "productionOnlyBranchRelocated": true,
+    "syntheticAuthorization": true,
+    "stoppedBeforeGuardian": true,
+    "measurementSource": "Observed command stdout; original v2 has no native preflight receipt."
+  },
+  "nativePreflightCases": [
+    {
+      "name": "minimal-valid",
+      "root": "D:/Tong/state/b23-login-0d49a875258b4d8e8580e983ee73bbf0",
+      "runId": "8b1593df-f08c-4aee-a217-55d3c6511a23",
+      "elapsedMs": 9430,
+      "originalReceiptSha256": "68a640ec860c4936b46827501ca803814d80db1b8a1c1c8cabbea91c3c62f9df",
+      "receipt": "receipts/minimal-valid.json",
+      "exitCode": 2,
+      "exitExplanation": "Test-only stop after real preflight, before Guardian creation",
+      "fourJobs": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "exactPreflightIdentityGone": true
+    },
+    {
+      "name": "minimal-denied",
+      "root": "D:/Tong/state/b23-login-d12ae22d7fa348ad8766ad03321e67c0",
+      "runId": "190b0041-891b-49ce-b790-2636d864dcc3",
+      "elapsedMs": 1753,
+      "originalReceiptSha256": "60153ed13f3f5699f5856fdd123ba535eba84376b7a1ce0102a8a79702ab58c2",
+      "receipt": "receipts/minimal-denied.json",
+      "exitCode": 2,
+      "exitExplanation": "Real preflight rejection or cancellation",
+      "fourJobs": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "exactPreflightIdentityGone": true
+    },
+    {
+      "name": "minimal-slow",
+      "root": "D:\\Tong\\state\\b23-login-a58341e88f0d413999226fcae1111a6c",
+      "runId": "e28787dd-5bd4-4461-8268-5fb89f6f64b7",
+      "elapsedMs": 18231,
+      "controlledDelayMs": 9000,
+      "originalReceiptSha256": "793a4c804c2b7ce9892c9b26c666c61a07b9af72edc6e5ea543510efeb8f1568",
+      "receipt": "receipts/minimal-slow.json",
+      "exitCode": 2,
+      "exitExplanation": "Test-only stop after real preflight, before Guardian creation",
+      "fourJobs": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "exactPreflightIdentityGone": true
+    },
+    {
+      "name": "minimal-timeout",
+      "root": "D:\\Tong\\state\\b23-login-418d7372f08d4e2e8a8559300f1c38a0",
+      "runId": "e3bac895-af7f-4c62-b31b-d55e9dde0880",
+      "elapsedMs": 3666,
+      "controlledDelayMs": 0,
+      "originalReceiptSha256": "1c3cc7320b912ac0f399a34ebef13b1d1dcbaf8811b8f4a62f93013ffbbb0936",
+      "receipt": "receipts/minimal-timeout.json",
+      "exitCode": 2,
+      "exitExplanation": "Real preflight rejection or cancellation",
+      "fourJobs": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "exactPreflightIdentityGone": true
+    }
+  ],
+  "otherChecks": [
+    {
+      "test": "Test-TongLauncherBudget.mjs",
+      "mode": "current and --minimal-candidate",
+      "passed": true,
+      "kind": "actual orchestration function with virtual time/native API doubles",
+      "covers": [
+        "over-15s result",
+        "first error versus cleanup refusal",
+        "bounded redacted stderr",
+        "missing/mismatched/late receipt refuses unlock",
+        "exact process identity",
+        "four empty Jobs",
+        "legacy receipt refusal"
+      ]
+    },
+    {
+      "test": "Test-TongStartupProtocol.ps1 -ScriptsRoot <isolated-seven-file-candidate>",
+      "passed": true,
+      "host": "Windows PowerShell 5.1",
+      "evidenceRoot": "D:/Tong/state/startup-protocol-eeaa3e79fa1d49f5acdb22a19eab469f",
+      "covers": [
+        "native slow preflight",
+        "deadline",
+        "abort",
+        "owner loss",
+        "descendant gone",
+        "unproven cleanup refuses next stage"
+      ]
+    },
+    {
+      "test": "Test-TongAtomicJobCreation.ps1 -ScriptsRoot <isolated-seven-file-candidate>",
+      "passed": true,
+      "host": "Windows PowerShell 5.1",
+      "evidenceRoot": "D:/Tong/state/atomic-job-952e581490fd4b898e0cbd8a7137e100",
+      "covers": [
+        "owner killed inside CreateProcess return boundary",
+        "preflight/Supervisor/Guardian identity gone"
+      ]
+    },
+    {
+      "test": "Test-TongGuardianOwnership.mjs with isolated-seven-file-candidate",
+      "passed": true,
+      "evidenceRoots": [
+        "D:/Tong/state/guardian-ownership-V4GxcZ",
+        "D:/Tong/state/guardian-ownership-fAFxzM"
+      ],
+      "covers": [
+        "Guardian adoption exit37 preserved",
+        "created then cleaned distinguished from never created",
+        "compiler descendant cannot inherit owner handle"
+      ]
+    },
+    {
+      "test": "git apply --check then actual apply to original-v2 isolated subset",
+      "passed": true,
+      "coreAutocrlf": false,
+      "exactSevenFinalByteHashesMatch": true
+    },
+    {
+      "test": "node --check",
+      "passed": true,
+      "files": 6
+    },
+    {
+      "test": "PowerShell7 parser",
+      "passed": true,
+      "files": 7
+    },
+    {
+      "test": "Windows PowerShell 5.1 parser",
+      "passed": true,
+      "files": 7
+    }
+  ],
+  "limitations": [
+    "Relocated root with synthetic authorization; no real production grant, database or personal configuration accessed.",
+    "Fixture source inventory is scripts-only and native pin list is empty; real production full source/native manifest and disk load are not reproduced. Existing dependencies are shared read-only by junction.",
+    "Slow case injects 9000ms into the owned Node preflight before running unchanged preflight-login; not a measurement of historical production latency.",
+    "All production-branch preflight cases stop before Guardian creation. Native Guardian/Job safety uses separate isolated tests; no end-to-end production-equivalent READY/doctor run.",
+    "Preflight Node stderr remains NUL in the reused native protocol; only Launcher fixed-message stderr projection is bounded and published.",
+    "Historical attempt lacks Launcher identity, true exit code and first exception. Absence cannot be repaired retrospectively.",
+    "Legacy Guardian lacks the new atomic containment marker and old requests lack new receipts. Ordinary candidate start must refuse them; no fabricated upgrade or state handoff is included.",
+    "No installation/pin/authorization update or production rollback was executed. Review patch is not deployment-ready."
+  ],
+  "finalSourceBinding": {
+    "name": "minimal-valid",
+    "sourceRef": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "minimalOverlay": true,
+    "runId": "63df730c-7843-4521-a2bc-35037a60970f",
+    "isolatedRoot": "D:\\Tong\\state\\b23-login-b9cced3b74374514a14cedecf2e006bf",
+    "productionBranchExecuted": true,
+    "syntheticAuthorization": true,
+    "stoppedBeforeGuardian": true,
+    "elapsedMs": 9220,
+    "controlledDelayMs": 0,
+    "exitCode": 2,
+    "preflightPassed": true,
+    "launcherCopySha256": "8f0b1062f8c3db3b0d2b264ad34eb652ef4b989b34a93e643c9992641097d135",
+    "jobs": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    },
+    "preflight": {
+      "startedAt": "2026-10-25T16:54:25.1041519Z",
+      "elapsedMs": 8065,
+      "exitCode": 0,
+      "child": {
+        "pid": 24580,
+        "exe": "D:\\node\\node.exe",
+        "startTicks": "639285440651132810"
+      },
+      "jobName": "Local\\TongPreflight-launcher-63df730c-7843-4521-a2bc-35037a60970f",
+      "jobActiveAfterCleanup": 0
+    },
+    "failure": {
+      "role": "launcher",
+      "stage": "preflight_complete",
+      "code": "TEST_PREFLIGHT_STOP",
+      "exceptionType": "System.Management.Automation.RuntimeException",
+      "errorId": "TEST_PREFLIGHT_STOP",
+      "hresult": -2146233087,
+      "win32Error": null,
+      "exitCode": 2,
+      "diagnosticId": "63df730c-7843-4521-a2bc-35037a60970f/launcher",
+      "preflightExitCode": 0
+    },
+    "limitation": "Relocated root with synthetic pins/grant; not an exact production latency reproduction.",
+    "receipt": "receipts/final-valid.json",
+    "originalReceiptSha256": "be25e73d927725e3be1bf6bbd6c7b05a540dfc34ff804460a3c6dfad0e6853ab",
+    "allSevenManagerFileByteHashesMatchManifest": true
+  },
+  "review": {
+    "readOnlyIndependentReview": true,
+    "importantFindings": 1,
+    "resolved": 1,
+    "guardianPreflightInitialAndSecondaryFailureRegressionPassed": true
+  },
+  "testHarnessCorrections": [
+    "Use the same existing per-process ExecutionPolicy Bypass argument as the pinned Launcher, without changing machine policy.",
+    "Share existing read-only dependency tree for the real CLI import; no installation or full dependency copy.",
+    "Use a file URL for the controlled slow-loader import on Windows."
+  ]
+}

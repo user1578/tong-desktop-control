@@ -189,22 +189,33 @@ function Assert-TongStartupActive {
 }
 function Invoke-TongStartupPreflight([string]$Arguments) {
     Assert-TongStartupActive
+    $watch=[Diagnostics.Stopwatch]::StartNew()
+    $script:tongStartup['preflight']=[ordered]@{startedAt=[DateTime]::UtcNow.ToString('o');elapsedMs=$null;exitCode=$null;child=$null;jobName=('Local\TongPreflight-'+$script:tongRole+'-'+$RunId);jobActiveAfterCleanup=$null}
     $script:tongStartup.preflightClean=$false;Set-TongStartupStage 'preflight'
     $probe=$null
     try {
         $probe=[TongStartupPreflight]::new(('Local\TongPreflight-'+$script:tongRole+'-'+$RunId),$NodeExe,$Arguments,$Root)
+        $script:tongStartup.preflight.child=[ordered]@{pid=$probe.Pid;exe=$NodeExe;startTicks=$probe.StartTicks}
+        Set-TongStartupStage 'preflight'
         while(-not $probe.Exited){Assert-TongStartupActive;Start-Sleep -Milliseconds 100}
         $script:tongStartup['preflightExitCode']=[long]$probe.ExitCode
+        $script:tongStartup.preflight.exitCode=[long]$probe.ExitCode
         if($probe.ExitCode -ne 0){throw 'APPROVAL_DENIED'}
+    }catch{
+        $initial=$_.Exception;while($initial.InnerException){$initial=$initial.InnerException}
+        $script:tongStartup.preflight['failure']=[ordered]@{role=$script:tongRole;stage='preflight';code=$(if($initial.Message -cmatch '^[A-Z_]{1,64}$'){$initial.Message}else{'SUPERVISOR_START_FAILED'});win32Error=$(if($initial -is [ComponentModel.Win32Exception]){$initial.NativeErrorCode}else{$null})}
+        throw
     }finally{
         if($null -ne $probe){
             try {
                 if($probe.Active -gt 0){$probe.Cancel()}
                 $until=[DateTime]::UtcNow.AddSeconds(10)
                 while($probe.Active -gt 0 -and [DateTime]::UtcNow -lt $until){Start-Sleep -Milliseconds 50}
-                $script:tongStartup.preflightClean=($probe.Active -eq 0)
-            }finally{$probe.Dispose()}
+                $script:tongStartup.preflight.jobActiveAfterCleanup=$probe.Active
+                $script:tongStartup.preflightClean=($script:tongStartup.preflight.jobActiveAfterCleanup -eq 0)
+            }finally{$script:tongStartup.preflight.elapsedMs=$watch.ElapsedMilliseconds;$probe.Dispose()}
         }
+        $script:tongStartup.preflight.elapsedMs=$watch.ElapsedMilliseconds
     }
     if(-not $script:tongStartup.preflightClean){throw 'PREFLIGHT_CLEANUP_REQUIRED'}
     Assert-TongStartupActive

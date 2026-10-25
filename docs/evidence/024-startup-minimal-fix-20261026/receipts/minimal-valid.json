@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 2,
+  "runId": "8b1593df-f08c-4aee-a217-55d3c6511a23",
+  "role": "launcher",
+  "owner": {
+    "pid": 24120,
+    "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "startTicks": "639285430964710160",
+    "markerMatches": true
+  },
+  "launcher": {
+    "pid": 24120,
+    "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "startTicks": "639285430964710160",
+    "markerMatches": true
+  },
+  "stage": "preflight_complete",
+  "guardianCreated": false,
+  "preflightClean": true,
+  "nodeCreated": false,
+  "runtimeClean": false,
+  "jobName": "Local\\TongRuntime-8b1593df-f08c-4aee-a217-55d3c6511a23",
+  "jobActiveAfterCleanup": null,
+  "at": "2026-10-25T16:38:25.8742951Z",
+  "preflight": {
+    "startedAt": "2026-10-25T16:38:17.4432063Z",
+    "elapsedMs": 8400,
+    "exitCode": 0,
+    "child": {
+      "pid": 1140,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639285430974510070"
+    },
+    "jobName": "Local\\TongPreflight-launcher-8b1593df-f08c-4aee-a217-55d3c6511a23",
+    "jobActiveAfterCleanup": 0
+  },
+  "failure": {
+    "role": "launcher",
+    "stage": "preflight_complete",
+    "code": "TEST_PREFLIGHT_STOP",
+    "exceptionType": "System.Management.Automation.RuntimeException",
+    "errorId": "TEST_PREFLIGHT_STOP",
+    "hresult": -2146233087,
+    "win32Error": null,
+    "exitCode": 2,
+    "diagnosticId": "8b1593df-f08c-4aee-a217-55d3c6511a23/launcher",
+    "preflightExitCode": 0
+  },
+  "finishedAt": "2026-10-25T16:38:25.8732951Z",
+  "code": "TEST_PREFLIGHT_STOP"
+}

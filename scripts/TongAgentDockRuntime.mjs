@@ -254,6 +254,13 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest,handoffId}={
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
   const held=await freeze(root,{handoffId,profile,action:'start'});
   let runId,child,launchedIdentity,deadline,release=true,stage='previous_cleanup';
+  let launchStartedAt,launchClosedAt,launchExitCode=null,launchSignal=null,stderrBytes=0,stderrHead=Buffer.alloc(0);
+  const launcherDiagnostic=()=>({pid:child?.pid??null,elapsedMs:launchStartedAt===undefined?null:(launchClosedAt??Date.now())-launchStartedAt,
+    closed:launchClosedAt!==undefined,exitCode:launchExitCode,signal:launchSignal,
+    // Keep a bounded prefix in memory; publish only established fixed messages.
+    // Arbitrary stderr can contain paths, arguments, credentials or user data.
+    stderr:{bytes:stderrBytes,capturedBytes:stderrHead.length,truncated:stderrBytes>stderrHead.length,redacted:true,
+      text:stderrHead.toString('utf8').split(/\r?\n/).filter(line=>['Runtime launch refused','Runtime guardian refused'].includes(line)).join('\n')}});
   const diagnosticId=randomUUID();
   const checkpoint=async name=>{stage=name;await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_checkpoint',diagnosticId,role:'manager',stage:name})+'\n',{flag:'a'});};
   const receipt=async(id=runId)=>{
@@ -323,11 +330,13 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest,handoffId}={
     // Maintenance persists this identity before the launcher can create a tree.
     if(onRequest)await onRequest({runId});
     stage='launcher_start';
+    launchStartedAt=Date.now();
     child=spawn(join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),
       ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',preserved(profile)?join(profile.managerRoot,'scripts','TongRuntimeLaunch.ps1'):guardianScript,'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',preserved(profile)?join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs'):self,...(recoveryGrantId?['-RecoveryGrantId',recoveryGrantId]:[])],
       {cwd:root,env:{...safeEnvironment(root),USERPROFILE:process.env.USERPROFILE,APPDATA:process.env.APPDATA,LOCALAPPDATA:process.env.LOCALAPPDATA},windowsHide:true,detached:false,stdio:['ignore','pipe','pipe']});
-    child.stderr.resume();let launchOutput='';child.stdout.on('data',chunk=>{launchOutput+=chunk;if(launchOutput.length>100)child.kill();});
-    let spawnError=false,launchClosed=false;child.once('error',()=>{spawnError=true;});child.once('close',()=>{launchClosed=true;});
+    child.stderr.on('data',chunk=>{const bytes=Buffer.from(chunk);stderrBytes+=bytes.length;if(stderrHead.length<4096)stderrHead=Buffer.concat([stderrHead,bytes.subarray(0,4096-stderrHead.length)]);});
+    let launchOutput='';child.stdout.on('data',chunk=>{launchOutput+=chunk;if(launchOutput.length>100)child.kill();});
+    let spawnError=false,launchClosed=false;child.once('error',()=>{spawnError=true;});child.once('close',(code,signal)=>{launchClosed=true;launchClosedAt=Date.now();launchExitCode=Number.isInteger(code)?code:null;launchSignal=typeof signal==='string'&&/^SIG[A-Z0-9]{1,16}$/.test(signal)?signal:null;});
     // Preflight, CreateProcess and acknowledgement share the original total
     // startup deadline. Cancel cooperatively; hard kill would destroy the only
     // owner capable of proving whether a Guardian was created.
@@ -339,6 +348,7 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest,handoffId}={
     if(spawnError||child.exitCode!==0){
       throw fail('SUPERVISOR_START_FAILED');
     }
+    await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_launcher',runId,diagnosticId,launcher:launcherDiagnostic()})+'\n',{flag:'a'});
     stage='guardian_confirmation';
     let launched;try{launched=JSON.parse(launchOutput);}catch{throw fail('SUPERVISOR_START_FAILED');}
     launchedIdentity=await processIdentity(launched.pid,runId);
@@ -398,29 +408,32 @@ export async function startRuntime(root,{startupTimeoutMs,onRequest,handoffId}={
     }
     }
     const latest=await receipt();
-    let runtimeFailure=null;
+    let runtimeFailure=null,secondaryFailure=null;
     if(runId){
       try{
         const record=await json(join(root,'run','runtime.json')),guardianFailure=await json(join(root,'run',`guardian.${runId}.json`));
         if(record?.runId===runId)runtimeFailure=record.startupFailure??record.startupProgress;
         if(guardianFailure?.schemaVersion===2&&guardianFailure.role==='guardian'&&guardianFailure.runId===runId){
-          if(guardianFailure.failure)runtimeFailure={...guardianFailure.failure,...(Number.isInteger(guardianFailure.nodeExitCode)?{nodeExitCode:guardianFailure.nodeExitCode}:{})};
+          if(guardianFailure.preflight?.failure&&guardianFailure.failure?.code!==guardianFailure.preflight.failure.code)secondaryFailure=guardianFailure.failure;
+          if(guardianFailure.failure)runtimeFailure={...(guardianFailure.preflight?.failure??guardianFailure.failure),...(Number.isInteger(guardianFailure.preflightExitCode)?{preflightExitCode:guardianFailure.preflightExitCode}:{}),...(Number.isInteger(guardianFailure.nodeExitCode)?{nodeExitCode:guardianFailure.nodeExitCode}:{})};
           else if(Number.isInteger(guardianFailure.nodeExitCode))runtimeFailure={role:'supervisor',stage:runtimeFailure?.stage??guardianFailure.stage,code:'SUPERVISOR_EXIT',exitCode:guardianFailure.nodeExitCode,diagnosticId:runId+'/supervisor'};
         }
       }catch{/* Preserve the original exception even if diagnostic state is unreadable. */}
     }
     const observedStage=error.stateFailure?managerFailure.stage:runtimeFailure?.stage??latest?.failure?.stage??(stage==='guardian_confirmation'?stage:latest?.stage??stage);
     const failureStage=/^[a-z][a-z_-]{0,63}$/.test(observedStage)?observedStage:stage;
-    const rawOrigin=runtimeFailure??latest?.failure;
+    const rawOrigin=runtimeFailure??latest?.preflight?.failure??latest?.failure;
+    if(!secondaryFailure&&latest?.preflight?.failure&&latest.failure?.code!==latest.preflight.failure.code)secondaryFailure=latest.failure;
     // Metadata only: never copy exception messages, command lines, paths, or
     // arbitrary properties from a diagnostic file into the public failure.
-    const observedRuntimeFailure=rawOrigin?Object.fromEntries(Object.entries(rawOrigin).filter(([key,value])=>
+    const failureMetadata=value=>Object.fromEntries(Object.entries(value).filter(([key,value])=>
       ['role','stage','code','exceptionType','errorId','diagnosticId'].includes(key)?typeof value==='string'&&/^[A-Za-z0-9_.:/-]{1,160}$/.test(value):
-      ['win32Error','hresult','exitCode','childExitCode','preflightExitCode','nodeExitCode'].includes(key)&&Number.isSafeInteger(value))):undefined;
+      ['win32Error','hresult','exitCode','childExitCode','preflightExitCode','nodeExitCode'].includes(key)&&Number.isSafeInteger(value)));
+    const observedRuntimeFailure=rawOrigin?failureMetadata(rawOrigin):undefined;
     // A state read/parse refusal happened in this Manager. An abort or exit
     // observed during cleanup is separate evidence, never its original cause.
     const origin=error.stateFailure?managerFailure:observedRuntimeFailure;
-    const startupFailure={runId:runId??null,diagnosticId,code:originalCode,stage:failureStage,managerFailure,...(origin?{origin}:{}),...(error.stateFailure&&observedRuntimeFailure?{observedRuntimeFailure}:{}),...(latest?.code?{launcherCode:latest.code}:{}),cleanup};
+    const startupFailure={runId:runId??null,diagnosticId,code:originalCode,stage:failureStage,managerFailure,...(child?{launcher:launcherDiagnostic()}:{}),...(origin?{origin}:{}),...(secondaryFailure?{secondaryFailure:failureMetadata(secondaryFailure)}:{}),...(error.stateFailure&&observedRuntimeFailure?{observedRuntimeFailure}:{}),...(latest?.code?{launcherCode:latest.code}:{}),cleanup};
     if(error.stateFailure)startupFailure.stateFailure=error.stateFailure;
     if(diagnosticsWriteFailed)startupFailure.diagnosticsWriteFailed=true;
     try{await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_result',...startupFailure})+'\n',{flag:'a'});}catch{startupFailure.diagnosticsWriteFailed=true;}

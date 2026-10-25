@@ -5,27 +5,30 @@ import {join,isAbsolute} from 'node:path';
 
 // Execute the actual Manager orchestration with a virtual clock and an owned
 // launcher. No production files, permissions, processes or ports are accessed.
-const source=await readFile(new URL('../scripts/TongAgentDockRuntime.mjs',import.meta.url),'utf8');
+const source=process.argv.includes('--minimal-candidate')?(await (await import('./fixtures/TongMinimalStartupCandidate.mjs')).minimalStartupSources())['scripts/TongAgentDockRuntime.mjs']:await readFile(new URL('../scripts/TongAgentDockRuntime.mjs',import.meta.url),'utf8');
 const body=source.slice(source.indexOf('export async function startRuntime('),source.indexOf('export async function stopRuntime(')).replace('export ','');
-async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=false,guardianAlive=false,guardianReused=false,guardianReceipt=true,confirmedFailureStage,receiptRun,completeReceipt=false,nodeAlive=false,receiptPatch={},launcherStage,previous=false,failObservation=false,failStateRead=false,creatorCleanup=false,budget=30000,failAbort=false,failLog=false,jobs={owner:0,launcher:0,guardian:0,runtime:0}}={}){
+async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=false,guardianAlive=false,guardianReused=false,guardianReceipt=true,confirmedFailureStage,guardianPreflightFailure=false,receiptRun,completeReceipt=false,nodeAlive=false,receiptPatch={},launcherStage,preflightFailure=false,previous=false,failObservation=false,failStateRead=false,creatorCleanup=false,budget=30000,failAbort=false,failLog=false,jobs={owner:0,launcher:0,guardian:0,runtime:0}}={}){
   let now=0,seq=0,result,done=false,request,aborted=false,released=false;
   const timers=new Map(),files=new Map(),events=[];
   class Clock extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}
   const timeout=(fn,ms)=>{timers.set(++seq,{fn,at:now+ms});return seq;};
   const clear=id=>timers.delete(id);
   const delay=ms=>new Promise(resolve=>timeout(resolve,ms));
-  const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr={resume(){}};
+  const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();child.stderr.resume=()=>{};
   child.pid=42;child.exitCode=null;child.kill=()=>{child.exitCode=1;child.emit('close',1);};
   const old={runId:'old-run',phase:'abnormal_exit',children:[],descendants:[]};
   const identity={pid:42,exe:'D:\\launcher.exe',startTicks:'1',markerMatches:true};
   const json=async path=>{if(failStateRead&&path.endsWith('guardian.json')&&request&&child.exitCode!==null){failStateRead=false;const error=Error('INVALID_STATE');error.stateFailure={file:'guardian.json',operation:'read',code:'EPERM',errno:-4048};throw error;}return files.get(path)??(path.endsWith('guardian.json')&&previous?{runId:'old-run',finishedAt:'old',jobActiveAfterCleanup:0}:null);};
   const save=async(path,value)=>{if(failAbort&&path.endsWith('abort.json'))throw Error('STATE_UNAVAILABLE');files.set(path,value);if(path.endsWith('request.json'))request=value;if(path.endsWith('abort.json'))aborted=true;};
   const spawn=()=>{timeout(()=>{
+    child.stderr.emit('data','Runtime launch refused\nBearer PRIVATE_TEST_TOKEN\n'+ 's'.repeat(6000));
     if(receipt){files.set(join('root','run',`launcher.${request.runId}.json`),{schemaVersion:2,role:'launcher',runId:receiptRun??request.runId,launcher:identity,guardian:created?{pid:43,exe:'D:\\guardian.exe',startTicks:'2',markerMatches:true}:undefined,...(creatorCleanup?{guardianTreeCleanup:{proven:true,runId:request.runId,jobName:`Local\\TongGuardian-${request.runId}`,stage:'guardian_adoption'}}:{}),stage:created?'guardian_created':'preflight',guardianCreated:created,preflightClean:true,finishedAt:'done',code:'APPROVAL_DENIED'});if(!created)child.stdout.emit('data',JSON.stringify({runId:receiptRun??request.runId,guardianCreated:false}));}
     if(receipt&&launcherStage)files.get(join('root','run',`launcher.${request.runId}.json`)).stage=launcherStage;
+    if(receipt&&preflightFailure)Object.assign(files.get(join('root','run',`launcher.${request.runId}.json`)),{preflight:{failure:{role:'launcher',stage:'preflight',code:'APPROVAL_DENIED'}},failure:{role:'launcher',stage:'preflight',code:'PREFLIGHT_JOB_FAILED'}});
     if(created&&guardianReceipt)files.set(join('root','run',`guardian.${request.runId}.json`),{schemaVersion:2,role:'guardian',runId:request.runId,preflightClean:true,finishedAt:'done',failure:confirmedFailureStage?{role:'guardian',stage:confirmedFailureStage,code:'JOB_CREATE_FAILED',win32Error:5,exitCode:2,diagnosticId:request.runId+'/guardian'}:undefined,...(completeReceipt?{owner:{pid:43,exe:'D:\\guardian.exe',startTicks:'2',markerMatches:true},stage:'wait-node',nodeCreated:true,node:{pid:44,exe:'D:\\node.exe',startTicks:'3',markerMatches:true},runtimeClean:true,jobName:`Local\\TongRuntime-${request.runId}`,jobActiveAfterCleanup:0}:{}),...receiptPatch});
     if(stdoutOnly)child.stdout.emit('data',JSON.stringify({runId:request.runId,guardianCreated:false}));
     if(confirmedFailureStage){files.set(join('root','run','guardian-failure.json'),{runId:request.runId,stage:confirmedFailureStage});child.stdout.emit('data',JSON.stringify({pid:43}));}
+    if(guardianPreflightFailure)Object.assign(files.get(join('root','run',`guardian.${request.runId}.json`)),{preflight:{failure:{role:'guardian',stage:'preflight',code:'APPROVAL_DENIED'}},preflightExitCode:1,failure:{role:'guardian',stage:'preflight',code:'PREFLIGHT_JOB_FAILED'}});
     child.exitCode=confirmedFailureStage?0:2;child.emit('close',child.exitCode);
   },launchAt);return child;};
   const names={absoluteRoot:x=>x,guardedRoot:()=>false,loadApprovedProfile:async()=>null,layout:async()=>({}),preserved:()=>false,
@@ -50,6 +53,22 @@ async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=fa
 const slow=await scenario();
 assert.equal(slow.error.message,'SUPERVISOR_START_FAILED','a >15s preflight refusal must retain its original error after proven no-create');
 assert.equal(slow.released,true);assert.ok(slow.now>=16000,'the real preflight result must be observed after 15 seconds');
+assert.equal(slow.error.startupFailure.launcher.elapsedMs,16000);
+assert.equal(slow.error.startupFailure.launcher.exitCode,2);
+assert.equal(slow.error.startupFailure.launcher.pid,42);
+assert.equal(slow.error.startupFailure.launcher.stderr.text,'Runtime launch refused');
+assert.equal(slow.error.startupFailure.launcher.stderr.truncated,true);
+assert.equal(JSON.stringify(slow.events).includes('PRIVATE_TEST_TOKEN'),false);
+const masked=await scenario({launchAt:10,preflightFailure:true,jobs:{owner:0,launcher:1,guardian:0,runtime:0}});
+assert.equal(masked.error.message,'CLEANUP_REQUIRED');
+assert.equal(masked.error.startupFailure.code,'SUPERVISOR_START_FAILED');
+assert.equal(masked.error.startupFailure.origin.code,'APPROVAL_DENIED','a later preflight cleanup exception must not replace its initial failure');
+assert.equal(masked.error.startupFailure.secondaryFailure.code,'PREFLIGHT_JOB_FAILED');
+assert.equal(masked.error.startupFailure.cleanup.proven,false);
+const maskedGuardian=await scenario({created:true,guardianAlive:true,confirmedFailureStage:'preflight',guardianPreflightFailure:true,launchAt:10});
+assert.equal(maskedGuardian.error.startupFailure.origin.code,'APPROVAL_DENIED','Guardian preflight must also retain the error before finally cleanup');
+assert.equal(maskedGuardian.error.startupFailure.origin.preflightExitCode,1);
+assert.equal(maskedGuardian.error.startupFailure.secondaryFailure.code,'PREFLIGHT_JOB_FAILED');
 const missing=await scenario({receipt:false,launchAt:10,previous:true});
 assert.equal(missing.error.message,'CLEANUP_REQUIRED');assert.equal(missing.released,false);
 assert.equal(missing.error.startupFailure.code,'SUPERVISOR_START_FAILED');

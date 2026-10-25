@@ -17,7 +17,9 @@ export async function protectedSyntheticRoot(prefix){
   if(result.status!==0)throw Error('FIXTURE_ACL_FAILED');
   return mkdtemp(join(parent,prefix));
 }
-export async function loginFixture({full=false,sharedDependencies=false,ports={},reuseRoot,dependencyRoot=project}={}){
+export async function loginFixture({full=false,sharedDependencies=false,ports={},reuseRoot,dependencyRoot=project,sourceRef,sourceOverrides={}}={}){
+  if(sourceRef!==undefined&&(!/^[a-f0-9]{40}$/.test(sourceRef)||reuseRoot))throw Error('FIXTURE_SOURCE_REF');
+  if(Object.keys(sourceOverrides).some(path=>!/^scripts\/[A-Za-z0-9_-]+\.(mjs|ps1)$/.test(path))||reuseRoot&&Object.keys(sourceOverrides).length)throw Error('FIXTURE_SOURCE_OVERRIDE');
   if(process.env.TONG_LOGIN_TEST_PORTS)ports={...JSON.parse(process.env.TONG_LOGIN_TEST_PORTS),...ports};
   // Explicit development-suite option: share immutable dependencies while each
   // fixture keeps its own DevSpace files, scripts, credentials and runtime state.
@@ -48,14 +50,16 @@ export async function loginFixture({full=false,sharedDependencies=false,ports={}
   const protectedRoot=reuseRoot?{status:0}:spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',`$ErrorActionPreference='Stop'; $target=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')); $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User; $acl=[Security.AccessControl.DirectorySecurity]::new(); $acl.SetAccessRuleProtection($true,$false); $acl.SetOwner($sid); foreach($allow in @($sid.Value,'S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($allow),'FullControl','ContainerInherit,ObjectInherit','None','Allow'))}; Set-Acl -LiteralPath $target -AclObject $acl`],{env,encoding:'utf8',windowsHide:true,timeout:10000});
   if(protectedRoot.status!==0)throw Error('FIXTURE_ACL_FAILED:'+protectedRoot.stderr);
   for(const dir of ['backend-state','workspace','tong-policy/agentdock-operations','secrets','run','logs','temp','home','releases','tong/runtime','tong/demo-workspace','tong/home/.devspace','tong/oauth'])await mkdir(join(root,dir),{recursive:true});
-  const git=spawnSync('git',['ls-files','--cached','--others','--exclude-standard','scripts'],{cwd:project,encoding:'utf8',windowsHide:true});
+  const git=spawnSync('git',sourceRef?['ls-tree','-r','--name-only',sourceRef,'--','scripts']:['ls-files','--cached','--others','--exclude-standard','scripts'],{cwd:project,encoding:'utf8',windowsHide:true});
   if(git.status!==0)throw Error('FIXTURE_SOURCE_INVENTORY_FAILED');
-  const names=git.stdout.trim().split(/\r?\n/);
+  const names=[...new Set([...git.stdout.trim().split(/\r?\n/),...Object.keys(sourceOverrides)])];
   // New source under test is explicitly included before it is committed.
   if(!names.includes('scripts/TongLoginRecovery.mjs'))names.push('scripts/TongLoginRecovery.mjs');
   const files=[];
   for(const path of names){
-    const bytes=await readFile(join(project,path));files.push({path,size:bytes.length,sha256:sha(bytes)});
+    const blob=sourceRef&&sourceOverrides[path]===undefined?spawnSync('git',['show',`${sourceRef}:${path}`],{cwd:project,windowsHide:true,maxBuffer:8*1024*1024}):null;
+    if(blob&&blob.status!==0)throw Error('FIXTURE_SOURCE_READ_FAILED');
+    const bytes=sourceOverrides[path]!==undefined?Buffer.from(sourceOverrides[path]):blob?blob.stdout:await readFile(join(project,path));files.push({path,size:bytes.length,sha256:sha(bytes)});
     for(const target of [initial.codeRoot,initial.managerRoot]){await mkdir(dirname(join(target,path)),{recursive:true});await writeFile(join(target,path),bytes);}
   }
   const hashes={};

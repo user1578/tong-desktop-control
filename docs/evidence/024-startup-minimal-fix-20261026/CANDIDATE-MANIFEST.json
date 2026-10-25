@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "base": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "reusedReference": "34e26801876d8b1a2fc874dddce72b0939924e87",
+  "reviewOnly": true,
+  "productionDeployReady": false,
+  "encoding": "UTF-8 without BOM, LF; byte hashes are mandatory",
+  "patchSha256": "5f853248ecda8168575c51ee4cacdf1a667fbab33e778e088d436daa5da7a587",
+  "files": [
+    {
+      "path": "scripts/TongAgentDockRuntime.mjs",
+      "originalSha256": "f609d906e7025ab64be872b94398c4a57f04dceefb2a25c8b4d0b8cee3f7924e",
+      "candidateSha256": "fb4d26f75a4083b7c24890e7cf5ea1f29a5af0034380a85a84ac73469301cc41",
+      "candidateBytes": 56447,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    },
+    {
+      "path": "scripts/TongRuntimeLaunch.ps1",
+      "originalSha256": "0b245454b29c552be9c0869e2cd16c2ca159ffebfb324bacc1204671ad849f21",
+      "candidateSha256": "954d807bc5120f91a8e3932dc3759031a15feff1d15467c8e24076a3589f4ad3",
+      "candidateBytes": 4939,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    },
+    {
+      "path": "scripts/TongRuntimeGuardian.ps1",
+      "originalSha256": "528abbd00bcfcc4a89492e2ee0de130196b71f63d8956f6636c27afd2117c910",
+      "candidateSha256": "b5ebf2b786f958fdbafca9a53afead412544fc4e06f3ebdefc084362c711a033",
+      "candidateBytes": 12847,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    },
+    {
+      "path": "scripts/TongStartupProtocol.ps1",
+      "originalSha256": null,
+      "candidateSha256": "8716bff6c3546bbd273c609aa46a5b30d297f16d4e9fd7d662256b3648b1ac7a",
+      "candidateBytes": 19302,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    },
+    {
+      "path": "scripts/TongRuntimeSecurity.mjs",
+      "originalSha256": "d2762f51aabaadf9a35095a8e4dfd0c10b4a042568b461a186e714edc666edca",
+      "candidateSha256": "fc4ab94f28dd57bd0afb45da5cd8fc872b67a69536067910d8135772295fdfaf",
+      "candidateBytes": 6752,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    },
+    {
+      "path": "scripts/TongRuntimeSecurity.ps1",
+      "originalSha256": "9d895570d5ba0943b0c58d86ebb1ec17c287e95635625ff71e89e66236036835",
+      "candidateSha256": "34355cac45e5a06a2778f545b5070c2d170fcd58d6b9df0694be3827217245f0",
+      "candidateBytes": 10053,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    },
+    {
+      "path": "scripts/TongLoginRecovery.mjs",
+      "originalSha256": "2d9ba2e7d32038b64eeef3561184060443510cf5f8178feb9933724872419ae7",
+      "candidateSha256": "fe107fa566ca85e2f2fd7cc9ee13e0c68b9c58da48deca1b434d5fc2cece659d",
+      "candidateBytes": 9437,
+      "referenceCommit": "34e26801876d8b1a2fc874dddce72b0939924e87"
+    }
+  ],
+  "validation": {
+    "appliedToIsolatedOriginalSubset": true,
+    "coreAutocrlf": false,
+    "allSevenFinalHashesMatchAssembledCandidate": true,
+    "nativePreflightFinalBindingReport": "VALIDATION.json"
+  },
+  "excluded": [
+    "Tong024LegacyRecovery",
+    "Tong024Handoff",
+    "TongLifecycleFreeze",
+    "TongRuntimePort",
+    "all other branch changes"
+  ]
+}

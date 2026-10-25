@@ -1,0 +1,825 @@
+diff --git a/scripts/TongAgentDockRuntime.mjs b/scripts/TongAgentDockRuntime.mjs
+index a96d663..6615a12 100644
+--- a/scripts/TongAgentDockRuntime.mjs
++++ b/scripts/TongAgentDockRuntime.mjs
+@@ -2,14 +2,14 @@ import { spawn, fork } from 'node:child_process';
+ import { createHash, randomBytes, randomUUID } from 'node:crypto';
+ import { open, readFile, writeFile, mkdir, rename, unlink, readdir } from 'node:fs/promises';
+ import { createWriteStream, appendFileSync } from 'node:fs';
+-import { join, resolve, isAbsolute, dirname, relative, sep } from 'node:path';
++import { join, resolve, isAbsolute, dirname, basename, relative, sep } from 'node:path';
+ import { fileURLToPath, pathToFileURL } from 'node:url';
+ import { createConnection } from 'node:net';
+ import { once } from 'node:events';
+ import { Transform } from 'node:stream';
+ import { StringDecoder } from 'node:string_decoder';
+ import { TongAgentDockClient } from './TongAgentDockClient.mjs';
+-import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic, runtimeJobState } from './TongRuntimeSecurity.mjs';
++import { assertProtectedPaths, inspectSecurity, protectSecret, readSecret, safeEnvironment, processIdentity, processDescendants, sameProcess, terminateOwnedProcess, exitDiagnostic, runtimeJobState, startupJobsState } from './TongRuntimeSecurity.mjs';
+ import {PRODUCTION_ROOT,validateProductionProfile,loadApprovedProfile,verifyRuntimeApproval,initializeProductionRoot,recordApprovedEnabledState,readApprovedEnabledState} from './TongProductionProfile.mjs';
+ import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.mjs';
+ import {withLoginRecovery,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
+@@ -67,7 +67,7 @@ export function waitForChildReadiness(child,{role,preserved:production,began=Dat
+   });
+ }
+ const hash=async path=>createHash('sha256').update(await readFile(path)).digest('hex');
+-async function json(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;throw fail('INVALID_STATE');}}
++async function json(path){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')return null;const refused=fail('INVALID_STATE');refused.stateFailure={file:basename(path),operation:typeof error.code==='string'?'read':'parse',code:/^[A-Z_]{1,64}$/.test(error.code??'')?error.code:'JSON_PARSE_FAILED',...(Number.isSafeInteger(error.errno)?{errno:error.errno}:{})};throw refused;}}
+ async function save(path,value){const tmp=path+'.'+randomUUID()+'.tmp';await writeFile(tmp,JSON.stringify(value,null,2)+'\n',{flag:'wx'});for(let n=0;n<10;n++){try{await rename(tmp,path);return;}catch(error){if(!['EPERM','EACCES','EBUSY'].includes(error.code)||n===9)throw fail('STATE_UNAVAILABLE');await delay(25);}}}
+ function absoluteRoot(root){
+   const approved=resolve('D:\\Tong\\state');
+@@ -227,11 +227,16 @@ export async function runtimeDoctor(root){const profile=await layout(root),statu
+ async function guardianComplete(root,runId) {
+   const guardian=await json(join(root,'run','guardian.json'));
+   if(guardian?.runId!==runId)return false;
++  // A legacy assigned-Job record cannot exclude descendants created before
++  // assignment. It needs a separately reviewed recovery, never an automatic
++  // upgrade to the atomic containment proof used by this protocol.
++  if(guardian.containment!=='create_process_job_list')return false;
++  if(guardian.jobName!==`Local\\TongRuntime-${runId}`||guardian.killOnJobClose!==true)return false;
+   if(!guardian.finishedAt)return (await reconciliationComplete(root,await json(join(root,'run','runtime.json'))))===true;
+   if(guardian.jobActiveAfterCleanup!==0||guardian.jobAssigned!==true)return false;
+   const record=await json(join(root,'run','runtime.json'));
+   if(record?.runId!==runId||guardian.nodePid!==record.supervisor?.pid)return false;
+-  try{await oldRuntimeGone(root,record,guardian,{completed:guardian.jobName!==undefined});return true;}catch{return false;}
++  try{await oldRuntimeGone(root,record,guardian,{completed:true});return true;}catch{return false;}
+ }
+ export async function startRuntime(root,{startupTimeoutMs}={}) {
+   if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
+@@ -241,67 +246,190 @@ export async function startRuntime(root,{startupTimeoutMs}={}) {
+   startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
+   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
+   const held=await freeze(root);
+-  let runId,child,launchedIdentity,deadline,release=true,launchConfirmedAbsent=false;
++  let runId,child,launchedIdentity,deadline,release=true,stage='previous_cleanup';
++  let launchStartedAt,launchClosedAt,launchExitCode=null,launchSignal=null,stderrBytes=0,stderrHead=Buffer.alloc(0);
++  const launcherDiagnostic=()=>({pid:child?.pid??null,elapsedMs:launchStartedAt===undefined?null:(launchClosedAt??Date.now())-launchStartedAt,
++    closed:launchClosedAt!==undefined,exitCode:launchExitCode,signal:launchSignal,
++    // Keep a bounded prefix in memory; publish only established fixed messages.
++    // Arbitrary stderr can contain paths, arguments, credentials or user data.
++    stderr:{bytes:stderrBytes,capturedBytes:stderrHead.length,truncated:stderrBytes>stderrHead.length,redacted:true,
++      text:stderrHead.toString('utf8').split(/\r?\n/).filter(line=>['Runtime launch refused','Runtime guardian refused'].includes(line)).join('\n')}});
++  const diagnosticId=randomUUID();
++  const checkpoint=async name=>{stage=name;await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_checkpoint',diagnosticId,role:'manager',stage:name})+'\n',{flag:'a'});};
++  const receipt=async(id=runId)=>{
++    if(!validRunId(id))return null;
++    try{
++      const value=await json(join(root,'run',`launcher.${id}.json`));
++      if(value===null)return null;
++      if(value?.schemaVersion!==2||value.role!=='launcher'||value.runId!==id||!['initializing','preflight','preflight_complete','create_guardian','guardian_created'].includes(value.stage)
++        ||value.code!==undefined&&!/^[A-Z_]{1,64}$/.test(value.code))return {invalid:true};
++      if(value.guardianCreated===false&&value.stage==='guardian_created'||value.guardianCreated===true&&!['create_guardian','guardian_created'].includes(value.stage))return {invalid:true};
++      return value;
++    }catch{return {invalid:true};}
++  };
++  const launchComplete=async(id=runId,launcherPid=child?.pid,{signal}={})=>{
++    // A dead launcher or empty Job alone cannot exclude a raced CreateProcess.
++    // Require its terminal negative receipt, or the exact acknowledged Guardian
++    // to be gone, as well as both preflight Jobs and the runtime Job being empty.
++    const value=await receipt(id);
++    const validIdentity=identity=>Number.isInteger(identity?.pid)&&identity.pid>0&&typeof identity.exe==='string'&&isAbsolute(identity.exe)&&/^\d+$/.test(identity.startTicks)&&identity.markerMatches===true;
++    if(id===runId&&child?.exitCode===null)return false;
++    if(!value)return false;
++    if(value.invalid||!value.finishedAt||value.preflightClean!==true||!validIdentity(value.launcher)||launcherPid!==undefined&&value.launcher.pid!==launcherPid||sameProcess(await processIdentity(value.launcher.pid,'',{signal}),value.launcher))return false;
++    await assertProtectedPaths([join(root,'run',`launcher.${id}.json`)],{signal});
++    if(value.guardianCreated!==false){
++      if(value.guardianCreated!==true||!validIdentity(value.guardian)||sameProcess(await processIdentity(value.guardian.pid,'',{signal}),value.guardian))return false;
++      const creatorCleanup=value.guardianTreeCleanup;
++      if(creatorCleanup!==undefined){
++        if(creatorCleanup.proven!==true||creatorCleanup.runId!==id||creatorCleanup.jobName!==`Local\\TongGuardian-${id}`||creatorCleanup.stage!=='guardian_adoption')return false;
++      }else{
++      const guardianReceiptPath=join(root,'run',`guardian.${id}.json`),guardianReceipt=await json(guardianReceiptPath);
++      if(guardianReceipt?.schemaVersion!==2||guardianReceipt.role!=='guardian'||guardianReceipt.runId!==id||!guardianReceipt.finishedAt||guardianReceipt.preflightClean!==true
++        ||!validIdentity(guardianReceipt.owner)||!sameProcess(guardianReceipt.owner,value.guardian)||guardianReceipt.runtimeClean!==true
++        ||guardianReceipt.jobName!==`Local\\TongRuntime-${id}`||guardianReceipt.jobActiveAfterCleanup!==0
++        ||!['compile','initializing','preflight','preflight_complete','read-request','create-job','spawn-node','record-start','wait-node'].includes(guardianReceipt.stage))return false;
++      if(guardianReceipt.nodeCreated!==false){
++        if(guardianReceipt.nodeCreated!==true||!['spawn-node','record-start','wait-node'].includes(guardianReceipt.stage)||!validIdentity(guardianReceipt.node)||sameProcess(await processIdentity(guardianReceipt.node.pid,'',{signal}),guardianReceipt.node))return false;
++      }else if(['record-start','wait-node'].includes(guardianReceipt.stage))return false;
++      await assertProtectedPaths([guardianReceiptPath],{signal});
++      }
++    }
++    const jobs=await startupJobsState(id,{signal});
++    return jobs.owner===0&&jobs.launcher===0&&jobs.guardian===0&&jobs.runtime===0;
++  };
+   try {
++    // Reading prior state is itself part of the proof. An ACL/CIM/Job failure
++    // must retain the lock even though this call has not created a child yet.
++    release=false;
++    await checkpoint('previous_status');
+     const status=await runtimeStatus(root);
+-    if(status.supervisorAlive)throw fail('ALREADY_RUNNING');
++    if(status.supervisorAlive){release=true;throw fail('ALREADY_RUNNING');}
+     if(!['not_started','stopped','abnormal_exit'].includes(status.phase))throw fail('STALE_RECORD');
+-    if(status.runId&&!await guardianComplete(root,status.runId))throw fail('CLEANUP_REQUIRED');
++    const previousRequest=await json(join(root,'run','request.json'));
++    if(previousRequest&&previousRequest.runId!==status.runId&&!await launchComplete(previousRequest.runId)){release=false;throw fail('CLEANUP_REQUIRED');}
++    if(status.runId&&!await guardianComplete(root,status.runId)){release=false;throw fail('CLEANUP_REQUIRED');}
+     for(const identity of [...(status.children??[]),...(status.descendants??[])])
+       if(sameProcess(await processIdentity(identity.pid),identity))throw fail('CHILD_STILL_ALIVE');
++    release=true;
++    await checkpoint('binary_hash');
+     if(await hash(AGENTDOCK_EXE)!==AGENTDOCK_SHA256)throw fail('BINARY_CHANGED');
++    await checkpoint('ports');
+     for(const port of [...(dockEnabled(profile)?[profile.agentdockPort]:[]),...(hasTong(profile)?[profile.gatewayPort,profile.upstreamPort]:[])])await unused(port);
++    await checkpoint('secrets');
+     if(dockEnabled(profile))await readSecret(root,'agentdock');if(preserved(profile)?profile.mode==='production-simulation':profile.withTong)await readSecret(root,'oauth-owner');
++    await checkpoint('request');
+     deadline=Date.now()+startupTimeoutMs;
+     runId=randomUUID();const recoveryGrantId=loginRecoveryGrantId();await save(join(root,'run','request.json'),{runId,createdAt:new Date().toISOString(),startupDeadline:deadline,...(recoveryGrantId?{recoveryGrantId}:{})});
++    stage='launcher_start';
++    launchStartedAt=Date.now();
+     child=spawn(join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),
+       ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',preserved(profile)?join(profile.managerRoot,'scripts','TongRuntimeLaunch.ps1'):guardianScript,'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',preserved(profile)?join(profile.managerRoot,'scripts','TongAgentDockRuntime.mjs'):self,...(recoveryGrantId?['-RecoveryGrantId',recoveryGrantId]:[])],
+       {cwd:root,env:{...safeEnvironment(root),USERPROFILE:process.env.USERPROFILE,APPDATA:process.env.APPDATA,LOCALAPPDATA:process.env.LOCALAPPDATA},windowsHide:true,detached:false,stdio:['ignore','pipe','pipe']});
+-    child.stderr.resume();let launchOutput='';child.stdout.on('data',chunk=>{launchOutput+=chunk;if(launchOutput.length>100)child.kill();});
+-    let spawnError=false;child.once('error',()=>{spawnError=true;});
+-    let launchTimer;
+-    try{await Promise.race([once(child,'close'),new Promise((_,reject)=>{launchTimer=setTimeout(()=>{child.kill();reject(fail('SUPERVISOR_START_FAILED'));},15000);})]);}
+-    finally{clearTimeout(launchTimer);}
++    child.stderr.on('data',chunk=>{const bytes=Buffer.from(chunk);stderrBytes+=bytes.length;if(stderrHead.length<4096)stderrHead=Buffer.concat([stderrHead,bytes.subarray(0,4096-stderrHead.length)]);});
++    let launchOutput='';child.stdout.on('data',chunk=>{launchOutput+=chunk;if(launchOutput.length>100)child.kill();});
++    let spawnError=false,launchClosed=false;child.once('error',()=>{spawnError=true;});child.once('close',(code,signal)=>{launchClosed=true;launchClosedAt=Date.now();launchExitCode=Number.isInteger(code)?code:null;launchSignal=typeof signal==='string'&&/^SIG[A-Z0-9]{1,16}$/.test(signal)?signal:null;});
++    // Preflight, CreateProcess and acknowledgement share the original total
++    // startup deadline. Cancel cooperatively; hard kill would destroy the only
++    // owner capable of proving whether a Guardian was created.
++    while(!launchClosed&&!spawnError){
++      const progress=await receipt();if(progress?.stage)stage=progress.stage;
++      if(Date.now()>=deadline)throw fail('START_TIMEOUT');
++      await delay(Math.min(100,Math.max(1,deadline-Date.now())));
++    }
+     if(spawnError||child.exitCode!==0){
+-      try{const refused=JSON.parse(launchOutput);launchConfirmedAbsent=refused.runId===runId&&refused.guardianCreated===false;}catch{}
+       throw fail('SUPERVISOR_START_FAILED');
+     }
+-    const launched=JSON.parse(launchOutput);launchedIdentity=await processIdentity(launched.pid,runId);
++    await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_launcher',runId,diagnosticId,launcher:launcherDiagnostic()})+'\n',{flag:'a'});
++    stage='guardian_confirmation';
++    let launched;try{launched=JSON.parse(launchOutput);}catch{throw fail('SUPERVISOR_START_FAILED');}
++    launchedIdentity=await processIdentity(launched.pid,runId);
+     if(!launchedIdentity?.markerMatches)throw fail('SUPERVISOR_START_FAILED');
+     while(Date.now()<deadline) {
+       if(spawnError)throw fail('SUPERVISOR_START_FAILED');
+-      const guardian=await json(join(root,'run','guardian.json')),failure=await json(join(root,'run','guardian-failure.json'));
+-      if(failure?.runId===runId||guardian?.runId===runId&&guardian.finishedAt)throw fail('START_FAILED');
++      const guardian=await json(join(root,'run','guardian.json')),failure=await json(join(root,'run',`guardian.${runId}.json`));
++      if(failure?.schemaVersion===2&&failure.runId===runId&&failure.failure||guardian?.runId===runId&&guardian.finishedAt)throw fail('START_FAILED');
+       const record=await json(join(root,'run','runtime.json'));
+       if(record?.runId===runId) {
+-        if(record.phase==='ready')return record;
++        if(record.phase==='ready'&&Date.now()<deadline)return record;
+         if(['abnormal_exit','cleanup_required'].includes(record.phase))throw fail('START_FAILED');
+       }
+       await delay(100);
+     }
+     throw fail('START_TIMEOUT');
+   } catch(error) {
++    const originalCode=/^[A-Z_]{1,64}$/.test(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
++    const managerFailure={role:'manager',stage,code:originalCode,diagnosticId};
++    let cleanup={proven:release&&!child?.pid,proof:child?.pid||!release?'unresolved':'not_launched'};
++    // Any observation, abort write or diagnostic failure from here must retain
++    // the lock until positive evidence explicitly changes this decision.
++    if(child?.pid)release=false;
++    let diagnosticsWriteFailed=false;
+     try{
+     if(error.message==='START_TIMEOUT'&&runId){
+       const current=await json(join(root,'run','runtime.json')),progress=current?.runId===runId?current.startupProgress:null;
+       const durationMs=Date.now()-deadline+startupTimeoutMs;
+       await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),runId,event:'startup_failure',code:'START_TIMEOUT',timeoutKind:'startup_total',role:progress?.role??'supervisor',stage:progress?.stage??'initializing',durationMs,budgetMs:startupTimeoutMs,stageDurationMs:progress?Date.now()-progress.stageStartedAt:durationMs})+'\n',{flag:'a'});
+     }
+-    }finally{
+-    if(child?.pid&&!launchConfirmedAbsent) {
++    }catch{diagnosticsWriteFailed=true;}finally{
++    if(child?.pid) {
+       // Cancel only this run's private Job; hold backup/start lock until completion.
+-      await save(join(root,'run','abort.json'),{runId,requestedAt:new Date().toISOString(),reason:'START_ABORT'});
++      try{await save(join(root,'run','abort.json'),{runId,requestedAt:new Date().toISOString(),reason:'START_ABORT'});}catch{cleanup={proven:false,proof:'abort_write_failed'};}
+       let complete=false;
+-      for(let n=0;n<300;n++) {
+-        if(await guardianComplete(root,runId)){complete=true;break;}
+-        // If no Job record was ever published, require the exact launcher-owned identity to be gone.
+-        const guardian=await json(join(root,'run','guardian.json'));
+-        if(launchedIdentity&&guardian?.runId!==runId&&!sameProcess(await processIdentity(launchedIdentity.pid),launchedIdentity)){complete=true;break;}
+-        await delay(100);
++      const cleanupDeadline=Date.now()+30000;
++      while(Date.now()<cleanupDeadline) {
++        let proofTimer;
++        const proofAbort=new AbortController();
++        try{
++          // Even a completed Guardian does not cover a still-running Launcher
++          // or preflight helper. Both owners must have finished this attempt.
++          // Read-only observations may finish late. Their eventual result must
++          // never release a lock after the shared cleanup budget has expired.
++          const proven=await Promise.race([launchComplete(runId,child?.pid,{signal:proofAbort.signal}),new Promise(resolve=>{proofTimer=setTimeout(()=>{proofAbort.abort();resolve(false);},cleanupDeadline-Date.now());})]);
++          if(proven&&Date.now()<cleanupDeadline){complete=true;cleanup={proven:true,proof:'launcher_terminal'};break;}
++        }catch{/* A failed observation is not cleanup evidence. */}
++        finally{clearTimeout(proofTimer);proofAbort.abort();}
++        if(Date.now()<cleanupDeadline)await delay(Math.min(100,cleanupDeadline-Date.now()));
+       }
+-      if(!complete){release=false;throw fail('CLEANUP_REQUIRED');}
++      if(!complete){
++        release=false;
++        // Closing an unresponsive owner's handles also closes its private
++        // preflight Job. Absence of a receipt still keeps the lock fail-closed.
++        if(child.exitCode===null)try{child.kill();}catch{cleanup.terminationFailed=true;}
++      }else release=true;
++    }
+     }
++    const latest=await receipt();
++    let runtimeFailure=null,secondaryFailure=null;
++    if(runId){
++      try{
++        const record=await json(join(root,'run','runtime.json')),guardianFailure=await json(join(root,'run',`guardian.${runId}.json`));
++        if(record?.runId===runId)runtimeFailure=record.startupFailure??record.startupProgress;
++        if(guardianFailure?.schemaVersion===2&&guardianFailure.role==='guardian'&&guardianFailure.runId===runId){
++          if(guardianFailure.preflight?.failure&&guardianFailure.failure?.code!==guardianFailure.preflight.failure.code)secondaryFailure=guardianFailure.failure;
++          if(guardianFailure.failure)runtimeFailure={...(guardianFailure.preflight?.failure??guardianFailure.failure),...(Number.isInteger(guardianFailure.preflightExitCode)?{preflightExitCode:guardianFailure.preflightExitCode}:{}),...(Number.isInteger(guardianFailure.nodeExitCode)?{nodeExitCode:guardianFailure.nodeExitCode}:{})};
++          else if(Number.isInteger(guardianFailure.nodeExitCode))runtimeFailure={role:'supervisor',stage:runtimeFailure?.stage??guardianFailure.stage,code:'SUPERVISOR_EXIT',exitCode:guardianFailure.nodeExitCode,diagnosticId:runId+'/supervisor'};
++        }
++      }catch{/* Preserve the original exception even if diagnostic state is unreadable. */}
+     }
++    const observedStage=error.stateFailure?managerFailure.stage:runtimeFailure?.stage??latest?.failure?.stage??(stage==='guardian_confirmation'?stage:latest?.stage??stage);
++    const failureStage=/^[a-z][a-z_-]{0,63}$/.test(observedStage)?observedStage:stage;
++    const rawOrigin=runtimeFailure??latest?.preflight?.failure??latest?.failure;
++    if(!secondaryFailure&&latest?.preflight?.failure&&latest.failure?.code!==latest.preflight.failure.code)secondaryFailure=latest.failure;
++    // Metadata only: never copy exception messages, command lines, paths, or
++    // arbitrary properties from a diagnostic file into the public failure.
++    const failureMetadata=value=>Object.fromEntries(Object.entries(value).filter(([key,value])=>
++      ['role','stage','code','exceptionType','errorId','diagnosticId'].includes(key)?typeof value==='string'&&/^[A-Za-z0-9_.:/-]{1,160}$/.test(value):
++      ['win32Error','hresult','exitCode','childExitCode','preflightExitCode','nodeExitCode'].includes(key)&&Number.isSafeInteger(value)));
++    const observedRuntimeFailure=rawOrigin?failureMetadata(rawOrigin):undefined;
++    // A state read/parse refusal happened in this Manager. An abort or exit
++    // observed during cleanup is separate evidence, never its original cause.
++    const origin=error.stateFailure?managerFailure:observedRuntimeFailure;
++    const startupFailure={runId:runId??null,diagnosticId,code:originalCode,stage:failureStage,managerFailure,...(child?{launcher:launcherDiagnostic()}:{}),...(origin?{origin}:{}),...(secondaryFailure?{secondaryFailure:failureMetadata(secondaryFailure)}:{}),...(error.stateFailure&&observedRuntimeFailure?{observedRuntimeFailure}:{}),...(latest?.code?{launcherCode:latest.code}:{}),cleanup};
++    if(error.stateFailure)startupFailure.stateFailure=error.stateFailure;
++    if(diagnosticsWriteFailed)startupFailure.diagnosticsWriteFailed=true;
++    try{await writeFile(join(root,'logs','lifecycle.jsonl'),JSON.stringify({at:new Date().toISOString(),event:'startup_result',...startupFailure})+'\n',{flag:'a'});}catch{startupFailure.diagnosticsWriteFailed=true;}
++    if(!cleanup.proven){const refused=fail('CLEANUP_REQUIRED');refused.startupFailure=startupFailure;throw refused;}
++    error.startupFailure=startupFailure;
+     throw error;
+   } finally {if(release)await releaseFreeze(root,held);else await held.close();}
+ }
+@@ -380,7 +508,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
+     if(result!==undefined)console.log(JSON.stringify(result));
+   }catch(error){
+     const code=['ACL_DENIED','PORT_OCCUPIED','ALREADY_RUNNING','STALE_RECORD','IDENTITY_MISMATCH','INIT_EXISTS','SECRET_UNAVAILABLE','RUNTIME_BUSY','CLEANUP_REQUIRED','STOP_TIMEOUT','START_TIMEOUT','START_FAILED','SUPERVISOR_START_FAILED','BINARY_CHANGED','INVALID_COMMAND','INVALID_ROOT','INVALID_RUN','APPROVAL_DENIED','CANDIDATE_DENIED','RECONCILIATION_DENIED','INVALID_STATE'].includes(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
+-    if(args.includes('--error-json'))console.log(JSON.stringify({error:code}));else console.error(code);
++    if(args.includes('--error-json'))console.log(JSON.stringify({error:code,...(error.startupFailure?{startupFailure:error.startupFailure}:{})}));else console.error(code);
+     process.exitCode=1;
+   }
+ }
+diff --git a/scripts/TongRuntimeLaunch.ps1 b/scripts/TongRuntimeLaunch.ps1
+index dde7f24..f532aff 100644
+--- a/scripts/TongRuntimeLaunch.ps1
++++ b/scripts/TongRuntimeLaunch.ps1
+@@ -6,42 +6,54 @@ try {
+     if(@($Root,$NodeExe,$Supervisor,$guardian) | Where-Object {$_ -match '["\r\n]'}){throw 'Invalid launch path'}
+     if($RunId -notmatch '^[a-f0-9-]{36}$'){throw 'Invalid run identity'}
+     $Root=[IO.Path]::GetFullPath($Root)
++    if($Root -cne 'D:\Tong\runtime' -and -not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
++    if($Root -ceq 'D:\Tong\runtime' -and ($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs')){throw 'Fixed production entry required'}
++    if($RecoveryGrantId -and $RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid recovery grant identity'}
++    . (Join-Path $PSScriptRoot 'TongStartupProtocol.ps1')
++    Initialize-TongStartup 'launcher'
++    Assert-TongStartupActive
+     if($Root -ceq 'D:\Tong\runtime') {
+         if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
+-        if($RecoveryGrantId){& $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null}else{& $NodeExe $Supervisor preflight-production | Out-Null}
+-        if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
++        if($RecoveryGrantId){Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)}else{Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-production')}
+     }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
+     if($RecoveryGrantId -and $RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid recovery grant identity'}
+     $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$guardian+'" -Root "'+$Root+'" -RunId "'+$RunId+'" -NodeExe "'+$NodeExe+'" -Supervisor "'+$Supervisor+'"'
+     if($RecoveryGrantId){$arguments+=' -RecoveryGrantId "'+$RecoveryGrantId+'"'}
++    $arguments+=' -OwnerJobName "Local\TongGuardian-'+$RunId+'"'
+     # A new console alone still inherits the initiating application's Job.
+     # Break away explicitly; refuse launch if that Job forbids breakaway.
+     # Keep PS5.1 as the pinned production host; its .NET Framework security
+     # helpers and the existing Task Scheduler action are validated together.
+     $guardianShell=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+-    Add-Type -TypeDefinition @'
+-using System;
+-using System.Text;
+-using System.Runtime.InteropServices;
+-public static class TongIndependentGuardian {
+- [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct Startup { public int size;public string reserved,desktop,title;public uint x,y,xSize,ySize,xChars,yChars,fill,flags;public short show,reservedSize;public IntPtr reservedPtr,input,output,error; }
+- [StructLayout(LayoutKind.Sequential)] struct ProcessInfo { public IntPtr process,thread;public uint pid,tid; }
+- [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool CreateProcess(string exe,StringBuilder args,IntPtr processAttrs,IntPtr threadAttrs,bool inherit,uint flags,IntPtr environment,string cwd,ref Startup startup,out ProcessInfo info);
+- [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+- public static uint Start(string exe,string args,string cwd) {
+-  var startup=new Startup();startup.size=Marshal.SizeOf(startup);startup.flags=1;startup.show=0;
+-  ProcessInfo info;
+-  if(!CreateProcess(exe,new StringBuilder("\""+exe+"\" "+args),IntPtr.Zero,IntPtr.Zero,false,0x01000010,IntPtr.Zero,cwd,ref startup,out info))throw new Exception("GUARDIAN_BREAKAWAY_FAILED:"+Marshal.GetLastWin32Error());
+-  try{return info.pid;}finally{CloseHandle(info.thread);CloseHandle(info.process);}
+- }
+-}
+-'@
+-    $childId=[TongIndependentGuardian]::Start($guardianShell,$arguments,$Root)
++    Assert-TongStartupActive
++    Set-TongStartupStage 'create_guardian'
++    # From here until the creation result is persisted, absence is unknown.
++    $script:tongStartup.guardianCreated=$null
++    Set-TongStartupStage 'create_guardian'
++    $adoptionBudget=[int][Math]::Max(1,[Math]::Min(30000,($script:tongDeadline-[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())))
++    $childId=[TongStartupPreflight]::StartGuardian(('Local\TongGuardian-'+$RunId),$guardianShell,$arguments,$Root,$adoptionBudget)
++    $script:tongStartup.guardianCreated=$true
++    $script:tongStartup['guardian']=[ordered]@{pid=$childId;exe=$guardianShell;startTicks=[TongStartupPreflight]::GuardianStartTicks;markerMatches=$true}
++    $script:tongStartup['finishedAt']=[DateTime]::UtcNow.ToString('o')
++    Set-TongStartupStage 'guardian_created'
+     [pscustomobject]@{pid=$childId} | ConvertTo-Json -Compress
+ } catch {
+     # This explicit negative acknowledgement is emitted only before CreateProcess
+     # returned a child. The manager can release its lock without guessing about
+     # an unobserved Guardian after a breakaway/validation failure.
+-    if($childId -eq 0){[pscustomobject]@{runId=$RunId;guardianCreated=$false}|ConvertTo-Json -Compress}
++    if(Get-Variable tongStartup -Scope Script -ErrorAction SilentlyContinue){
++        $nativeFailure=$_.Exception
++        while($nativeFailure.InnerException){$nativeFailure=$nativeFailure.InnerException}
++        if($nativeFailure.Data.Contains('guardianPid')){
++            $childId=[int]$nativeFailure.Data['guardianPid']
++            $script:tongStartup['guardian']=[ordered]@{pid=$childId;exe=[string]$nativeFailure.Data['guardianExe'];startTicks=[string]$nativeFailure.Data['guardianStartTicks'];markerMatches=$true}
++            $script:tongStartup['guardianTreeCleanup']=[ordered]@{proven=($nativeFailure.Data['guardianTreeClean'] -ceq $true);jobName=('Local\TongGuardian-'+$RunId);stage='guardian_adoption';runId=$RunId}
++        }
++        # CreateProcess failure returned synchronously; a killed launcher cannot
++        # execute this catch and therefore cannot publish negative proof.
++        $script:tongStartup.guardianCreated=($childId -ne 0)
++        try{Complete-TongStartupFailure $_}catch{}
++        if($childId -eq 0 -and $script:tongStartup.preflightClean){[pscustomobject]@{runId=$RunId;guardianCreated=$false}|ConvertTo-Json -Compress}
++    }
+     [Console]::Error.WriteLine('Runtime launch refused');exit 2
+ }
+diff --git a/scripts/TongRuntimeGuardian.ps1 b/scripts/TongRuntimeGuardian.ps1
+index 268f5d8..0b9c596 100644
+--- a/scripts/TongRuntimeGuardian.ps1
++++ b/scripts/TongRuntimeGuardian.ps1
+@@ -1,8 +1,10 @@
+-param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$RunId,[Parameter(Mandatory)][string]$NodeExe,[Parameter(Mandatory)][string]$Supervisor,[string]$RecoveryGrantId)
++param([Parameter(Mandatory)][string]$Root,[Parameter(Mandatory)][string]$RunId,[Parameter(Mandatory)][string]$NodeExe,[Parameter(Mandatory)][string]$Supervisor,[string]$RecoveryGrantId,[string]$OwnerJobName)
+ $ErrorActionPreference='Stop'
+ Set-StrictMode -Version Latest
+ $job=[IntPtr]::Zero
+ $stage='compile'
++$node=$null
++$nodeIdentity=$null
+ $approvedRoot=$false
+ function Write-GuardianEvent([string]$Event,$Details) {
+     $entry=[ordered]@{at=[datetime]::UtcNow.ToString('o');runId=$RunId;event=$Event;guardianPid=$PID;stage=$stage}
+@@ -13,16 +15,28 @@ try {
+     if ($Root -match '["\r\n]' -or $RunId -notmatch '^[a-f0-9-]{36}$') { throw 'Invalid guardian settings' }
+     $boundary='D:\Tong\state\'
+     $Root=[IO.Path]::GetFullPath($Root)
++    if($Root -cne 'D:\Tong\runtime' -and -not $Root.StartsWith($boundary,[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
++    if($Root -ceq 'D:\Tong\runtime' -and ($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs')){throw 'Fixed production entry required'}
++    if($RecoveryGrantId -and $RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid recovery grant identity'}
++    . (Join-Path $PSScriptRoot 'TongStartupProtocol.ps1')
++    if($OwnerJobName){
++        if($OwnerJobName -cne ('Local\TongGuardian-'+$RunId)){throw 'GUARDIAN_JOB_MISMATCH'}
++        [TongStartupPreflight]::AdoptGuardian($OwnerJobName)
++    }
++    Initialize-TongStartup 'guardian'
++    Assert-TongStartupActive
++    $stage='preflight'
+     if($Root -ceq 'D:\Tong\runtime') {
+         if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
+-        if($RecoveryGrantId){& $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null}else{& $NodeExe $Supervisor preflight-production | Out-Null}
+-        if($LASTEXITCODE -ne 0){throw 'Production approval refused'}
++        if($RecoveryGrantId){Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)}else{Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-production')}
+     }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
+     $approvedRoot=$true
++    $stage='compile'
+     Write-GuardianEvent 'guardian_started' $null
+     Add-Type -TypeDefinition @'
+ using System;
+ using System.Runtime.InteropServices;
++using System.ComponentModel;
+ public static class TongRuntimeJob {
+   [StructLayout(LayoutKind.Sequential)] struct Basic { public long a,b; public uint flags; public UIntPtr c,d; public uint e; public UIntPtr f; public uint g,h; }
+   [StructLayout(LayoutKind.Sequential)] struct IO { public ulong a,b,c,d,e,f; }
+@@ -33,20 +47,22 @@ public static class TongRuntimeJob {
+   [DllImport("kernel32.dll",SetLastError=true)] public static extern bool TerminateJobObject(IntPtr job,uint code);
+   [DllImport("kernel32.dll",SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job,int type,IntPtr info,uint size,IntPtr returned);
+   [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr handle);
+-  public static IntPtr Create(string name) { var job=CreateJobObject(IntPtr.Zero,name); int error=Marshal.GetLastWin32Error(); if(job==IntPtr.Zero)throw new Exception("JOB_CREATE_FAILED"); if(error==183){CloseHandle(job);throw new Exception("JOB_ALREADY_EXISTS");} var data=new Extended(); data.basic.flags=0x2000; int size=Marshal.SizeOf(data); var ptr=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,ptr,false);if(!SetInformationJobObject(job,9,ptr,(uint)size)){CloseHandle(job);throw new Exception("JOB_CONFIG_FAILED");}}finally{Marshal.FreeHGlobal(ptr);}return job; }
+-  public static int Active(IntPtr job) { var ptr=Marshal.AllocHGlobal(48);try{if(!QueryInformationJobObject(job,1,ptr,48,IntPtr.Zero))throw new Exception("JOB_QUERY_FAILED");return Marshal.ReadInt32(ptr,40);}finally{Marshal.FreeHGlobal(ptr);} }
++  public static IntPtr Create(string name) { var job=CreateJobObject(IntPtr.Zero,name); int error=Marshal.GetLastWin32Error(); if(job==IntPtr.Zero)throw new Win32Exception(error,"JOB_CREATE_FAILED"); if(error==183){CloseHandle(job);throw new Win32Exception(error,"JOB_ALREADY_EXISTS");} var data=new Extended(); data.basic.flags=0x2000; int size=Marshal.SizeOf(data); var ptr=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,ptr,false);if(!SetInformationJobObject(job,9,ptr,(uint)size)){int code=Marshal.GetLastWin32Error();CloseHandle(job);throw new Win32Exception(code,"JOB_CONFIG_FAILED");}}finally{Marshal.FreeHGlobal(ptr);}return job; }
++  public static int Active(IntPtr job) { var ptr=Marshal.AllocHGlobal(48);try{if(!QueryInformationJobObject(job,1,ptr,48,IntPtr.Zero))throw new Win32Exception(Marshal.GetLastWin32Error(),"JOB_QUERY_FAILED");return Marshal.ReadInt32(ptr,40);}finally{Marshal.FreeHGlobal(ptr);} }
+ }
+ '@
+-    function Save-Json([string]$Path,$Value) { $tempPath=$Path+'.'+[guid]::NewGuid().ToString()+'.tmp'; [IO.File]::WriteAllText($tempPath,($Value | ConvertTo-Json -Depth 12),[Text.UTF8Encoding]::new($false)); Move-Item -LiteralPath $tempPath -Destination $Path -Force }
++    function Save-Json([string]$Path,$Value) { $tempPath=$Path+'.'+[guid]::NewGuid().ToString()+'.tmp'; [IO.File]::WriteAllText($tempPath,($Value | ConvertTo-Json -Depth 12),[Text.UTF8Encoding]::new($false)); [TongStartupPreflight]::AtomicReplace($tempPath,$Path) }
+     $stage='read-request'
+     $request=Get-Content -LiteralPath (Join-Path $Root 'run\request.json') -Raw | ConvertFrom-Json
+     if ($request.runId -ne $RunId) { throw 'Run identity mismatch' }
+     if($RecoveryGrantId){
+         if($RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$' -or $request.recoveryGrantId -cne $RecoveryGrantId){throw 'Recovery grant identity mismatch'}
+-        & $NodeExe $Supervisor preflight-login --root $Root --grant-id $RecoveryGrantId | Out-Null
+-        if($LASTEXITCODE -ne 0){throw 'Recovery authorization refused'}
++        $stage='preflight'
++        Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)
++        $stage='read-request'
+     }elseif($request.PSObject.Properties['recoveryGrantId']){throw 'Recovery request requires explicit guardian authorization'}
+     $stage='create-job'
++    Assert-TongStartupActive
+     $jobName='Local\TongRuntime-'+$RunId
+     $job=[TongRuntimeJob]::Create($jobName)
+     Write-GuardianEvent 'job_created' @{jobName=$jobName;killOnJobClose=$true}
+@@ -57,15 +73,20 @@ public static class TongRuntimeJob {
+     $info.EnvironmentVariables.Clear()
+     foreach ($entry in [Environment]::GetEnvironmentVariables().GetEnumerator()) { if($entry.Key -match '^(SYSTEMROOT|WINDIR|COMSPEC|SYSTEMDRIVE|PROGRAMDATA|PATH|PATHEXT|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|NUMBER_OF_PROCESSORS|PROCESSOR_ARCHITECTURE|OS)$') { $info.EnvironmentVariables[[string]$entry.Key]=[string]$entry.Value } }
+     $stage='spawn-node'
+-    $node=[Diagnostics.Process]::new(); $node.StartInfo=$info; $null=$node.Start()
++    Assert-TongStartupActive
++    $script:tongStartup.nodeCreated=$null;Set-TongStartupStage $stage
++    $environment=(@($info.EnvironmentVariables.Keys | Sort-Object | ForEach-Object {$_+'='+$info.EnvironmentVariables[$_]}) -join [char]0)+[char]0+[char]0
++    $node=[TongStartupPreflight]::StartNode($job,$info.FileName,$info.Arguments,$Root,$environment)
++    $script:tongStartup.nodeCreated=$true
+     $nodeTicks=$node.StartTime.ToUniversalTime().Ticks
+     $nodeIdentity=[ordered]@{pid=$node.Id;parentPid=$PID;exe=$NodeExe;startTicks=($nodeTicks-($nodeTicks%10)).ToString();markerMatches=$true}
+     Write-GuardianEvent 'node_spawned' @{nodePid=$node.Id}
+-    $stage='assign-job'
+-    if (-not [TongRuntimeJob]::AssignProcessToJobObject($job,$node.Handle)) { $node.Kill(); throw 'Job assignment failed' }
++    $script:tongStartup['node']=$nodeIdentity
++    Set-TongStartupStage 'node_bound'
+     $selfInfo=Get-CimInstance Win32_Process -Filter ('ProcessId = '+$PID)
+-    $guardian=[ordered]@{schemaVersion=1;runId=$RunId;pid=$PID;exe=$selfInfo.ExecutablePath;startTicks=$selfInfo.CreationDate.ToUniversalTime().Ticks.ToString();nodePid=$node.Id;jobAssigned=$true;jobName=$jobName;killOnJobClose=$true;startedAt=[datetime]::UtcNow.ToString('o')}
++    $guardian=[ordered]@{schemaVersion=1;containment='create_process_job_list';runId=$RunId;pid=$PID;exe=$selfInfo.ExecutablePath;startTicks=$selfInfo.CreationDate.ToUniversalTime().Ticks.ToString();nodePid=$node.Id;jobAssigned=$true;jobName=$jobName;killOnJobClose=$true;startedAt=[datetime]::UtcNow.ToString('o')}
+     $stage='record-start'
++    Assert-TongStartupActive
+     Save-Json (Join-Path $Root 'run\guardian.json') $guardian
+     Write-GuardianEvent 'job_assigned' @{nodePid=$node.Id}
+     $stage='wait-node'
+@@ -99,5 +120,35 @@ public static class TongRuntimeJob {
+         Save-Json $runtimePath $runtime
+         Write-GuardianEvent 'supervisor_exit_before_record' @{nodePid=$node.Id;jobActiveAfterCleanup=$active}
+     }elseif($runtime.supervisor.pid -eq $node.Id -and ($active -gt 0 -or $runtime.phase -in @('starting','ready','stopping'))){$runtime.phase=if($active -gt 0){'cleanup_required'}else{'abnormal_exit'};$runtime | Add-Member -NotePropertyName finishedAt -NotePropertyValue $guardian.finishedAt -Force;Save-Json $runtimePath $runtime}
+-} catch { if($approvedRoot){try { $failure=[ordered]@{runId=$RunId;stage=$stage;at=[datetime]::UtcNow.ToString('o');exceptionType=$_.Exception.GetType().FullName;errorId=$_.FullyQualifiedErrorId;win32Error=[Runtime.InteropServices.Marshal]::GetLastWin32Error()}; [IO.File]::WriteAllText((Join-Path $Root 'run\guardian-failure.json'),($failure | ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false));Write-GuardianEvent 'guardian_failure' $failure } catch { }}; [Console]::Error.WriteLine('Tong runtime guardian failed; inspect protected lifecycle records'); exit 2 }
+-finally { if($job -ne [IntPtr]::Zero){$null=[TongRuntimeJob]::CloseHandle($job);if($approvedRoot){try{Write-GuardianEvent 'job_handle_closed' $null}catch{}}} }
++} catch {
++    $originalFailure=$_
++    if(Get-Variable tongStartup -Scope Script -ErrorAction SilentlyContinue){
++        try{Complete-TongStartupFailure $originalFailure $stage}catch{}
++    }
++    if($approvedRoot){try{Write-GuardianEvent 'guardian_failure' $script:tongStartup.failure}catch{}}
++    [Console]::Error.WriteLine('Tong runtime guardian failed; inspect protected lifecycle records')
++    exit 2
++} finally {
++    # A preflight terminal receipt is never runtime cleanup evidence. Publish
++    # runtime evidence only after terminating AND observing the named Job empty.
++    if(Get-Variable tongStartup -Scope Script -ErrorAction SilentlyContinue){
++        try {
++            if($job -ne [IntPtr]::Zero){
++                if([TongRuntimeJob]::Active($job) -gt 0){if(-not [TongRuntimeJob]::TerminateJobObject($job,1)){throw 'JOB_CLEANUP_FAILED'}}
++                $until=[DateTime]::UtcNow.AddSeconds(10)
++                while([TongRuntimeJob]::Active($job) -gt 0 -and [DateTime]::UtcNow -lt $until){Start-Sleep -Milliseconds 50}
++                $script:tongStartup.jobActiveAfterCleanup=[TongRuntimeJob]::Active($job)
++                $script:tongStartup.runtimeClean=($script:tongStartup.jobActiveAfterCleanup -eq 0)
++            }elseif($script:tongStartup.nodeCreated -ceq $false){
++                $script:tongStartup.runtimeClean=$true
++                $script:tongStartup.jobActiveAfterCleanup=0
++            }
++            if($node){$script:tongStartup['node']=$nodeIdentity;$script:tongStartup['nodeExitCode']=$node.ExitCode}
++            $script:tongStartup['finishedAt']=[DateTime]::UtcNow.ToString('o')
++            Set-TongStartupStage $stage
++        }catch{# Keep the last incomplete receipt; absence is not proof.
++        }
++    }
++    if($job -ne [IntPtr]::Zero){$null=[TongRuntimeJob]::CloseHandle($job);if($approvedRoot){try{Write-GuardianEvent 'job_handle_closed' $null}catch{}}}
++    if($node){$node.Dispose()}
++}
+diff --git a/scripts/TongStartupProtocol.ps1 b/scripts/TongStartupProtocol.ps1
+new file mode 100644
+index 0000000..288cf9a
+--- /dev/null
++++ b/scripts/TongStartupProtocol.ps1
+@@ -0,0 +1,223 @@
++# Shared by the pinned PS5.1 Launcher and Guardian. No production test switches.
++# Every preflight descendant inherits a private kill-on-close Job. The child is
++# bound by CreateProcess itself. Suspending then assigning still leaks a child
++# if its owner dies between those two calls. JOB_LIST is required; no fallback.
++Add-Type -TypeDefinition @'
++using System;
++using System.Text;
++using System.Runtime.InteropServices;
++using System.ComponentModel;
++using System.Diagnostics;
++using System.Threading;
++public sealed class TongStartupPreflight : IDisposable {
++ [StructLayout(LayoutKind.Sequential)] struct Basic { public long a,b; public uint flags; public UIntPtr c,d; public uint e; public UIntPtr f; public uint g,h; }
++ [StructLayout(LayoutKind.Sequential)] struct IO { public ulong a,b,c,d,e,f; }
++ [StructLayout(LayoutKind.Sequential)] struct Extended { public Basic basic; public IO io; public UIntPtr a,b,c,d; }
++ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct Startup { public int size; public string reserved,desktop,title; public uint x,y,xSize,ySize,xChars,yChars,fill,flags; public short show,reservedSize; public IntPtr reservedPtr,input,output,error; }
++ [StructLayout(LayoutKind.Sequential)] struct ProcessInfo { public IntPtr process,thread; public uint pid,tid; }
++ [StructLayout(LayoutKind.Sequential)] struct StartupEx { public Startup startup; public IntPtr attributes; }
++ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateJobObject(IntPtr attrs,string name);
++ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr OpenJobObject(uint access,bool inherit,string name);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool IsProcessInJob(IntPtr process,IntPtr job,out bool result);
++ [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetInformationJobObject(IntPtr job,int type,IntPtr info,uint size);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job,int type,IntPtr info,uint size,IntPtr returned);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool TerminateJobObject(IntPtr job,uint code);
++ [DllImport("kernel32.dll",EntryPoint="CreateProcessW",CharSet=CharSet.Unicode,SetLastError=true)] static extern bool CreateBoundProcess(string exe,StringBuilder args,IntPtr pa,IntPtr ta,bool inherit,uint flags,IntPtr env,string cwd,ref StartupEx startup,out ProcessInfo info);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool InitializeProcThreadAttributeList(IntPtr list,int count,int flags,ref IntPtr size);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool UpdateProcThreadAttribute(IntPtr list,uint flags,IntPtr attribute,IntPtr value,IntPtr size,IntPtr previous,IntPtr returned);
++ [DllImport("kernel32.dll")] static extern void DeleteProcThreadAttributeList(IntPtr list);
++ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)] static extern IntPtr CreateFile(string path,uint access,uint share,IntPtr sa,uint disposition,uint flags,IntPtr template);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetHandleInformation(IntPtr h,uint mask,uint flags);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetHandleInformation(IntPtr h,out uint flags);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern uint ResumeThread(IntPtr thread);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr process,out long created,out long exited,out long kernel,out long user);
++ [DllImport("kernel32.dll",SetLastError=true)] static extern uint WaitForSingleObject(IntPtr h,uint ms);
++ [DllImport("kernel32.dll")] static extern bool TerminateProcess(IntPtr h,uint code);
++ [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
++ [StructLayout(LayoutKind.Sequential)] struct RenameInfo { public uint flags;public IntPtr root;public uint length;public ushort name; }
++ [DllImport("kernel32.dll",SetLastError=true)] static extern bool SetFileInformationByHandle(IntPtr file,int kind,IntPtr info,uint size);
++ public static void AtomicReplace(string from,string to){
++  // MoveFileEx cannot replace an open target even with FILE_SHARE_DELETE.
++  // FileRenameInfoEx + REPLACE_IF_EXISTS | POSIX_SEMANTICS is one kernel
++  // rename: existing readers keep the old file, new opens see the new file.
++  // Do not ignore readonly attributes, change ACLs, delete first, or fall back
++  // on unsupported filesystems/Windows versions. Failed files remain evidence.
++  var file=CreateFile(from,0x10000,7,IntPtr.Zero,3,0x00200000,IntPtr.Zero);
++  if(file==new IntPtr(-1))throw new Win32Exception(Marshal.GetLastWin32Error(),"STATE_OPEN_FAILED");
++  IntPtr info=IntPtr.Zero;
++  try{
++   var path=Encoding.Unicode.GetBytes(System.IO.Path.GetFullPath(to));
++   int offset=Marshal.OffsetOf(typeof(RenameInfo),"name").ToInt32(),size=checked(offset+path.Length+2);
++   info=Marshal.AllocHGlobal(size);for(int n=0;n<size;n++)Marshal.WriteByte(info,n,0);
++   Marshal.WriteInt32(info,3);Marshal.WriteInt32(info,offset-4,path.Length);Marshal.Copy(path,0,IntPtr.Add(info,offset),path.Length);
++   if(!SetFileInformationByHandle(file,22,info,(uint)size))throw new Win32Exception(Marshal.GetLastWin32Error(),"STATE_REPLACE_FAILED");
++  }finally{if(info!=IntPtr.Zero)Marshal.FreeHGlobal(info);CloseHandle(file);}
++ }
++ IntPtr job,process;
++ static void Check(bool success,string code){if(!success)throw new Win32Exception(Marshal.GetLastWin32Error(),code);}
++ // Explicit handle allowlist: preflight inherits only NUL. Neither Guardian
++ // nor runtime children inherit an owner Job handle (including CodeDom/csc).
++ static ProcessInfo Spawn(IntPtr job,string exe,string args,string cwd,IntPtr environment,IntPtr inherited,uint flags) {
++  IntPtr size=IntPtr.Zero,list=IntPtr.Zero,jobs=IntPtr.Zero,handles=IntPtr.Zero;bool initialized=false;
++  try {
++   InitializeProcThreadAttributeList(IntPtr.Zero,inherited==IntPtr.Zero?1:2,0,ref size);
++   list=Marshal.AllocHGlobal(size);Check(InitializeProcThreadAttributeList(list,inherited==IntPtr.Zero?1:2,0,ref size),"ATTRIBUTE_INIT_FAILED");initialized=true;
++   jobs=Marshal.AllocHGlobal(IntPtr.Size);Marshal.WriteIntPtr(jobs,job);
++   Check(UpdateProcThreadAttribute(list,0,new IntPtr(0x2000d),jobs,new IntPtr(IntPtr.Size),IntPtr.Zero,IntPtr.Zero),"JOB_LIST_FAILED");
++   if(inherited!=IntPtr.Zero){handles=Marshal.AllocHGlobal(IntPtr.Size);Marshal.WriteIntPtr(handles,inherited);Check(UpdateProcThreadAttribute(list,0,new IntPtr(0x20002),handles,new IntPtr(IntPtr.Size),IntPtr.Zero,IntPtr.Zero),"HANDLE_LIST_FAILED");}
++   var startup=new StartupEx();startup.startup.size=Marshal.SizeOf(startup);startup.attributes=list;
++   if((flags&0x08000000)!=0&&inherited!=IntPtr.Zero){startup.startup.flags=0x100;startup.startup.input=inherited;startup.startup.output=inherited;startup.startup.error=inherited;}
++   else{startup.startup.flags=1;startup.startup.show=0;}
++   ProcessInfo info;
++   Check(CreateBoundProcess(exe,new StringBuilder("\""+exe+"\" "+args),IntPtr.Zero,IntPtr.Zero,inherited!=IntPtr.Zero,flags|0x80000|0x400,environment,cwd,ref startup,out info),"BOUND_CREATE_FAILED");
++   return info;
++  }finally{if(initialized)DeleteProcThreadAttributeList(list);if(list!=IntPtr.Zero)Marshal.FreeHGlobal(list);if(jobs!=IntPtr.Zero)Marshal.FreeHGlobal(jobs);if(handles!=IntPtr.Zero)Marshal.FreeHGlobal(handles);}
++ }
++ public static Process StartNode(IntPtr job,string exe,string args,string cwd,string environment) {
++  IntPtr env=Marshal.StringToHGlobalUni(environment);ProcessInfo info=new ProcessInfo();
++  try{info=Spawn(job,exe,args,cwd,env,IntPtr.Zero,0x08000004);var child=Process.GetProcessById((int)info.pid);var handle=child.Handle;Check(ResumeThread(info.thread)!=0xffffffff,"RESUME_FAILED");return child;}
++  catch{if(info.process!=IntPtr.Zero){TerminateProcess(info.process,1);WaitForSingleObject(info.process,10000);}throw;}
++  finally{Marshal.FreeHGlobal(env);if(info.thread!=IntPtr.Zero)CloseHandle(info.thread);if(info.process!=IntPtr.Zero)CloseHandle(info.process);}
++ }
++ static IntPtr guardianLease;
++ public static string GuardianStartTicks {get;private set;}
++ public static void AdoptGuardian(string name) {
++  var lease=OpenJobObject(4,false,name);Check(lease!=IntPtr.Zero,"GUARDIAN_JOB_OPEN_FAILED");
++  try{bool member;Check(IsProcessInJob(GetCurrentProcess(),lease,out member),"GUARDIAN_JOB_QUERY_FAILED");if(!member)throw new Exception("GUARDIAN_JOB_MISMATCH");
++   uint flags;Check(GetHandleInformation(lease,out flags),"GUARDIAN_HANDLE_QUERY_FAILED");if((flags&1)!=0)throw new Exception("GUARDIAN_HANDLE_INHERITABLE");
++   // Keep a NON-inheritable handle until native process teardown. Closing the
++   // final handle inside finally would kill this process before its exit code.
++   using(var ready=EventWaitHandle.OpenExisting(name+"-adopted")){guardianLease=lease;lease=IntPtr.Zero;ready.Set();}
++  }finally{if(lease!=IntPtr.Zero)CloseHandle(lease);}
++ }
++ public static uint StartGuardian(string name,string exe,string args,string cwd,int timeoutMs) {
++  IntPtr owner=IntPtr.Zero;ProcessInfo info=new ProcessInfo();
++  bool created;using(var ready=new EventWaitHandle(false,EventResetMode.ManualReset,name+"-adopted",out created)){
++  if(!created)throw new Exception("GUARDIAN_EVENT_EXISTS");
++  try{owner=NewJob(name);info=Spawn(owner,exe,args,cwd,IntPtr.Zero,IntPtr.Zero,0x01000010);
++   long createdAt,ended,kernel,user;Check(GetProcessTimes(info.process,out createdAt,out ended,out kernel,out user),"GUARDIAN_IDENTITY_FAILED");GuardianStartTicks=(DateTime.FromFileTimeUtc(createdAt).Ticks/10*10).ToString();
++   var watch=Stopwatch.StartNew();
++   while(!ready.WaitOne(50)){if(Wait(info.process,0)==0)throw new Exception("GUARDIAN_EXIT_BEFORE_ADOPTION");if(watch.ElapsedMilliseconds>=timeoutMs)throw new Exception("GUARDIAN_ADOPTION_TIMEOUT");}
++   return info.pid;
++  }
++  catch(Exception failure){
++   if(info.process!=IntPtr.Zero){
++    failure.Data["guardianPid"]=(int)info.pid;failure.Data["guardianExe"]=exe;
++    long a,b,c,d;if(GetProcessTimes(info.process,out a,out b,out c,out d))failure.Data["guardianStartTicks"]=(DateTime.FromFileTimeUtc(a).Ticks/10*10).ToString();
++    bool clean=false;
++    try{if(owner!=IntPtr.Zero&&TerminateJobObject(owner,1)){
++     WaitForSingleObject(info.process,10000);var until=Stopwatch.StartNew();
++     while(QueryActive(owner)>0&&until.ElapsedMilliseconds<10000)Thread.Sleep(50);
++     clean=QueryActive(owner)==0;
++    }}catch{clean=false;}
++    failure.Data["guardianTreeClean"]=clean;
++    uint code;if(GetExitCodeProcess(info.process,out code)&&code!=259)failure.Data["childExitCode"]=(long)code;
++   }
++   throw;
++  }
++  finally{if(info.thread!=IntPtr.Zero)CloseHandle(info.thread);if(info.process!=IntPtr.Zero)CloseHandle(info.process);if(owner!=IntPtr.Zero)CloseHandle(owner);}
++  }
++ }
++ static int QueryActive(IntPtr handle){var p=Marshal.AllocHGlobal(48);try{Check(QueryInformationJobObject(handle,1,p,48,IntPtr.Zero),"JOB_QUERY_FAILED");return Marshal.ReadInt32(p,40);}finally{Marshal.FreeHGlobal(p);}}
++ static IntPtr NewJob(string name) {
++  var handle=CreateJobObject(IntPtr.Zero,name);int error=Marshal.GetLastWin32Error();if(handle==IntPtr.Zero)throw new Win32Exception(error,"JOB_CREATE_FAILED");
++  try{if(error==183)throw new Win32Exception(error,"JOB_ALREADY_EXISTS");var data=new Extended();data.basic.flags=0x2000;int size=Marshal.SizeOf(data);var p=Marshal.AllocHGlobal(size);try{Marshal.StructureToPtr(data,p,false);Check(SetInformationJobObject(handle,9,p,(uint)size),"JOB_CONFIG_FAILED");}finally{Marshal.FreeHGlobal(p);}return handle;}catch{CloseHandle(handle);throw;}
++ }
++ public int Pid {get;private set;}
++ public string StartTicks {get;private set;}
++ public TongStartupPreflight(string name,string exe,string args,string cwd) {
++  IntPtr nul=IntPtr.Zero; ProcessInfo info=new ProcessInfo();
++  try {
++   job=NewJob(name);
++   nul=CreateFile("NUL",0xC0000000,3,IntPtr.Zero,3,0,IntPtr.Zero);
++   Check(nul!=new IntPtr(-1),"PREFLIGHT_IO_FAILED");Check(SetHandleInformation(nul,1,1),"PREFLIGHT_IO_FAILED");
++   info=Spawn(job,exe,args,cwd,IntPtr.Zero,nul,0x08000004);
++   process=info.process;
++   Pid=(int)info.pid;long a,b,c,d;Check(GetProcessTimes(process,out a,out b,out c,out d),"PREFLIGHT_IDENTITY_FAILED");StartTicks=(DateTime.FromFileTimeUtc(a).Ticks/10*10).ToString();
++   Check(ResumeThread(info.thread)!=0xffffffff,"PREFLIGHT_RESUME_FAILED");
++  }catch{if(process!=IntPtr.Zero){TerminateProcess(process,1);WaitForSingleObject(process,10000);}Dispose();throw;}
++  finally{if(info.thread!=IntPtr.Zero)CloseHandle(info.thread);if(nul!=IntPtr.Zero&&nul!=new IntPtr(-1))CloseHandle(nul);}
++ }
++ static uint Wait(IntPtr handle,uint timeout){uint status=WaitForSingleObject(handle,timeout);if(status==0xffffffff)throw new Win32Exception(Marshal.GetLastWin32Error(),"PROCESS_WAIT_FAILED");return status;}
++ public bool Exited { get{return Wait(process,0)==0;} }
++ public uint ExitCode { get{uint code;Check(GetExitCodeProcess(process,out code),"PREFLIGHT_STATUS_FAILED");return code;} }
++ public int Active { get{var p=Marshal.AllocHGlobal(48);try{Check(QueryInformationJobObject(job,1,p,48,IntPtr.Zero),"PREFLIGHT_JOB_FAILED");return Marshal.ReadInt32(p,40);}finally{Marshal.FreeHGlobal(p);}} }
++ public void Cancel(){Check(TerminateJobObject(job,1),"PREFLIGHT_CANCEL_FAILED");}
++ public void Dispose(){if(job!=IntPtr.Zero){CloseHandle(job);job=IntPtr.Zero;}if(process!=IntPtr.Zero){CloseHandle(process);process=IntPtr.Zero;}}
++}
++'@
++function Get-TongStartupIdentity([int]$ProcessId) {
++    $p=Get-CimInstance Win32_Process -Filter ('ProcessId = '+$ProcessId)
++    if($null -eq $p){return $null}
++    return [ordered]@{pid=[int]$p.ProcessId;exe=[string]$p.ExecutablePath;startTicks=$p.CreationDate.ToUniversalTime().Ticks.ToString();markerMatches=([string]$p.CommandLine -like ('*'+$RunId+'*'))}
++}
++function Initialize-TongStartup([string]$Role) {
++    $request=Get-Content -LiteralPath (Join-Path $Root 'run\request.json') -Raw | ConvertFrom-Json
++    if($request.runId -cne $RunId){throw 'INVALID_RUN'}
++    $script:tongDeadline=if($request.PSObject.Properties['startupDeadline']){[long]$request.startupDeadline}else{[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()+120000}
++    $script:tongRole=$Role
++    $script:tongStartup=[ordered]@{schemaVersion=2;runId=$RunId;role=$Role;owner=Get-TongStartupIdentity $PID;launcher=$(if($Role -eq 'launcher'){Get-TongStartupIdentity $PID}else{$null});stage='initializing';guardianCreated=$false;preflightClean=$true;nodeCreated=$false;runtimeClean=$false;jobName=('Local\TongRuntime-'+$RunId);jobActiveAfterCleanup=$null}
++    Set-TongStartupStage 'initializing'
++}
++function Set-TongStartupStage([string]$Stage) {
++    $script:tongStartup.stage=$Stage
++    $script:tongStartup['at']=[DateTime]::UtcNow.ToString('o')
++    $path=Join-Path $Root ('run\'+$script:tongRole+'.'+$RunId+'.json')
++    $tempPath=$path+'.'+[guid]::NewGuid().ToString()+'.tmp'
++    [IO.File]::WriteAllText($tempPath,($script:tongStartup|ConvertTo-Json -Depth 5 -Compress),[Text.UTF8Encoding]::new($false))
++    [TongStartupPreflight]::AtomicReplace($tempPath,$path)
++}
++function Assert-TongStartupActive {
++    $request=Get-Content -LiteralPath (Join-Path $Root 'run\request.json') -Raw | ConvertFrom-Json
++    if($request.runId -cne $RunId){throw 'INVALID_RUN'}
++    $abortPath=Join-Path $Root 'run\abort.json'
++    if(Test-Path -LiteralPath $abortPath){$abort=Get-Content -LiteralPath $abortPath -Raw|ConvertFrom-Json;if($abort.runId -ceq $RunId){throw 'START_ABORT'}}
++    if([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -ge $script:tongDeadline){throw 'START_TIMEOUT'}
++}
++function Invoke-TongStartupPreflight([string]$Arguments) {
++    Assert-TongStartupActive
++    $watch=[Diagnostics.Stopwatch]::StartNew()
++    $script:tongStartup['preflight']=[ordered]@{startedAt=[DateTime]::UtcNow.ToString('o');elapsedMs=$null;exitCode=$null;child=$null;jobName=('Local\TongPreflight-'+$script:tongRole+'-'+$RunId);jobActiveAfterCleanup=$null}
++    $script:tongStartup.preflightClean=$false;Set-TongStartupStage 'preflight'
++    $probe=$null
++    try {
++        $probe=[TongStartupPreflight]::new(('Local\TongPreflight-'+$script:tongRole+'-'+$RunId),$NodeExe,$Arguments,$Root)
++        $script:tongStartup.preflight.child=[ordered]@{pid=$probe.Pid;exe=$NodeExe;startTicks=$probe.StartTicks}
++        Set-TongStartupStage 'preflight'
++        while(-not $probe.Exited){Assert-TongStartupActive;Start-Sleep -Milliseconds 100}
++        $script:tongStartup['preflightExitCode']=[long]$probe.ExitCode
++        $script:tongStartup.preflight.exitCode=[long]$probe.ExitCode
++        if($probe.ExitCode -ne 0){throw 'APPROVAL_DENIED'}
++    }catch{
++        $initial=$_.Exception;while($initial.InnerException){$initial=$initial.InnerException}
++        $script:tongStartup.preflight['failure']=[ordered]@{role=$script:tongRole;stage='preflight';code=$(if($initial.Message -cmatch '^[A-Z_]{1,64}$'){$initial.Message}else{'SUPERVISOR_START_FAILED'});win32Error=$(if($initial -is [ComponentModel.Win32Exception]){$initial.NativeErrorCode}else{$null})}
++        throw
++    }finally{
++        if($null -ne $probe){
++            try {
++                if($probe.Active -gt 0){$probe.Cancel()}
++                $until=[DateTime]::UtcNow.AddSeconds(10)
++                while($probe.Active -gt 0 -and [DateTime]::UtcNow -lt $until){Start-Sleep -Milliseconds 50}
++                $script:tongStartup.preflight.jobActiveAfterCleanup=$probe.Active
++                $script:tongStartup.preflightClean=($script:tongStartup.preflight.jobActiveAfterCleanup -eq 0)
++            }finally{$script:tongStartup.preflight.elapsedMs=$watch.ElapsedMilliseconds;$probe.Dispose()}
++        }
++        $script:tongStartup.preflight.elapsedMs=$watch.ElapsedMilliseconds
++    }
++    if(-not $script:tongStartup.preflightClean){throw 'PREFLIGHT_CLEANUP_REQUIRED'}
++    Assert-TongStartupActive
++    Set-TongStartupStage 'preflight_complete'
++}
++function Complete-TongStartupFailure($Failure,[string]$Stage=$script:tongStartup.stage) {
++    $exception=$Failure.Exception
++    while($exception.InnerException){$exception=$exception.InnerException}
++    $code=$exception.Message
++    $script:tongStartup['failure']=[ordered]@{role=$script:tongRole;stage=$Stage;code=$(if($code -cmatch '^[A-Z_]{1,64}$'){$code}else{'SUPERVISOR_START_FAILED'});exceptionType=$exception.GetType().FullName;errorId=$(if($Failure.FullyQualifiedErrorId -cmatch '^[A-Za-z0-9_.,-]{1,128}$'){$Failure.FullyQualifiedErrorId}else{'REDACTED'});hresult=$exception.HResult;win32Error=$(if($exception -is [ComponentModel.Win32Exception]){$exception.NativeErrorCode}else{$null});exitCode=2;diagnosticId=($RunId+'/'+$script:tongRole)}
++    if($script:tongStartup.Contains('preflightExitCode')){$script:tongStartup.failure['preflightExitCode']=$script:tongStartup.preflightExitCode}
++    if($exception.Data.Contains('childExitCode')){$script:tongStartup.failure['childExitCode']=$exception.Data['childExitCode']}
++    $script:tongStartup['finishedAt']=[DateTime]::UtcNow.ToString('o')
++    $script:tongStartup['code']=$script:tongStartup.failure.code
++    Set-TongStartupStage $Stage
++}
+diff --git a/scripts/TongRuntimeSecurity.mjs b/scripts/TongRuntimeSecurity.mjs
+index c81deba..6727f73 100644
+--- a/scripts/TongRuntimeSecurity.mjs
++++ b/scripts/TongRuntimeSecurity.mjs
+@@ -12,16 +12,17 @@ export function safeEnvironment(root) {
+   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => keys.has(key.toUpperCase())));
+   return { ...env, TEMP: join(root, 'temp'), TMP: join(root, 'temp'), USERPROFILE: join(root, 'home'), APPDATA: join(root, 'home', 'AppData', 'Roaming'), LOCALAPPDATA: join(root, 'home', 'AppData', 'Local') };
+ }
+-function launch(mode, input, root) {
++function launch(mode, input, root, signal) {
+   // Keep metadata inspection read-only: synthetic USERPROFILE/TEMP made Windows
+   // create directories while inspecting an otherwise empty target.
+   const keys = new Set(['SYSTEMROOT','WINDIR','COMSPEC','SYSTEMDRIVE','PROGRAMDATA','PATH','PATHEXT','TEMP','TMP','USERPROFILE','APPDATA','LOCALAPPDATA','NUMBER_OF_PROCESSORS','PROCESSOR_ARCHITECTURE','OS']);
+   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => keys.has(key.toUpperCase())));
+-  const child = spawn(powershell, ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',helper,'-Mode',mode], { windowsHide: true, env, stdio: ['pipe','pipe','pipe'] });
++  if(signal?.aborted)throw fail('SECURITY_UNAVAILABLE');
++  const child = spawn(powershell, ['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',helper,'-Mode',mode], { windowsHide: true, env, signal, stdio: ['pipe','pipe','pipe'] });
+   child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify(input)); return child;
+ }
+-async function run(mode, input, root = dirname(helper)) {
+-  const child = launch(mode, input, root); let out = '', size = 0;
++async function run(mode, input, root = dirname(helper), signal) {
++  const child = launch(mode, input, root, signal); let out = '', size = 0;
+   child.stdout.on('data', chunk => { size += chunk.length; if (size > 1048576) child.kill(); else out += chunk; });
+   child.stderr.resume();
+   return new Promise((ok, reject) => {
+@@ -30,13 +31,13 @@ async function run(mode, input, root = dirname(helper)) {
+     child.once('close', code => { clearTimeout(timer); if (code !== 0 || size > 1048576) reject(fail('SECURITY_UNAVAILABLE')); else { try { ok(out.trim() ? JSON.parse(out) : []); } catch { reject(fail('SECURITY_UNAVAILABLE')); } } });
+   });
+ }
+-export async function inspectSecurity(paths) {
++export async function inspectSecurity(paths,{signal}={}) {
+   if (process.platform !== 'win32' || !Array.isArray(paths) || !paths.length || paths.some(path => !isAbsolute(path))) throw fail('ACL_DENIED');
+   for (const path of paths) { const info = await lstat(path); if (info.isSymbolicLink() || info.isFile() && info.nlink !== 1 || (await realpath(path)).toLowerCase() !== resolve(path).toLowerCase()) throw fail('ACL_DENIED'); }
+-  return run('acl', { paths }, paths[0]);
++  return run('acl', { paths }, paths[0],signal);
+ }
+-export async function assertProtectedPaths(paths) {
+-  const info = await inspectSecurity(paths);
++export async function assertProtectedPaths(paths,options) {
++  const info = await inspectSecurity(paths,options);
+   if (info.items.length !== paths.length || info.items.some(item => !item.secure)) throw fail('ACL_DENIED');
+   return info;
+ }
+@@ -75,12 +76,13 @@ export async function readSecret(root, purpose) {
+     child.once('close', code => { if (code !== 0 || !socket) finish(true); });
+   });
+ }
+-export async function processIdentity(pid, marker = '') {
+-  const value=await run('identity', { pid, marker });
++export async function processIdentity(pid, marker = '',{signal}={}) {
++  const value=await run('identity', { pid, marker },undefined,signal);
+   // Windows PowerShell emits no JSON for a missing CIM process; run() uses [].
+   return value===null||Array.isArray(value)&&value.length===0?null:value;
+ }
+ export async function runtimeJobState(runId) { return run('runtime-job', { runId }); }
++export async function startupJobsState(runId,{signal}={}) { return run('startup-jobs', { runId },undefined,signal); }
+ export function sameProcess(actual, expected) { return !!actual && actual.pid === expected?.pid && actual.exe?.toLowerCase() === expected.exe?.toLowerCase() && actual.startTicks === expected.startTicks; }
+ export async function processDescendants(pid) { const result = await run('descendants', { pid }); return Array.isArray(result) ? result : result ? [result] : []; }
+ export async function terminateOwnedProcess(identity) { return run('terminate', identity); }
+diff --git a/scripts/TongRuntimeSecurity.ps1 b/scripts/TongRuntimeSecurity.ps1
+index 087afa8..63e0364 100644
+--- a/scripts/TongRuntimeSecurity.ps1
++++ b/scripts/TongRuntimeSecurity.ps1
+@@ -1,4 +1,4 @@
+-param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job')][string]$Mode)
++param([ValidateSet('acl','protect','unprotect','identity','descendants','terminate','runtime-job','startup-jobs')][string]$Mode)
+ $ErrorActionPreference = 'Stop'
+ Set-StrictMode -Version Latest
+ [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+@@ -54,7 +54,7 @@ try {
+             if ($null -eq $p) { return $null }
+             [pscustomobject]@{pid=[int]$p.ProcessId;parentPid=[int]$p.ParentProcessId;exe=[string]$p.ExecutablePath;startTicks=$p.CreationDate.ToUniversalTime().Ticks.ToString()}
+         }
+-        if ($Mode -eq 'runtime-job') {
++        if ($Mode -eq 'runtime-job' -or $Mode -eq 'startup-jobs') {
+             if([string]$inputData.runId -cnotmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$'){throw 'Invalid runtime Job identity'}
+             Add-Type -TypeDefinition @'
+ using System;
+@@ -71,8 +71,12 @@ public static class TongRuntimeJobProbe {
+  }
+ }
+ '@
+-            $active=[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId))
+-            [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
++            if($Mode -eq 'startup-jobs'){
++                [pscustomobject]@{owner=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongGuardian-'+[string]$inputData.runId)));launcher=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongPreflight-launcher-'+[string]$inputData.runId)));guardian=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongPreflight-guardian-'+[string]$inputData.runId)));runtime=[Math]::Max(0,[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId)))}|ConvertTo-Json -Compress
++            }else{
++                $active=[TongRuntimeJobProbe]::Active(('Local\TongRuntime-'+[string]$inputData.runId))
++                [pscustomobject]@{exists=($active -ge 0);activeProcesses=[Math]::Max(0,$active)} | ConvertTo-Json -Compress
++            }
+         } elseif ($Mode -eq 'descendants') {
+             $all = @(Get-CimInstance Win32_Process)
+             $byId = @{}; foreach ($p in $all) { $byId[[int]$p.ProcessId]=$p }
+diff --git a/scripts/TongLoginRecovery.mjs b/scripts/TongLoginRecovery.mjs
+index 0f90e22..d9f015d 100644
+--- a/scripts/TongLoginRecovery.mjs
++++ b/scripts/TongLoginRecovery.mjs
+@@ -42,7 +42,7 @@ export async function loginRecoveryDescriptor(root){
+   const input={...(profile.mode==='production-simulation'?{simulationId:profile.simulationId,gatewayPort:profile.gatewayPort,upstreamPort:profile.upstreamPort,agentdockPort:profile.agentdockPort}:{}),sourceDigest:pin.files?.find(f=>f.path==='code/source.tar')?.sha256,releaseDigest:sha(pinBytes),agentdockEnabled:false};
+   const managerProfile=profile.mode==='production'?createProductionProfile(input):createProductionSimulationProfile(input);
+   await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true,reviewedManagerProfile:managerProfile});
+-  const critical=['TongLoginRecovery.mjs','TongProductionProfile.mjs','TongProductionApproval.ps1','TongAgentDockRuntime.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongRuntimeServer.mjs','TongLoginRuntime.ps1'];
++  const critical=['TongLoginRecovery.mjs','TongProductionProfile.mjs','TongProductionApproval.ps1','TongAgentDockRuntime.mjs','TongRuntimeLaunch.ps1','TongRuntimeGuardian.ps1','TongStartupProtocol.ps1','TongRuntimeServer.mjs','TongLoginRuntime.ps1'];
+   if(!/^[a-f0-9]{40}$/.test(pin.commit??'')||critical.some(name=>!pin.sourceFiles.some(file=>file.path==='scripts/'+name)))throw fail('CANDIDATE_DENIED');
+   return validateLoginRecoveryDescriptor({schemaVersion:1,purpose,root,runtimeProfile:profile,managerProfile,runnerSha256:pin.sourceFiles.find(file=>file.path==='scripts/TongLoginRuntime.ps1').sha256,components,operations});
+ }

@@ -1,6 +1,7 @@
+param([string]$ScriptsRoot)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
-$scripts=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\scripts'))
+$scripts=if($ScriptsRoot){[IO.Path]::GetFullPath($ScriptsRoot)}else{[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\scripts'))}
 . (Join-Path $scripts 'TongStartupProtocol.ps1')
 $NodeExe='D:\node\node.exe'
 $testRoot=Join-Path 'D:\Tong\state' ('startup-protocol-'+[guid]::NewGuid().ToString('N'))
@@ -44,7 +45,7 @@ $null=New-Item -ItemType Directory -Path (Join-Path $Root 'run')
 $worker=Join-Path $Root 'worker.ps1'
 $workerText="param(`$Root,`$RunId,`$NodeExe)`n. '"+(Join-Path $scripts 'TongStartupProtocol.ps1')+"'`nInitialize-TongStartup 'launcher'`nInvoke-TongStartupPreflight ('-e '+[char]34+'setInterval(()=>{},1000)'+[char]34)`n"
 [IO.File]::WriteAllText($worker,$workerText)
-$info=[Diagnostics.ProcessStartInfo]::new('C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',('-NoProfile -NonInteractive -File "'+$worker+'" -Root "'+$Root+'" -RunId '+$RunId+' -NodeExe "'+$NodeExe+'"'))
+$info=[Diagnostics.ProcessStartInfo]::new('C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$worker+'" -Root "'+$Root+'" -RunId '+$RunId+' -NodeExe "'+$NodeExe+'"'))
 $info.UseShellExecute=$false;$info.CreateNoWindow=$true
 $owner=[Diagnostics.Process]::Start($info)
 $observed=@();$until=[DateTime]::UtcNow.AddSeconds(10)
@@ -69,7 +70,7 @@ $Root=Join-Path $testRoot 'unproven';$RunId=[guid]::NewGuid().ToString()
 $null=New-Item -ItemType Directory -Path (Join-Path $Root 'run')
 [IO.File]::WriteAllText((Join-Path $Root 'run\request.json'),(@{runId=$RunId;startupDeadline=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()+30000}|ConvertTo-Json -Compress))
 Initialize-TongStartup 'launcher'
-$script:uncleanProbe=[pscustomobject]@{Exited=$true;ExitCode=0;Active=1}
+$script:uncleanProbe=[pscustomobject]@{Exited=$true;ExitCode=0;Active=1;Pid=1;StartTicks='1'}
 $script:uncleanProbe|Add-Member ScriptMethod Cancel {}
 $script:uncleanProbe|Add-Member ScriptMethod Dispose {}
 $body=${function:Invoke-TongStartupPreflight}.ToString() -replace '(?m)^\s*\$probe=\[TongStartupPreflight\]::new.*$','$probe=$script:uncleanProbe'

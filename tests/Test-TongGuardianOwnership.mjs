@@ -3,8 +3,9 @@ import {mkdtemp,mkdir,readFile,writeFile,copyFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
 import {processIdentity,sameProcess,terminateOwnedProcess,startupJobsState} from '../scripts/TongRuntimeSecurity.mjs';
-const scripts=new URL('../scripts/',import.meta.url),roots=[];
+const scripts=process.env.TONG_TEST_STARTUP_SCRIPTS?pathToFileURL(process.env.TONG_TEST_STARTUP_SCRIPTS+'\\'):new URL('../scripts/',import.meta.url),roots=[];
 for(const mode of ['adoption_failure','compiler_descendant']){
   const root=await mkdtemp('D:\\Tong\\state\\guardian-ownership-');roots.push(root);
   for(const dir of ['scripts','run','logs'])await mkdir(join(root,dir));
@@ -30,7 +31,7 @@ for(const mode of ['adoption_failure','compiler_descendant']){
     await writeFile(guardianPath,source.replace('[TongStartupPreflight]::AdoptGuardian($OwnerJobName)',hook));
   }
   const shell='C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
-  const result=spawnSync(shell,['-NoProfile','-NonInteractive','-File',join(root,'scripts/TongRuntimeLaunch.ps1'),'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',join(root,'unused.mjs')],{encoding:'utf8',windowsHide:true,timeout:35000});
+  const result=spawnSync(shell,['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',join(root,'scripts/TongRuntimeLaunch.ps1'),'-Root',root,'-RunId',runId,'-NodeExe',process.execPath,'-Supervisor',join(root,'unused.mjs')],{encoding:'utf8',windowsHide:true,timeout:35000});
   assert.equal(result.status,mode==='adoption_failure'?2:0,result.stderr);
   const receipt=JSON.parse(await readFile(join(root,`run/launcher.${runId}.json`),'utf8'));
   assert.equal(receipt.guardianCreated,true,'created-and-cleaned is distinct from never-created');
