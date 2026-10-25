@@ -1,0 +1,397 @@
+{
+  "observedAt": "2026-10-25T11:49:59.699Z",
+  "status": "NOT_READY",
+  "developmentBase": "9850e1a80912ec18d80112544a7ab524d4798365",
+  "branch": "codex/024-maintenance-adapter-20261024",
+  "versions": {
+    "one": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "two": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "three": "24431b263ab1bc6ec17cca48f82245f72f197d4c"
+  },
+  "productionWrite": false,
+  "productionRollbackCommandAvailable": false,
+  "originalVersion1SourceModified": false,
+  "priorNativeAcceptanceRepeated": false,
+  "backup": {
+    "path": "D:/Tong/state/b23-login-68009b23f4794f16a6a9e03b1510f65a/offline-9850e1a/production-6ac61ad1-c9e5-4d21-8142-af1c4aa59956",
+    "seal": "db00d0725d89b0141ae31d972b9d96800a2c53d7c2dd9d2876a467c71a273e8f",
+    "case": "tong-024-to-37dc649-once-20261025",
+    "scope": "production",
+    "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "target": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "createdAt": "2026-10-25T08:51:38.8735365Z",
+    "fileCount": 77485,
+    "uniqueBlobs": 33305,
+    "logicalBytes": 1635563708,
+    "archiveBytes": 286155104,
+    "archiveSha256": "7f5a5bb2ec8d757af19834f5797777303cba0ffd3aecc4a58bdfa872af381208",
+    "manifestSha256": "495bec397f7143d91c635e379d26614b29b241a87ab23b82b2d8f64f369934f1",
+    "productionWriteAllowed": false,
+    "startupInventoryProven": false,
+    "manifestBytes": 18125606,
+    "protection": "AES-256-CBC payload; CurrentUser DPAPI manifest/key; externally anchored seal hashes validated before decrypt",
+    "freshIndependentPs7VerifyExit": 0,
+    "allUniqueBlobHashesVerified": true,
+    "gateFileKey": "3025126315:89915392:3025673",
+    "groups": {
+      "app": 38606,
+      "manager": 38458,
+      "binding": 2,
+      "control": 16,
+      "secrets": 63,
+      "policy": 13,
+      "backend": 1,
+      "config": 2,
+      "oauth": 3,
+      "monitor": 10,
+      "logs": 248,
+      "node": 1,
+      "ngrok": 1,
+      "agentdock": 61
+    },
+    "externalTaskXmlAndNgrokScmConfigIncluded": true,
+    "sourceAllFilesReadShareRead": true,
+    "sourceWrites": false,
+    "agentdockSource61FilesRechecked": true,
+    "volumeImage": false,
+    "windowsObjectRestoreTested": false
+  },
+  "isolation": {
+    "at": "2026-10-25T09:00:55.388Z",
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+    "snapshot": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\isolation-52b84969-c847-4f78-9699-d57c5d46842a",
+    "seal": "b1d1921e283fb6d261718fe5c474ef0c41c0f0b19ba756fc52ec6571117e16da",
+    "captured": {
+      "uniqueBlobs": 1635,
+      "operation": "captured",
+      "scope": "isolation",
+      "offlineEntryClosureProven": false,
+      "files": 3625,
+      "logicalBytes": 196602526,
+      "seal": "b1d1921e283fb6d261718fe5c474ef0c41c0f0b19ba756fc52ec6571117e16da",
+      "gateFileKey": "3025126315:65536:3281504",
+      "snapshot": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\isolation-52b84969-c847-4f78-9699-d57c5d46842a",
+      "archiveBytes": 24896800,
+      "sourceWrite": false
+    },
+    "stages": [
+      "app-half",
+      "bindings"
+    ],
+    "commands": [
+      {
+        "mode": "InspectIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 44000,
+        "stdoutSha256": "ae31de76f12bc91e71e99b706ab793832e20d04a0c886661b219f03307f56f75",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "CaptureIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 43052,
+        "stdoutSha256": "071ba0319c4ae5e1e0016c00306c5ea6b2ba984ba7b1fb353bdd28b298a19c9f",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "Verify",
+        "extra": [],
+        "code": 0,
+        "workerPid": 12680,
+        "stdoutSha256": "4dd8d584482aec8402436a9613b9dfcb4f83db4d8edc73bbd0aa9a15b0156a38",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "InstallIsolation",
+        "extra": [
+          "-InterruptAt",
+          "app-half"
+        ],
+        "code": 71,
+        "workerPid": 3716,
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "RestoreIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 3520,
+        "stdoutSha256": "e446c058b614152e245a74dd3b86569c6d74e679c6760289077bec333783dc80",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "InstallIsolation",
+        "extra": [
+          "-InterruptAt",
+          "bindings"
+        ],
+        "code": 71,
+        "workerPid": 22412,
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "RestoreIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 15476,
+        "stdoutSha256": "26a016e584b303971288f7e9cb61e6b51ba5fa1e3e67d78f33e78a340439eb70",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "InstallIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 19468,
+        "stdoutSha256": "e0d45ed723fd8f01a991a76194e7257873d1967b4d658bf355ade3c28699b4d5",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "ArchiveIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 12568,
+        "stdoutSha256": "89f30ea8f20d63f344dbffdc7f5dff2596c1af7c58f6c400c2d932784ab21030",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "mode": "RestoreIsolation",
+        "extra": [],
+        "code": 0,
+        "workerPid": 38960,
+        "stdoutSha256": "04d8b35261daee536b37c69e8e6b188e321ca85e7163a99e589c44825710f56d",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "independentPs7Restorer": true,
+    "fullFixtureByteRestore": true,
+    "oauthAndBusinessAppliedToOriginalFixturePaths": true,
+    "permissionCiphertextRestored": true,
+    "originalIncidentControlsRestored": true,
+    "addedFilesRetired": true,
+    "gateSameFile": true,
+    "sourceOneUnmodified": true,
+    "externalHostSha256": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+    "productionWrite": false,
+    "productionEntryClosureProven": false,
+    "startAfterArchiveTested": true,
+    "boot": {
+      "task": "TongStable1Offline-b1ad6a9b-e098-4bdf-90d5-73655153c109",
+      "installedCommit": "37dc649c46ad0e267c3471f750b97227cf106310",
+      "hostPid": 31956,
+      "priorAcceptanceRepeated": false,
+      "runnerPid": 44724,
+      "hostSha256": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+      "runId": "af5757a4-294d-4991-9bf1-041097b3d71b",
+      "healthy": true,
+      "runnerSha256": "8fbbda10ed4524af3cebbc58f08c47941f438d9ec539ef2d6aa73f3018decc3e",
+      "windowsRebootTested": false,
+      "passed": true,
+      "taskExit": 0,
+      "productionMutation": false
+    },
+    "afterHealthyVersion1StoppedFullVersion2Restore": true,
+    "finalFixtureVersion": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739"
+  },
+  "shadow": {
+    "at": "2026-10-25T09:32:28.887Z",
+    "passed": true,
+    "snapshot": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-6ac61ad1-c9e5-4d21-8142-af1c4aa59956",
+    "seal": "db00d0725d89b0141ae31d972b9d96800a2c53d7c2dd9d2876a467c71a273e8f",
+    "initial": {
+      "taskXmlSha256": "925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3",
+      "workerPid": 3208,
+      "gateFileKey": "3025126315:65536:3281891",
+      "noActivation": true,
+      "allCapturedBytesVerified": true,
+      "seal": "db00d0725d89b0141ae31d972b9d96800a2c53d7c2dd9d2876a467c71a273e8f",
+      "taskServiceDefinitionsApplied": false,
+      "externalConfigRecovered": true,
+      "retired": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\shadow-retired-d34fec7d-a117-448c-b735-d10333315dfb",
+      "shadow": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-shadow",
+      "operation": "shadow-restored",
+      "files": 77485,
+      "newBytesWritten": 1635563708,
+      "resourceBudgetBytes": 2500000000,
+      "productionWrite": false,
+      "managerImported": false
+    },
+    "restored": {
+      "taskServiceDefinitionsApplied": false,
+      "workerPid": 40980,
+      "operation": "shadow-restored",
+      "shadow": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-shadow",
+      "files": 77485,
+      "resourceBudgetBytes": 2500000000,
+      "productionWrite": false,
+      "managerImported": false,
+      "taskXmlSha256": "925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3",
+      "noActivation": true,
+      "seal": "db00d0725d89b0141ae31d972b9d96800a2c53d7c2dd9d2876a467c71a273e8f",
+      "allCapturedBytesVerified": true,
+      "newBytesWritten": 2941549,
+      "externalConfigRecovered": true,
+      "retired": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\shadow-retired-e592ac58-7ae3-440d-ab66-b08b9532bf72",
+      "gateFileKey": "3025126315:65536:3281891"
+    },
+    "independentWorkerProcesses": true,
+    "all77485FileBytesVerified": true,
+    "managerImported": false,
+    "damagedRelativePaths": [
+      "manager/scripts/TongAgentDockRuntime.mjs",
+      "app/runtime/agent-tasks.json",
+      "oauth/devspace.sqlite",
+      "secrets/agentdock.dpapi",
+      "binding/profile.json",
+      "control/runtime.json",
+      "monitor/TongLoginHost.exe"
+    ],
+    "addedFilesRetired": [
+      "app/scripts/offline-candidate-added.mjs",
+      "manager/scripts/offline-candidate-added.mjs",
+      "control/offline-added.json",
+      "binding/offline-added.json"
+    ],
+    "oauthBusinessAndDpapiCiphertextExact": true,
+    "externalConfigRecovered": true,
+    "externalTaskServiceDefinitionsApplied": false,
+    "originalAbsolutePathsApplied": false,
+    "sourceProductionWrite": false,
+    "activationTested": false,
+    "resourceApprovalBytes": 2500000000
+  },
+  "launchSurface": {
+    "observedAt": "2026-10-25T08:45:26.0851726Z",
+    "taskCount": 222,
+    "serviceCount": 322,
+    "runValueCount": 16,
+    "startupFileCount": 3,
+    "wmiConsumerCount": 0,
+    "opaqueWrapperCount": 121,
+    "enumerationErrors": [
+      "SERVICE_IMAGE_UNAVAILABLE"
+    ],
+    "allEntrypointsProvenClosed": false
+  },
+  "finalProductionAudit": {
+    "observedAt": "2026-10-25T11:46:33.428Z",
+    "exitCode": 0,
+    "appAndManagerCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "sourceFiles": 283,
+    "nativeFiles": 23,
+    "controlledFileCount": 88,
+    "controlledFileSetSha256": "ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642",
+    "controlledFilesUnchanged": true,
+    "phase": "abnormal_exit",
+    "recordedIdentitiesGone": 10,
+    "incidentRunJobSets": 3,
+    "allIncidentJobsZero": true,
+    "monitors": [],
+    "listeners": [],
+    "missingLauncherReceiptStillMissing": true,
+    "oldGuardianContainmentStillMissing": true,
+    "inventoryComplete": false,
+    "inventoryError": "SECURITY_UNAVAILABLE",
+    "ngrok": {
+      "state": "Running",
+      "startMode": "Auto",
+      "pid": 40452,
+      "exeReadable": false,
+      "commandReadable": false
+    },
+    "formalTaskState": "Ready",
+    "formalTaskLastResult": 1
+  },
+  "finalIsolationInspect": {
+    "exitCode": 0,
+    "quiescent": true,
+    "nativeInventoryComplete": true,
+    "recordedIdentitiesGoneOrReused": true,
+    "allJobsZero": true,
+    "portsFree": true,
+    "matchingTasksDisabledAndNoInstances": true,
+    "sourceWrites": false
+  },
+  "resource": {
+    "explicitUserGrantBytes": 2500000000,
+    "scope": "D:/Tong/state/b23-login-68009b23f4794f16a6a9e03b1510f65a/offline-9850e1a",
+    "files": 78309,
+    "logicalBytes": 1976166995,
+    "ntfsAllocationUnitBytes": 4096,
+    "upperBoundIncludingPerFileSlackAnd64MiB": 2364029523,
+    "belowGrant": true,
+    "noCleanupPerformed": true
+  },
+  "negativeGuards": [
+    {
+      "mode": "RestoreIsolation",
+      "productionSnapshot": true,
+      "exit": 1,
+      "error": "OFFLINE_PRODUCTION_WRITE_DENIED"
+    },
+    {
+      "mode": "InstallIsolation",
+      "productionSnapshot": true,
+      "exit": 1,
+      "error": "OFFLINE_PRODUCTION_WRITE_DENIED"
+    },
+    {
+      "mode": "ArchiveIsolation",
+      "productionSnapshot": true,
+      "exit": 1,
+      "error": "OFFLINE_PRODUCTION_WRITE_DENIED"
+    },
+    {
+      "mode": "Verify",
+      "badSeal": true,
+      "exit": 1,
+      "error": "OFFLINE_SEAL_CHANGED"
+    }
+  ],
+  "staticChecks": {
+    "ps7": "7.6.6",
+    "ps7ParseFiles": [
+      "scripts/TongStable1Offline.ps1",
+      "scripts/Inspect-TongStable1OfflineEntries.ps1",
+      "tests/Test-TongStable1OfflineBoot.ps1"
+    ],
+    "nodeCheckFiles": [
+      "scripts/TongStable1OfflineProbe.mjs",
+      "tests/Test-TongStable1Offline.mjs",
+      "tests/Test-TongStable1OfflineShadow.mjs"
+    ],
+    "passed": true
+  },
+  "retainedFailures": [
+    {
+      "operation": "initial isolation quiescence while production backup helper remained active",
+      "result": "refused matching process; waited for helper exit; no assertion weakened"
+    },
+    {
+      "operation": "first launch-surface enumeration",
+      "result": "PowerShell automatic $matches variable conflict; changed local variable to $entryMatches; corrected run passed"
+    },
+    {
+      "operation": "final quiescence invoked through nested pwsh controllers",
+      "result": "refused one extra matching process; direct invocation inside existing PS7 controller passed; no probe exception added"
+    }
+  ],
+  "review": {
+    "localManualReview": true,
+    "independentAutomatedReview": "UNAVAILABLE_USAGE_LIMIT",
+    "independentReviewPassed": false,
+    "chatgptFinalReviewPending": true
+  },
+  "remaining": [
+    "production entry shutdown/continuous offline exclusivity and original freeze handoff",
+    "native production authorization and exact external PS7 Host/production runner binding",
+    "privileged ngrok identity and approved service maintenance window",
+    "actual production-path restore and Windows task/service object application",
+    "post-restore real Windows reboot/login acceptance",
+    "post-success cleanup and Tong-Recovery-Handoff.md"
+  ]
+}
