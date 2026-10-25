@@ -1,0 +1,174 @@
+{
+  "at": "2026-10-25T12:18:35.4898883Z",
+  "status": "NOT_READY",
+  "productionWrite": false,
+  "offlineBootTested": false,
+  "sourceSeal": "db00d0725d89b0141ae31d972b9d96800a2c53d7c2dd9d2876a467c71a273e8f",
+  "sourceManifestCurrentUserDpapiDecrypted": true,
+  "payloadOrShadowFullPassRepeated": false,
+  "records": 77485,
+  "partitions": [
+    {
+      "DiskNumber": 0,
+      "PartitionNumber": 3,
+      "DriveLetter": "C",
+      "Guid": "{357c8b50-3db5-49b7-abcd-a2b1d8daf5d7}",
+      "Offset": 290455552,
+      "Size": 608241524224
+    },
+    {
+      "DiskNumber": 0,
+      "PartitionNumber": 5,
+      "DriveLetter": "D",
+      "Guid": "{bfd9746d-1cf8-4f5a-9332-3d38c641818d}",
+      "Offset": 609474314240,
+      "Size": 383662424064
+    }
+  ],
+  "adminToken": false,
+  "bitlockerStatus": "UNKNOWN_REQUIRES_ADMIN_STATUS",
+  "winreStatus": "UNVERIFIED_REQUIRES_ADMIN_INFO_AND_REAL_BOOT",
+  "profile1Sha256": "101cb3556b725b1ef115023b1160a3ee56070549f814eff483a61f6ad3a6a1a4",
+  "profile1Digest": "101cb3556b725b1ef115023b1160a3ee56070549f814eff483a61f6ad3a6a1a4",
+  "installWriteOperations": 597,
+  "retireOperations": 26,
+  "hostSha256": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+  "formalOriginalRunnerSha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+  "approvals": {
+    "envelopes": 62,
+    "typedPermissionDecrypted": 61,
+    "typedPermissionFailed": 0,
+    "otherPurposeSkipped": 0,
+    "version1PermissionCount": 3,
+    "version1UnexpiredCount": 0,
+    "version1StartUnexpiredCount": 0,
+    "version1LatestExpiry": "2026-10-20T11:01:41.773Z",
+    "loginRecoveryDecrypted": 1,
+    "loginRecoveryMatchesVersion1": false,
+    "loginRecoveryEnabled": true,
+    "loginRecoveryRevoked": false
+  },
+  "task": {
+    "passwordRequired": false,
+    "registered": false,
+    "logonType": 3,
+    "unchanged": true,
+    "disabledXmlValidateOnly": true,
+    "xmlSha256": "925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3",
+    "originalXmlValidateOnly": true,
+    "sddlSha256": "386b37a5c89241ce4c4632483209a8152b656cc3a5db421b2913e4e0bf7ee46d",
+    "actualRegisterRestoreTested": false
+  },
+  "privatePacket": {
+    "baselineSha256": "0919d91a7be189bfe974e1b363bdb56169998029f574fdc96c9edb2cc88c015f",
+    "onlyMetadataAndProfile": true,
+    "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\offline-last-3f6dabd",
+    "installOrderSha256": "87d764207b27b0c025e2ed6006e77101afe7681b60a7bd0ec14852d19768714e",
+    "actualTaskAndServiceObjectsIncluded": false
+  },
+  "offlineWriteCommandAvailable": false,
+  "developmentBase": "3f6dabdaf51a737d3336f37e956c7839b23b897a",
+  "branch": "codex/024-maintenance-adapter-20261024",
+  "priorChatgptReviewAccepted": true,
+  "priorLargeEvidence": "docs/evidence/stable1-offline-20261025.json",
+  "versions": {
+    "one": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "two": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "threeStopped": "24431b263ab1bc6ec17cca48f82245f72f197d4c"
+  },
+  "disk": {
+    "number": 0,
+    "gptGuid": "{b4ca51ed-af2a-4307-a968-a26e0e447d25}",
+    "partitionStyle": "GPT",
+    "currentlyDiscoveredDisks": 1,
+    "externalMaintenanceDiskDiscovered": false,
+    "cAndDOnSameDisk": true,
+    "ntfsClusterBytes": 4096,
+    "sourceWindowsCurrentlyRunning": true,
+    "offlineWriteAccessTested": false
+  },
+  "adminReadFailures": {
+    "manageBdeStatus": {
+      "exit": -2147217405,
+      "reason": "elevated command prompt required",
+      "protectionState": "UNKNOWN"
+    },
+    "reagentInfo": {
+      "exit": 5,
+      "reason": "access denied",
+      "enabledState": "UNKNOWN"
+    },
+    "noEscalationAttempted": true,
+    "bitlockerRecoveryKeyReadOrExported": false
+  },
+  "winre": {
+    "reagentXmlExists": true,
+    "defaultSystem32WinreWimExists": false,
+    "defaultAdkWinpePathExists": false,
+    "configurationFileIsNotBootProof": true,
+    "powerShell7AvailabilityInsideMaintenanceOs": "UNKNOWN"
+  },
+  "packet": {
+    "files": 7,
+    "bytes": 18329255,
+    "reusedExistingShadow": true,
+    "fileDataCopied": false,
+    "encryptionKeyOrIvExported": false,
+    "metadataOnly": true
+  },
+  "consistencyCheck": {
+    "passed": true,
+    "rollbackRecords": 77485,
+    "rollbackGroups": 14,
+    "installWrites": 597,
+    "retiredSourcePaths": 26,
+    "newActivePaths": 0,
+    "unchangedBusinessRecords": 91,
+    "gateInInstallWrites": false,
+    "actualOfflineExecution": false
+  },
+  "productionAudit": {
+    "at": "2026-10-25T12:25:32.459Z",
+    "exit": 0,
+    "appAndManagerCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "controlledFiles": 88,
+    "controlledFileSetSha256": "ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642",
+    "controlledFilesUnchanged": true,
+    "recordedIdentitiesGone": 10,
+    "incidentJobSetsZero": 3,
+    "ports": [],
+    "monitors": [],
+    "oldFreezePreserved": true,
+    "missingLauncherReceiptStillMissing": true,
+    "ngrok": {
+      "state": "Running",
+      "startMode": "Auto",
+      "pid": 40452,
+      "fullProcessIdentityAvailable": false
+    }
+  },
+  "retainedDiagnosticFailure": {
+    "operation": "initial task action metadata inspection",
+    "reason": "null COM Arguments passed to UTF8.GetBytes",
+    "result": "corrected to indexed Action.Item(1) and explicit null/empty test; original task XML/SDDL unchanged"
+  },
+  "productionTasksOrServicesChanged": false,
+  "globalPolicyPermissionsOrCredentialsChanged": false,
+  "checks": {
+    "ps7ScriptParse": true,
+    "documentationPowershellBlocksParsed": 4,
+    "documentationProductionCommandsExecuted": false,
+    "nodeSyntaxCheck": true,
+    "fixedPacketConsistencyCheck": true,
+    "nativeRuntimeMatrixRepeated": false
+  },
+  "cleanupPerformed": false,
+  "windowsRebootPerformed": false,
+  "remainingMinimalHumanSteps": [
+    "elevated read-only BitLocker and WinRE information; local recovery key availability confirmation",
+    "approved actual maintenance boot and original C/D volume access/tool validation",
+    "review mapped fixed file operation and independent rollback before any production write",
+    "fresh original-user version1 native approval after installed version validation",
+    "actual task restore if required, ngrok window, real connection and Windows reboot acceptance"
+  ]
+}
