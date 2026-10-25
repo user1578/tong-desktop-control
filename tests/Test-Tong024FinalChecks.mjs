@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {readFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {verifyRelease} from '../scripts/TongRuntimeRelease.mjs';
+import {verifyRuntimeCandidate} from '../scripts/TongRuntimeCandidate.mjs';
+const sha=b=>createHash('sha256').update(b).digest('hex');
+for(const file of ['scripts/Tong024ColdRecovery.mjs','tests/Test-Tong024ColdContract.mjs','tests/Test-Tong024ColdRecovery.mjs','tests/Test-Tong024ColdBoundary.mjs'])assert.equal(spawnSync(process.execPath,['--check',file],{encoding:'utf8'}).status,0,file);
+const parse=spawnSync('C:\\Program Files\\PowerShell\\7\\pwsh.exe',['-NoLogo','-NoProfile','-NonInteractive','-Command',"$ErrorActionPreference='Stop'; foreach($file in @('scripts/Tong024ColdRecovery.ps1','scripts/Tong024NgrokIdentity.ps1','tests/Test-Tong024TaskHost.ps1','tests/Test-Tong024TaskPolicy.ps1','tests/Test-Tong024MonitoringAudit.ps1')){$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile((Join-Path (Get-Location) $file),[ref]$tokens,[ref]$errors);if($errors.Count){throw ($errors|Out-String)}}"],{encoding:'utf8'});assert.equal(parse.status,0,parse.stderr);
+assert.equal(spawnSync('git',['diff','--quiet','9ec35b9ab7997aaebfc36e127a2658ec2d116b12','--','scripts/Tong024Handoff.mjs','scripts/Tong024Handoff.ps1']).status,0,'unaccepted commit draft must not be delivered');
+const releaseRoot='D:\\Tong\\state\\b23-login-8e32da332608430bb4971bc668ef4ace\\handoff-release-90e3bc8';
+const release=await verifyRelease({releaseRoot});assert.equal(release.commit,'90e3bc872989e63a6efe5bcef214e0489d54e052');assert.equal(sha(await readFile(join(releaseRoot,'release-manifest.json'))),'0fdfe34e0685db76486e094d74369455f58857d5ff74db29c524037775b61af1');
+const root=process.env.TONG_024_COLD_ROOT;assert.match(root??'',/^D:\\Tong\\state\\b23-login-[a-f0-9]{32}$/);
+const profile=JSON.parse(await readFile(join(root,'profile.json'),'utf8'));
+for(const manager of [false,true])assert.equal((await verifyRuntimeCandidate(profile,{manager,reviewedManagerProfile:{...profile,agentdockEnabled:false}})).commit,release.commit);
+assert.equal((await readFile(join(root,'run/backup.freeze'))).length,0);
+console.log(JSON.stringify({passed:true,jsSyntax:4,pwsh7Syntax:5,originalHandoffUnchanged:true,releaseCommit:release.commit,releaseDigest:'0fdfe34e0685db76486e094d74369455f58857d5ff74db29c524037775b61af1',appAndManagerVerified:true,gateStillExists:true,productionExecutionAllowed:false}));

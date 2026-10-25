@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-25",
+  "reviewBase": "9ec35b9ab7997aaebfc36e127a2658ec2d116b12",
+  "branch": "codex/024-maintenance-adapter-20261024",
+  "readiness": "NOT READY",
+  "productionExecutionAllowed": false,
+  "newProductCandidate": null,
+  "acceptedCandidate": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+  "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "release": {
+    "root": "D:\\Tong\\state\\b23-login-8e32da332608430bb4971bc668ef4ace\\handoff-release-90e3bc8",
+    "releaseDigest": "0fdfe34e0685db76486e094d74369455f58857d5ff74db29c524037775b61af1",
+    "sourceDigest": "b3b2e7c7d2d601a94b9e1b5f5b78192e3c0fded6927d9efbb7cdd372b1c192a4"
+  },
+  "acceptance": {
+    "coldFirstNative": {
+      "passed": true,
+      "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+      "sessionId": "a7eb3f1e-f23a-4717-a0fd-3c6b97d00e9a",
+      "folder": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\024-handoff\\a7eb3f1e-f23a-4717-a0fd-3c6b97d00e9a",
+      "candidate": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+      "coldEvidence": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\024-handoff\\a7eb3f1e-f23a-4717-a0fd-3c6b97d00e9a\\cold-18d2a67e-7f4f-4fd9-824c-bf5d102b0609",
+      "gateFileKey": "3025126315:65536:3194011",
+      "damagedBytesSha256": "dca1483c4dfe155f05744f0427656179fd0037e489d639ddcb12ed8d496f99aa",
+      "damagePreserved": true,
+      "snapshotMismatchDenied": true,
+      "nativeRestoreApprovalRequired": true,
+      "foreignNativeProcessDenied": true,
+      "replacementFileDenied": true,
+      "originalFreezeRestored": true,
+      "productionExecutionAllowed": false
+    },
+    "coldFinalBoundary": {
+      "passed": true,
+      "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+      "sessionId": "d3bfe566-66b0-45b8-8ab1-1286777f224d",
+      "oldSessionReplayDenied": true,
+      "liveSuccessorControllerDenied": true,
+      "nativeListenerDenied": true,
+      "authorizationExpiredAfterSealDenied": true,
+      "sealedFilesWriteAndRenameDenied": 8,
+      "coldSealedWorkerKilled": true,
+      "coldWrittenWorkerKilled": true,
+      "independentNodeWorker": 44944,
+      "rawDamageEvidence": [
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\024-handoff\\d3bfe566-66b0-45b8-8ab1-1286777f224d\\cold-34c6b1ee-621e-4c00-b866-2b301fa83a44\\gate.original.bytes",
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\024-handoff\\d3bfe566-66b0-45b8-8ab1-1286777f224d\\cold-62b6884f-8e39-42f7-96ba-a3ecd6bc2b3e\\gate.original.bytes",
+        "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\024-handoff\\d3bfe566-66b0-45b8-8ab1-1286777f224d\\cold-cee500b3-9566-4f25-9df5-b4ddb01c9a22\\gate.original.bytes"
+      ],
+      "truncatedReceiptDenied": true,
+      "originalFileKey": "3025126315:65536:3194011",
+      "productionExecutionAllowed": false
+    },
+    "productionGuards": {
+      "passed": true,
+      "productionWriteGateClosed": true,
+      "directNativeProductionDenied": true,
+      "crossRootGrantDeniedBeforeIO": true
+    },
+    "finalChecks": {
+      "passed": true,
+      "jsSyntax": 4,
+      "pwsh7Syntax": 5,
+      "originalHandoffUnchanged": true,
+      "releaseCommit": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+      "releaseDigest": "0fdfe34e0685db76486e094d74369455f58857d5ff74db29c524037775b61af1",
+      "appAndManagerVerified": true,
+      "gateStillExists": true,
+      "productionExecutionAllowed": false
+    }
+  },
+  "readOnly": {
+    "ngrok": {
+      "at": "2026-10-25T02:26:45.0016025Z",
+      "service": "ngrok",
+      "serviceState": 4,
+      "pid": 40452,
+      "scmStable": true,
+      "startMode": "Auto",
+      "account": "LocalSystem",
+      "requestedProcessAccess": "PROCESS_QUERY_LIMITED_INFORMATION",
+      "nativeError": 5,
+      "nativeExe": null,
+      "nativeStartTicks": null,
+      "cimParentPid": 2728,
+      "cimCreationUtc": "2026-10-23T03:27:46.4025660Z",
+      "cimExeReadable": false,
+      "cimCommandLineReadable": false,
+      "processIdentityProven": false,
+      "inventoryStatus": "SECURITY_UNAVAILABLE",
+      "productionMutation": false
+    },
+    "production": {
+      "at": "2026-10-25T03:09:01.1790818Z",
+      "productionBinding": {
+        "codeRoot": "D:\\Tong\\app",
+        "pins": [
+          {
+            "name": "release-pin.json",
+            "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+            "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739"
+          },
+          {
+            "name": "manager-pin.json",
+            "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+            "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739"
+          }
+        ],
+        "ports": [
+          7676,
+          7677,
+          18765
+        ],
+        "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+        "managerRoot": "D:\\Tong\\runtime\\releases\\manager",
+        "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+        "root": "D:\\Tong\\runtime"
+      },
+      "productionTask": {
+        "instances": 0,
+        "multipleInstances": 2,
+        "runLevel": 0,
+        "enabled": true,
+        "xmlSha256": "925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3",
+        "logonType": 3,
+        "name": "TongLoginRuntime",
+        "action": "D:\\Tong\\runtime\\login-management\\TongLoginHost.exe",
+        "lastTaskResult": 1,
+        "state": 3
+      },
+      "policy": {
+        "policies": [
+          {
+            "policy": "Undefined",
+            "scope": "MachinePolicy"
+          },
+          {
+            "policy": "Undefined",
+            "scope": "UserPolicy"
+          },
+          {
+            "policy": "Undefined",
+            "scope": "Process"
+          },
+          {
+            "policy": "RemoteSigned",
+            "scope": "CurrentUser"
+          },
+          {
+            "policy": "Undefined",
+            "scope": "LocalMachine"
+          }
+        ],
+        "productionRunnerZone": "Internet"
+      },
+      "productionRunnerSignature": "NotSigned",
+      "productionRunnerStreams": [
+        ":$DATA"
+      ],
+      "currentUserCodeSigningCertCount": 0,
+      "matchingProductionMonitorProcesses": [],
+      "isolatedProbeTasks": [
+        {
+          "name": "Tong024Acceptance-59cce095-cce9-42fd-9bcc-a182575eca04",
+          "state": 1,
+          "enabled": false,
+          "instances": 0,
+          "lastTaskResult": 1
+        },
+        {
+          "name": "Tong024Acceptance-d156b335-674b-4396-b34a-73f99cfb789d",
+          "state": 1,
+          "enabled": false,
+          "instances": 0,
+          "lastTaskResult": 0
+        }
+      ],
+      "productionMutation": false
+    },
+    "taskContextPolicy": "RemoteSigned"
+  },
+  "notAccepted": [
+    "commit-intent/disarmed live-tree adoption or stop",
+    "commit-stage six-boundary native crash matrix",
+    "formal Task/Host/runner positive takeover and singleton/restart",
+    "production inventory (ngrok ACCESS_DENIED)",
+    "production full recovery and independent complete rollback"
+  ],
+  "knownFailures": {
+    "closure3-ngrok-identity-20261025": "Executable path quoting failure; probe did not execute.",
+    "closure3-contract-red-20261025": "Expected red for withdrawn draft API.",
+    "closure3-contract-green-20261025": "Withdrawn draft API contract only; not acceptance of delivered code.",
+    "closure3-task-host-20261025": "Native Task and Host ran; unsigned PS5 runner refused; task disabled.",
+    "closure3-cold-native-20261025": "Foreign process refused. This was withdrawn settlement draft, not delivered cold tool.",
+    "closure3-cold-scoped-r2-20261025": "Test registered exit listener too late; unsettled await, Node exit13.",
+    "closure3-cold-scoped-r3-20261025": "Timed-out connect did not prove port absence; refused PORT_UNKNOWN.",
+    "closure3-cold-boundary-final-20261025": "Inventory metadata unknown, exact PID not captured; root cause UNKNOWN.",
+    "closure3-final-checks-20261025": "Verification overlapped active native boundary test and observed its31-byte gate; later verification executed sequentially."
+  },
+  "historicalEvidenceNotRerun": "docs/evidence/024-minimal-handoff-20261025.json",
+  "captures": [
+    {
+      "label": "closure3-ngrok-identity-20261025",
+      "executable": "C:\\Program",
+      "args": [
+        "Files\\PowerShell\\7\\pwsh.exe",
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "scripts/Tong024NgrokIdentity.ps1"
+      ],
+      "code": -4058,
+      "signal": null,
+      "startedAt": "2026-10-25T02:26:33.515Z",
+      "durationMs": 5,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "66ea840f7c0de871d4999cda925ea14f13753c20b8cb38dadde0c9c773aaf83e",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-ngrok-identity-20261025"
+    },
+    {
+      "label": "closure3-ngrok-identity-fixed-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "scripts/Tong024NgrokIdentity.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T02:26:41.841Z",
+      "durationMs": 3351,
+      "stdoutSha256": "618d3e45476873880ea0c9094f05ceb7d30189374ddcdb25f0bff8cdfec5f281",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-ngrok-identity-fixed-20261025"
+    },
+    {
+      "label": "closure3-contract-red-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024CommitContract.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T02:34:23.605Z",
+      "durationMs": 76,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "2ca88df6832ac1ebe6245b1c1bd826067dfddabee7ed6ef3c23a331c7d71d6b3",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-contract-red-20261025"
+    },
+    {
+      "label": "closure3-task-host-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024TaskHost.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T02:41:03.849Z",
+      "durationMs": 21164,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "511534e98f28836e8381c89ae9c31ed11e7f5b5088f70b55acc9d5a5b7671f38",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-task-host-20261025"
+    },
+    {
+      "label": "closure3-contract-green-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024CommitContract.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T02:42:36.741Z",
+      "durationMs": 73,
+      "stdoutSha256": "0972f7827d761eb399b28b705f20d06653d2526463277fea2b2e089ba7292e7a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-contract-green-20261025"
+    },
+    {
+      "label": "closure3-cold-native-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdRecovery.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T02:49:41.299Z",
+      "durationMs": 27713,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "ff4bf73f42057189c7fd4be6b6611ba563daa83d57a50b4b7bfc4cddd84af370",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-native-20261025"
+    },
+    {
+      "label": "closure3-monitoring-audit-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024MonitoringAudit.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T02:49:51.465Z",
+      "durationMs": 1876,
+      "stdoutSha256": "0e4203f8756c041d75a402dd84409234a640390d0813e61766c4b413232b0642",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-monitoring-audit-20261025"
+    },
+    {
+      "label": "closure3-task-policy-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024TaskPolicy.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T02:54:15.173Z",
+      "durationMs": 1826,
+      "stdoutSha256": "4d0c5f6ac86ae90c0efbdb8fb94980e196ac0a46448da02ff89d70790418893b",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-task-policy-20261025"
+    },
+    {
+      "label": "closure3-cold-scoped-r2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdRecovery.mjs"
+      ],
+      "code": 13,
+      "signal": null,
+      "startedAt": "2026-10-25T02:58:24.406Z",
+      "durationMs": 23866,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "42fd7b6a0579ad1fec1dc05d0b33087e9bbf55aaa59f20b5c9efee017c5265f7",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-scoped-r2-20261025"
+    },
+    {
+      "label": "closure3-cold-scoped-r3-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdRecovery.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T02:58:57.640Z",
+      "durationMs": 29474,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "8a477acc38ee0cf9e108fb2ebaed1fb2b29a6aec82e7bd7456d52400f1461014",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-scoped-r3-20261025"
+    },
+    {
+      "label": "closure3-cold-scoped-r4-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdRecovery.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T02:59:57.440Z",
+      "durationMs": 32348,
+      "stdoutSha256": "c7b5e4cc08d795bf6b74c958459cfbcb1ba985e0a33b8dea2524e5c637380e37",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-scoped-r4-20261025"
+    },
+    {
+      "label": "closure3-cold-boundary-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdBoundary.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T03:01:48.027Z",
+      "durationMs": 48528,
+      "stdoutSha256": "1292de966760a9645db0202069f5390f7db81d3102d85627ac3e675519c64a75",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-boundary-20261025"
+    },
+    {
+      "label": "closure3-cold-boundary-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdBoundary.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T03:03:36.224Z",
+      "durationMs": 67193,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "c1f3123906f51a4d1b53103ad40e1fb5a5563adb20d8799f70aad8310a3ace3c",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-boundary-final-20261025"
+    },
+    {
+      "label": "closure3-cold-contract-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdContract.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T03:05:06.712Z",
+      "durationMs": 2097,
+      "stdoutSha256": "798d7512a155b5c29373999737155c828dbf7f159caed133a02a2f1ac31dea21",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-contract-final-20261025"
+    },
+    {
+      "label": "closure3-monitoring-audit-final-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024MonitoringAudit.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T03:05:08.987Z",
+      "durationMs": 1733,
+      "stdoutSha256": "89691d1baffdca7227f82845cb4ca69a505769c4460239214eb6af65e7245834",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-monitoring-audit-final-20261025"
+    },
+    {
+      "label": "closure3-cold-boundary-final-r2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ColdBoundary.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T03:06:05.823Z",
+      "durationMs": 69615,
+      "stdoutSha256": "1798e8c1370282b03571d6bb204f8bd8ca0ee48d2bc91c1d1878e7433847ede8",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-cold-boundary-final-r2-20261025"
+    },
+    {
+      "label": "closure3-final-checks-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024FinalChecks.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T03:06:48.695Z",
+      "durationMs": 6582,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "d0e066f357b0ecbc8113fc6898db401b42f91eb5139f9d7995181ab71901b1db",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-final-checks-20261025"
+    },
+    {
+      "label": "closure3-final-checks-r2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024FinalChecks.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T03:08:10.004Z",
+      "durationMs": 6214,
+      "stdoutSha256": "53ee9550d7e478e54acc8eb954f483a1e03c65ed6088f294d8ec68ea5f5c3e01",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-final-checks-r2-20261025"
+    },
+    {
+      "label": "closure3-production-binding-readonly-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024MonitoringAudit.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T03:08:59.592Z",
+      "durationMs": 1764,
+      "stdoutSha256": "85cb26ff7f80d29b4591e8fc7c85f64fba0bc9a8f701143d4e2750db17ad85a2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidenceDirectory": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\closure3-production-binding-readonly-20261025"
+    }
+  ]
+}
