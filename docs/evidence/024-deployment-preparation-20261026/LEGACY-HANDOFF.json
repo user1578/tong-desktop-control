@@ -1,0 +1,52 @@
+{
+  "passed": true,
+  "root": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f",
+  "retired": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\legacy-evidence-baa0f0b8-32e6-4bc2-a7dd-6731b121634e",
+  "seal": "740982901ffc4c4c74efc22a4b8c21d5877f09300f0a927c4e026d9d86eaded7",
+  "originalCount": 8,
+  "originals": {
+    "runtime.json": {
+      "sha256": "4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557",
+      "fileKey": "562949956794030"
+    },
+    "guardian.json": {
+      "sha256": "383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7",
+      "fileKey": "562949956794031"
+    },
+    "request.json": {
+      "sha256": "b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff",
+      "fileKey": "281474980083376"
+    },
+    "abort.json": {
+      "sha256": "3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660",
+      "fileKey": "281474980083377"
+    },
+    "backup.freeze": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fileKey": "281474980083378"
+    },
+    "stop.json": {
+      "sha256": "31edce2a9ca467859717c94709aa1b2afa142734819216204d862e6734169549",
+      "fileKey": "281474980083379"
+    },
+    "login-recovery-budget.json": {
+      "sha256": "1488a639de90adab3dfbae1de993414ad9ba1e93d0c0475ef6adcf0786963ac0",
+      "fileKey": "281474980083380"
+    },
+    "stale-reconciliation.json": {
+      "sha256": "f7424b813e950a800bebe40adc9979bd9b4c3935d613462d630f3c9489dea5bb",
+      "fileKey": "281474980083381"
+    }
+  },
+  "oldRunId": "74cd4ad3-f21b-40ec-96f5-3f9015649e5d",
+  "oldFailedRequest": "d348ae39-27cf-4167-8e35-58de75421309",
+  "additionalFailedRequest": "be3f5c49-d824-4edd-b8fc-7ee70d7f9a00",
+  "additionalReceiptAbsencePreserved": true,
+  "allFourRunsFourJobKindsObserved": true,
+  "observations": 9,
+  "physicalOriginalsRetained": true,
+  "physicalOriginalRollbackVerified": true,
+  "budgetWorkingCopyIdentical": true,
+  "noReceiptsFabricated": true,
+  "productionExecutionAllowed": false
+}

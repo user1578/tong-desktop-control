@@ -1,0 +1,28 @@
+{
+  "candidateCommit": "3740082b3c11ca4403d1abdceed75d539878a161",
+  "candidateTree": "e04a63d3bf6845713cb565e83b659c6191241109",
+  "candidateDeltaFromOriginalV2": [
+    "scripts/TongAgentDockRuntime.mjs",
+    "scripts/TongLoginRecovery.mjs",
+    "scripts/TongRuntimeGuardian.ps1",
+    "scripts/TongRuntimeLaunch.ps1",
+    "scripts/TongRuntimeSecurity.mjs",
+    "scripts/TongRuntimeSecurity.ps1",
+    "scripts/TongStartupProtocol.ps1"
+  ],
+  "testCommit": "61dbb317b3cba84ed4499fb9d3435d717f46c175",
+  "testDeltaFromCandidate": [
+    "scripts/TongRuntimeGuardian.ps1",
+    "scripts/TongRuntimeLaunch.ps1"
+  ],
+  "packagedByteDifferences": [
+    "scripts/TongRuntimeGuardian.ps1",
+    "scripts/TongRuntimeLaunch.ps1"
+  ],
+  "otherSourceFilesByteIdentical": 282,
+  "nativeFilesByteIdentical": 23,
+  "reviewedNormalizedSevenFileHashesMatch": true,
+  "productionProfileValidatorPassed": true,
+  "productionGrantIssued": false,
+  "nativeSqliteMemoryAndConptyLoadInBothTargets": true
+}

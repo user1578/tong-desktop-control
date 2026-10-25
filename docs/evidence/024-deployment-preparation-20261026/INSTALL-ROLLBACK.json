@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "partialAppRejected": true,
+  "partialManagerRejected": true,
+  "mismatchedPinRejected": true,
+  "all14PhysicalSourceOriginalsRestored": true,
+  "appManagerSameCommit": true,
+  "profileUnchanged": true,
+  "productionMutation": false
+}

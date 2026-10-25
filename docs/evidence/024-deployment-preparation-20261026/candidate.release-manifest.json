@@ -1,0 +1,3108 @@
+{
+  "schemaVersion": 1,
+  "syntheticOnly": true,
+  "commit": "3740082b3c11ca4403d1abdceed75d539878a161",
+  "sourceRepository": "D:\\Tong\\development\\tong-desktop-control",
+  "releaseRoot": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\seven-file-release",
+  "createdAt": "2026-10-25T17:19:47.114Z",
+  "sourceFiles": [
+    {
+      "path": ".github/workflows/p3-claude-adapter.yml",
+      "size": 700,
+      "sha256": "d1887dc19f323eb2477a55b777145627ee7c53b9f73980e6c4340063caf910fb"
+    },
+    {
+      "path": ".github/workflows/p3-dsh-desktop-runtime.yml",
+      "size": 1811,
+      "sha256": "4c673c3f4529586cfb35fa2f7dc86c32639473de8727f12bf815ff8212c915be"
+    },
+    {
+      "path": ".github/workflows/p3-dsh-durable.yml",
+      "size": 1105,
+      "sha256": "8f4075b086f314b50113b1b224fc7de855ac979435bbb58efa4d9c64c25a0f89"
+    },
+    {
+      "path": ".github/workflows/p3-local-acceptance.yml",
+      "size": 1373,
+      "sha256": "629eb4d19dbe4b81a869996659c678ed04c7b23423a629904e00483c9decece8"
+    },
+    {
+      "path": ".github/workflows/p3-multi-agent-core.yml",
+      "size": 1450,
+      "sha256": "1f9b761354adc7c8f17cf13704dd10ac09b3d2bafe2eedce13fa4c985e4a9f72"
+    },
+    {
+      "path": ".github/workflows/p3-windows-inspection.yml",
+      "size": 1605,
+      "sha256": "7bfe568994a67e80fba5557fde07b7f19f44ed411950582687dfc882dfe9e1af"
+    },
+    {
+      "path": ".gitignore",
+      "size": 722,
+      "sha256": "043e0193703044cecf2347d10cf5bb4d552f662429d23f65a2c4c550162a69a9"
+    },
+    {
+      "path": "AGENTS.md",
+      "size": 2258,
+      "sha256": "b2d764513c522ee07215c7b2962767eb9caca865a35a47b62746c614b8521467"
+    },
+    {
+      "path": "README.md",
+      "size": 31692,
+      "sha256": "a4fd092ba7647bc5c4d1a8ac172f6a61ebe993a66827983d53a5ef6960a3db7f"
+    },
+    {
+      "path": "config/tong.config.example.json",
+      "size": 281,
+      "sha256": "ac37c30cd20f8971f07d0b0a4a02738d7f850da198c8c9e7251e58fbf4a692e6"
+    },
+    {
+      "path": "demo-workspace/README.md",
+      "size": 156,
+      "sha256": "24bf0baa4892c060f308958ac38585b083ae6a2654e90e5935e4f5a606744cb4"
+    },
+    {
+      "path": "docs/2026-10-18-Codex-Cancel-Proxy-Stage.md",
+      "size": 4011,
+      "sha256": "15eaf0c03be0c8c62d0a391bb18abcd3d00d14f582740c210c746e02f15f573f"
+    },
+    {
+      "path": "docs/2026-10-18-Codex-Persistent-Local-Proxy.md",
+      "size": 3102,
+      "sha256": "1a9590abae9c6ec7554012543984c28efe3ebff206dff4a2e5113276caa972f9"
+    },
+    {
+      "path": "docs/2026-10-18-Codex-Writer-Ownership.md",
+      "size": 4914,
+      "sha256": "a2aa613df30424148e8a0e4c757d64ef1f0a8f335d0bb47dddb953667386d10b"
+    },
+    {
+      "path": "docs/2026-10-18-Tong-Exact-Cutover-Rehearsal.md",
+      "size": 4436,
+      "sha256": "88b4b8043df60021e7c7c4796e0e091e063587e975e39fdf1b24ee33a9c06192"
+    },
+    {
+      "path": "docs/2026-10-18-project-affinity-cutover-recovery.md",
+      "size": 3333,
+      "sha256": "7fded102e1e433ab1f24c8ea3b109343cb97675862db12125b0d7173380b67fa"
+    },
+    {
+      "path": "docs/P2.2-Worker-Isolation-B0.2.md",
+      "size": 9245,
+      "sha256": "f82443c11327e004f562b4949526ce224330f7e7037dad493b4e1116a22a650f"
+    },
+    {
+      "path": "docs/P2.2-Worker-Isolation-StageB.md",
+      "size": 20171,
+      "sha256": "f3f28dd4515c21917528c7108b7f6a7f04f5e070ba33e065a1f471bdb0eb9409"
+    },
+    {
+      "path": "docs/P2.3-Trusted-Windows-Codex.md",
+      "size": 7337,
+      "sha256": "4a069446b16d3e7a8f7ec2d1be3bafdb9b0ab17e5af85532f65a6e66f3e53645"
+    },
+    {
+      "path": "docs/P2.4.3-AgentDock-Client.md",
+      "size": 8192,
+      "sha256": "a304f57a2c611165bdcb3c7806d956214e92d5db4d075e52b33b8291c3c324f0"
+    },
+    {
+      "path": "docs/P2.4.4-A-Controlled-Execution.md",
+      "size": 15147,
+      "sha256": "a0b764726cd08fba652f23363f7b056e80efde3c3d88b7a16e162fa1bc2fa8f7"
+    },
+    {
+      "path": "docs/P2.4.4-B1-Predeployment.md",
+      "size": 18804,
+      "sha256": "10b3d131aa900d528adec39a54fb2990776408202a971e3e86d85dbc740db485"
+    },
+    {
+      "path": "docs/P2.4.4-B2.2-Runtime-Preparation.md",
+      "size": 22213,
+      "sha256": "bb8991f0071976141b1ef2a19ae1fb472aec57679a63dca4b7a5aed3bde1d8cc"
+    },
+    {
+      "path": "docs/P2.4.4-B2.3-Production-Candidate.md",
+      "size": 36128,
+      "sha256": "cc4a916be3046f8a958d2523e52a7b0c3184f4c0a5aca9bc74088b8eb39fc424"
+    },
+    {
+      "path": "docs/P2.4.4-B2.4-Closeout-Report.md",
+      "size": 23066,
+      "sha256": "418dade6818e1f157b18b0564b2e9b9b9dad1a08c6cbe6bbdc47ade61ef90e30"
+    },
+    {
+      "path": "docs/P2.4.4-B2.4-Production-Deployment.md",
+      "size": 76263,
+      "sha256": "f79114bdea0a567dacf4c8bea3c3738d173a8baeffa34ebeaedbd2ab69c10942"
+    },
+    {
+      "path": "docs/P3-Claude-Adapter-Stage-A.md",
+      "size": 3432,
+      "sha256": "b4de6b1d56940e139202b0c104f5892e4ea62d85ad920ba459a688e3c64dc782"
+    },
+    {
+      "path": "docs/P3-Claude-Live-Session-Closeout.md",
+      "size": 3921,
+      "sha256": "7f34574a89916f5e58cc25bc9d64efbcd2a4bbabd6d022312a80a3357c4ba57f"
+    },
+    {
+      "path": "docs/P3-DSH-Desktop-StageD.md",
+      "size": 3386,
+      "sha256": "587d148f5390122958d0b2dfc9b2e60a80ac5260a8307f397de498398b68de5f"
+    },
+    {
+      "path": "docs/P3-DSH-Next-Safe-Execution-Handoff.md",
+      "size": 3921,
+      "sha256": "8c7a2f846523090e26e209fedc2f64507a3a40ca6aacb3385cde1d1b1c184380"
+    },
+    {
+      "path": "docs/P3-DSH-S0-Protocol-Capability-Audit.md",
+      "size": 7710,
+      "sha256": "8ef8d0a920487a933a8fec548d1fd5472c90f89a3d7f38aca75bd420251c7daf"
+    },
+    {
+      "path": "docs/P3-DSH-S1-Restricted-Synthetic-Runner.md",
+      "size": 5368,
+      "sha256": "b0097c0c5353789e8bb5480fe726c4821e8427ca2f1e282b0cc3023eb22680b0"
+    },
+    {
+      "path": "docs/P3-DSH-S1B0-Windows-Job-Canary.md",
+      "size": 4597,
+      "sha256": "c013d53e996067fce08b50b5b3db1afd0ce2b0065140a100e60a105c3f6c11a3"
+    },
+    {
+      "path": "docs/P3-DSH-S1B1A-Restricted-ACL-and-Synthetic-Grant.md",
+      "size": 4846,
+      "sha256": "b181a4c405e45f19c65c54b79bec0b9d2c4eb7fd24cf20b06f11854a432080d9"
+    },
+    {
+      "path": "docs/P3-DSH-S1B1B-Restricted-Native-Loader-Blocker.md",
+      "size": 4991,
+      "sha256": "15e1a573477110e83f90da90510657441bbaa1a507977f698ce10b5aa426541c"
+    },
+    {
+      "path": "docs/P3-DSH-and-Durable-StageC.md",
+      "size": 4721,
+      "sha256": "730c1db4957b1b779537cfcfcf7e4151d13a778c76bbdc919ec8392a36561134"
+    },
+    {
+      "path": "docs/P3-Local-Provider-Acceptance-StageE.md",
+      "size": 20599,
+      "sha256": "c406d7e6b13bf0a2bea194e33b569eebf126061431f7e2c378dd7ddc6c3866a4"
+    },
+    {
+      "path": "docs/P3-MultiAgent-Core-StageB.md",
+      "size": 4613,
+      "sha256": "1dfa6f7d65ed111a329efa460445a5ce4043f12b03d23ae469af2ef89db21caa"
+    },
+    {
+      "path": "docs/Tong-Codex-Desktop-Progress-Handoff-20261021.md",
+      "size": 46149,
+      "sha256": "c7fd31a3dcc45fbb77619f7295a35e03046325c617fd5b700c778a58047baf37"
+    },
+    {
+      "path": "docs/Tong-Project-Authorization.md",
+      "size": 6153,
+      "sha256": "b1c8a60e13a72d5d8c16839323f41bf774349e26cc12ff0d813e0d1d89d64741"
+    },
+    {
+      "path": "docs/Tong-Quick-Folder-Trust.md",
+      "size": 2749,
+      "sha256": "44634eaaa3602d61e37fa9cbe09c2e5929db8adc7f3dd75b50f82616de1515dc"
+    },
+    {
+      "path": "docs/Tong-QuickTrust-Full-Production-Retry.md",
+      "size": 5178,
+      "sha256": "692052bc8ded8c552f0d9bbb83b16926b5f21dd96ca0ccdf14a2aabd683d7925"
+    },
+    {
+      "path": "docs/Tong-QuickTrust-Production-Upgrade.md",
+      "size": 4056,
+      "sha256": "ec617718d995d20147199295ec2c2077261eaf170e0f7caf4ce3a807493f758b"
+    },
+    {
+      "path": "docs/Tong-Runtime-Recovery-Fix.md",
+      "size": 11489,
+      "sha256": "722ca1823540a12b2ec94924674903e33cb665381834851c3011d666919f5066"
+    },
+    {
+      "path": "docs/Tong-Silent-Login.md",
+      "size": 7667,
+      "sha256": "3b0d4f35e8ed4695db14d31be98b4ab574a0001e181f72df28a457ca786a94d8"
+    },
+    {
+      "path": "docs/evidence/B0.2-legacy-synthetic-roots.txt",
+      "size": 2334,
+      "sha256": "fbae78bb78be9981190d169f430d88d6f487a7ab3779c1bd7daaecb8e6d9f8c4"
+    },
+    {
+      "path": "docs/evidence/B0.2-native-file-stderr.txt",
+      "size": 4705,
+      "sha256": "6627e210f33c7bea406e15b47e7c361fdfaad5504d79da7c031ca9bc45962cdb"
+    },
+    {
+      "path": "docs/evidence/B0.2-native-pipe-1.txt",
+      "size": 938,
+      "sha256": "95d6743f0f5094494d464a6a15b98dcb356e51140d06328bdc5f397755f17e9c"
+    },
+    {
+      "path": "docs/evidence/B0.2-native-pipe-2.txt",
+      "size": 965,
+      "sha256": "bfdf1a0acafb7bf807121660d4c85df2dafa1631052db7f1f317bb8221a8c670"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-Commit-And-Delete-OldSwitch.ps1",
+      "size": 13234,
+      "sha256": "62e9af489da8ec816dcf4ea8b222a22ddbf481fa56b72902a0eb148f4d0c9784"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-Commit-And-FirstCacheCleanup.ps1",
+      "size": 6595,
+      "sha256": "7acabccc4ebaeeb593e83bc96471c42d4295c3506f4051e7f15fe4f8604d1052"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-Exact-OldSwitch-LongPath.py",
+      "size": 3722,
+      "sha256": "267d8b2bfca956206d9824788e8695d2c263106a9545bb52d46699a604bfc2fb"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-ReadOnly-Disk-Audit.ps1",
+      "size": 8799,
+      "sha256": "42fbc9764702477a38d87b73f53ac0fff51fb49a6637b375df555b099252e81c"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-Review-SecondBatch-Switch.ps1",
+      "size": 9850,
+      "sha256": "01a77f8b58b66c04057364545b7bb3ef961e5d6d1396ee170d8413e63ae29e7a"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-Verify-Cleanup-Candidates.ps1",
+      "size": 11232,
+      "sha256": "1a7ac7bb38203477620ce066a726c0c3d3350c698940df7ab5e05bdd2ab71d29"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-b23-switch-second-review.csv",
+      "size": 2347,
+      "sha256": "9ee00be78fa46c9b9e609c38742f0bd13d8fe74511f22e029153c2b2a06cae25"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-b23-switch-second-review.txt",
+      "size": 2756,
+      "sha256": "e43488f8d8a8e0dfb8280528eff20691b002d64c87dfdc975b14098c95104f3c"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-cleanup-dependency-review.csv",
+      "size": 2378,
+      "sha256": "6c10293d6a1de3994aa44b2a1512c44ab556aed477c1d5e45fbb4b940ae98c42"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-cleanup-dependency-review.txt",
+      "size": 3130,
+      "sha256": "173e9bba9f43877be8815e8329acdd84c577e0b6828edab16ec488bcd1e0b314"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-cleanup-final-review-20261013.md",
+      "size": 4977,
+      "sha256": "69c2d0e366161ce456b989c9aabe31f214ee5c7182ebdbbe5b2877bc739e9701"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-disk-audit-README.txt",
+      "size": 3833,
+      "sha256": "5884ba86368282f9464f3de3b169430b41ae1b2902d677e0a76f8ffbdcf74dcc"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-disk-audit-buckets.csv",
+      "size": 288193,
+      "sha256": "5db553acb7e143c0da454cbbb78b2cec76bad5679629800cc082509bd86748c0"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-disk-audit-summary.csv",
+      "size": 1680,
+      "sha256": "ebee4d011b66e897b21774c65f34d63d246efe49c30313e7d710d21abb7b997c"
+    },
+    {
+      "path": "docs/maintenance/2026-10-13-disk-audit/Tong-second-batch-cleanup-decision-20261013.md",
+      "size": 2780,
+      "sha256": "3df28f9b10ba93ee02d5b96f07e80f8b48beb1713f40cd0a2187c065d881f9bd"
+    },
+    {
+      "path": "native/TongWorkerSupervisor/AclJournal.cs",
+      "size": 8114,
+      "sha256": "a5bf920a52549a13db9f340fb66103fcc4cfa04b8acd526cfb9e007418a61d32"
+    },
+    {
+      "path": "native/TongWorkerSupervisor/Native.cs",
+      "size": 21659,
+      "sha256": "20a0c69b2b55c9e5eeff256c5779a53d6e95085d4cc52b02492508de81a2d2a6"
+    },
+    {
+      "path": "native/TongWorkerSupervisor/Policy.cs",
+      "size": 15741,
+      "sha256": "fc72f2b0a0d7b70a92145981d0d3b2218b2b21aa08f52ac9de5159630d7b2204"
+    },
+    {
+      "path": "native/TongWorkerSupervisor/Program.cs",
+      "size": 24892,
+      "sha256": "a92367a8996993b191df7e496efb7ce83e00eb9d825919dbd53d5be26709afaf"
+    },
+    {
+      "path": "native/TongWorkerSupervisor/RestrictedProcess.cs",
+      "size": 17505,
+      "sha256": "f1df5038af983417cae4c01207066cb4e79b400ec69fe709eb2bfecf9629f553"
+    },
+    {
+      "path": "package-lock.json",
+      "size": 183596,
+      "sha256": "2c3cb8667f929ff1a87a251f3d5d2ea0300c9846277f28f891968f431769ea01"
+    },
+    {
+      "path": "package.json",
+      "size": 340,
+      "sha256": "0d1a4fbf39a3f34b98952ff15c79915222dbf8fd93d43cd45aecbc482abb6368"
+    },
+    {
+      "path": "scripts/Apply-TongDevSpacePatch.mjs",
+      "size": 16430,
+      "sha256": "7b810c8fbfefb56074f3a827520123b49ff8ae6edbedb0c0713759cb14585691"
+    },
+    {
+      "path": "scripts/Build-TongLoginHost.ps1",
+      "size": 524,
+      "sha256": "33ecff6c74315f2853a36d64cb9e3990190f5e43e67c43c6e996068c7f8f60e1"
+    },
+    {
+      "path": "scripts/Build-TongWorkerSupervisor.ps1",
+      "size": 1171,
+      "sha256": "7c797d2d9d2a1faf53c9bfa5dc2864a116b68479dfb67a2de104b773ff66f5fd"
+    },
+    {
+      "path": "scripts/Connect-TongFolder.cmd",
+      "size": 360,
+      "sha256": "4fd62d6ab26ad16695ce918afbc15710b6de45cbdae1b4a0e192ad7dcc099949"
+    },
+    {
+      "path": "scripts/Connect-TongFolder.ps1",
+      "size": 1925,
+      "sha256": "f0cfc1dafc11e39c88932de3b74aee478acac6d83a27d4288e3826ba82c55826"
+    },
+    {
+      "path": "scripts/Get-TongDesktopControlStatus.ps1",
+      "size": 130,
+      "sha256": "02bc629be41cc1c52fbc4474bfa73368203facb93203ed71850b71d5172b2021"
+    },
+    {
+      "path": "scripts/Inspect-TongDshS1Config.mjs",
+      "size": 4784,
+      "sha256": "a4e413f901ced7116f9648360b3d7381b5f30eeae712b0f92eca205eb6481e90"
+    },
+    {
+      "path": "scripts/Install-TongLoginManagement.ps1",
+      "size": 6946,
+      "sha256": "55c96f58d2355b8f077ab159bb9f9076188325b7db330361972ac252f10b3d38"
+    },
+    {
+      "path": "scripts/Invoke-TongAutonomyProduction.ps1",
+      "size": 16528,
+      "sha256": "d4588471c91ae41845f2aac59830acf0203c138d8fb7b6333105fc3329860b6b"
+    },
+    {
+      "path": "scripts/Invoke-TongQuickTrustFullProduction.ps1",
+      "size": 22006,
+      "sha256": "1b0fcd0368b180c710338c7e5089d0353b2eefc72a43d60bfaae10f356844aff"
+    },
+    {
+      "path": "scripts/Invoke-TongQuickTrustProduction.ps1",
+      "size": 13815,
+      "sha256": "3f6fc079843fdc33e99111d478b876fd61793efd357522fd212d602d83861bde"
+    },
+    {
+      "path": "scripts/Plan-TongWorkerIsolation.ps1",
+      "size": 5138,
+      "sha256": "ad944adbb26ee9d66ff12ae0de31d1d77c47ba3146d01609669b5b2980fcb286"
+    },
+    {
+      "path": "scripts/Plan-TongWorkerIsolationRollback.ps1",
+      "size": 2505,
+      "sha256": "e5c699e1c005a3b8c9fabe90256b9bf264a183052c17a578e1f6cfa52f645baf"
+    },
+    {
+      "path": "scripts/Restart-TongDesktopControl.ps1",
+      "size": 151,
+      "sha256": "2b02760d76e6af88bc77d68b25226ade4f05822cfd7a86616c808e290f5a0ee5"
+    },
+    {
+      "path": "scripts/Run-TongP3LocalAcceptance.mjs",
+      "size": 18822,
+      "sha256": "26c19ca862a88939e9589af0c73302e15952ca6f251a17534e0cceedd958e971"
+    },
+    {
+      "path": "scripts/Set-TongSilentLogin.ps1",
+      "size": 10297,
+      "sha256": "0d8dbdc75619b437dbe7862591cf4167fa261b94af28e9d4e4031f2316152d15"
+    },
+    {
+      "path": "scripts/Start-TongDesktopControl.ps1",
+      "size": 126,
+      "sha256": "ab4659ba67b115398a9cb2d4cbe80f3cf8187bc841ae03f23b1d04e63aec70b8"
+    },
+    {
+      "path": "scripts/Stop-TongDesktopControl.ps1",
+      "size": 125,
+      "sha256": "ce1d6d89174af78db02d8775ac7aeb1970ded64eb1ccd7d404460b53ec0c13e5"
+    },
+    {
+      "path": "scripts/TongAgentDockAuthorization.mjs",
+      "size": 4725,
+      "sha256": "6e30a4c15575e1f7ba61e3a83e843ef1a9db6a8f0b87164b2a65e236b552784a"
+    },
+    {
+      "path": "scripts/TongAgentDockClient.mjs",
+      "size": 12154,
+      "sha256": "b5ff332c270ae967b17a9787a26e58941d1d8082f1873580f543b91764ab02b6"
+    },
+    {
+      "path": "scripts/TongAgentDockExecution.mjs",
+      "size": 30462,
+      "sha256": "4fbe25fcb00f48c17cd784352cd8838a69318f93a7ff7730d305f934eee00143"
+    },
+    {
+      "path": "scripts/TongAgentDockOperations.mjs",
+      "size": 3165,
+      "sha256": "4fa4d713ab919bc058c56b236787cfedb81f0b760dc6209481cad159e18294fd"
+    },
+    {
+      "path": "scripts/TongAgentDockPaths.mjs",
+      "size": 7290,
+      "sha256": "856c162f80c5a48aabb4b4e9ceeb58984af713ff06dcd8732cac8fddc0b0b7dd"
+    },
+    {
+      "path": "scripts/TongAgentDockPolicy.mjs",
+      "size": 4263,
+      "sha256": "d00d852e03ef4d4a41541c6ac168d61e74f55a18b2d67fb68f89fd8c874aaa10"
+    },
+    {
+      "path": "scripts/TongAgentDockRuntime.mjs",
+      "size": 56961,
+      "sha256": "2a69e574e92a5aa7f62a358c6a74336a1e0abc364acc0f60e363ffbb8e787a51"
+    },
+    {
+      "path": "scripts/TongAgentDockSessions.mjs",
+      "size": 3170,
+      "sha256": "3f5b874b5cebe3e2712b0d540d519e8d3125ff2d1ac547ace7cf6d8639b5ee89"
+    },
+    {
+      "path": "scripts/TongAgentDockTools.mjs",
+      "size": 15574,
+      "sha256": "1b6d580fa7fe748365287e41a8d576a61262d45019192bfc4841a7a5005a1653"
+    },
+    {
+      "path": "scripts/TongAgentProviders.mjs",
+      "size": 10646,
+      "sha256": "9f8c10a3606ab9b0b16054e92a8c0b2c11bf18aad48031d10f472ce865c4f491"
+    },
+    {
+      "path": "scripts/TongAgentTasks.mjs",
+      "size": 45213,
+      "sha256": "9788d5ce267b9a91b11c003a6ed4bde267afd87e45c5389edaeeb6f5a0e2c4aa"
+    },
+    {
+      "path": "scripts/TongAutonomyProductionCutover.mjs",
+      "size": 12018,
+      "sha256": "62b6b82b6dc366351521ac71c49b8c2b50f894cff728ec5d60fbe742441a3133"
+    },
+    {
+      "path": "scripts/TongClaudeAuthDifferential.mjs",
+      "size": 3751,
+      "sha256": "824aae70ae1610f2351a2fbd57733b12c70a388557a7522746f145cbdf961ec5"
+    },
+    {
+      "path": "scripts/TongClaudeCodeAdapter.mjs",
+      "size": 5464,
+      "sha256": "ba7ecb5f42ac24cadd6b365af2dfbb6855872559eb0a342f6bc550f2f1989c60"
+    },
+    {
+      "path": "scripts/TongClaudeExplicitRouting.mjs",
+      "size": 2398,
+      "sha256": "b99c5762b39797c8b51c97a2171c32513cfc505f9935b7a78d09da91631898dd"
+    },
+    {
+      "path": "scripts/TongClaudeResumeContext.mjs",
+      "size": 3079,
+      "sha256": "dc2a717498ed6ba9f389a90ebeadb499b05727572c1f37039c6abebff07385e7"
+    },
+    {
+      "path": "scripts/TongCodexAppServer.mjs",
+      "size": 26257,
+      "sha256": "5a5e98c3f3a748d84a44f4e77c53dc291aa945a3802995bc8c14c50bf9c6490a"
+    },
+    {
+      "path": "scripts/TongCodexDesktopLink.mjs",
+      "size": 860,
+      "sha256": "73ea1296a7c23fd36fc9b73bf95bfd51d60e140138fe3901363972452dba3430"
+    },
+    {
+      "path": "scripts/TongCodexWorker.mjs",
+      "size": 3181,
+      "sha256": "4e9dbff569d30280e459e802cf22ebcf9e3b1430c2f792b9061d73f37e53e5a0"
+    },
+    {
+      "path": "scripts/TongCodexWorkerMain.mjs",
+      "size": 3203,
+      "sha256": "5fb95080355cd5cb68071cf604a6d775ef563ce7d5db41720258f835d94eb9ba"
+    },
+    {
+      "path": "scripts/TongControl.psm1",
+      "size": 18109,
+      "sha256": "4b883d79bad33f136990181e66fbe1d01a77533cba8395691ea8547f456f20ca"
+    },
+    {
+      "path": "scripts/TongCutoverStoppedRunProbe.mjs",
+      "size": 3563,
+      "sha256": "544a545ce87c50a2e06c1dae5ad4329a69b2c28e71c1f0cd0265dd93d65367ac"
+    },
+    {
+      "path": "scripts/TongDevEnvironment.mjs",
+      "size": 4672,
+      "sha256": "b461e209eb70c74c76391d70e293d7dcc95f3e028efec4139667b77b5bbf91fb"
+    },
+    {
+      "path": "scripts/TongDevEnvironment.ps1",
+      "size": 2024,
+      "sha256": "b3301fa42f632463a55c0f5a628bb5eea516b45b1514cdf4c8b8486c9e59b698"
+    },
+    {
+      "path": "scripts/TongDevSpaceHttpDiagnostics.mjs",
+      "size": 4293,
+      "sha256": "1ef3ae0bcd6a8a831899eb67f6793c123c65b62d8141fddf6942f3825749d03c"
+    },
+    {
+      "path": "scripts/TongDshDesktopRuntime.mjs",
+      "size": 3388,
+      "sha256": "2e13778c06dd7436ad79c320f34ab64de41f7e356a51511494e910de7d1868a5"
+    },
+    {
+      "path": "scripts/TongDshS0Audit.mjs",
+      "size": 2909,
+      "sha256": "b56b4958dac09f4cf6204d8d913c467572d32eb8a6f8b5d7447b9d27f4d61cc5"
+    },
+    {
+      "path": "scripts/TongDshS1B1SyntheticGrant.mjs",
+      "size": 3608,
+      "sha256": "935af3d20c97cc6b64b1825901cb9db6601ef5c7ccc52084a253da3e1ac2493b"
+    },
+    {
+      "path": "scripts/TongDshS1Policy.mjs",
+      "size": 6426,
+      "sha256": "e4234d54e6ec225ef8510bf478e49b0932839841046388d068f298d05b3c351c"
+    },
+    {
+      "path": "scripts/TongDshS1SyntheticRunner.mjs",
+      "size": 6893,
+      "sha256": "5f5ddea5870a5187907e54e5458a80d1dad82d3874d3d63dd9b453862f43d07d"
+    },
+    {
+      "path": "scripts/TongDshSdkAdapter.mjs",
+      "size": 5336,
+      "sha256": "efacb1f22fce8d71cda1bd2583f73b680c077fe361521c6aa2acf0f495554947"
+    },
+    {
+      "path": "scripts/TongGoalSupervisor.mjs",
+      "size": 33512,
+      "sha256": "321096adc01fc2699e8c39da7a10d2bd89108642fe159d208bb6f70f9bbbab43"
+    },
+    {
+      "path": "scripts/TongLocalConfirmation.mjs",
+      "size": 1092,
+      "sha256": "9e6b9e32d3b2c5f64d8460ec7e5cd2bc37fe12b4fcb06ea8ce71c3d3251fbab8"
+    },
+    {
+      "path": "scripts/TongLocalConfirmation.ps1",
+      "size": 1638,
+      "sha256": "be842dd8b29bd36d8fe8e416db31197be749924ae50e4992d7f97186be5bdbb4"
+    },
+    {
+      "path": "scripts/TongLoginHost.cs",
+      "size": 2750,
+      "sha256": "c30f4f2f7bb1aa23db8ce367f435a9f7ec1653486f15a34b47fc4f394f361431"
+    },
+    {
+      "path": "scripts/TongLoginRecovery.mjs",
+      "size": 9552,
+      "sha256": "5bc9f5fa3d71c24862193b7a398fa61b38903e14aee1f1faee156116688b9097"
+    },
+    {
+      "path": "scripts/TongLoginRuntime.ps1",
+      "size": 11324,
+      "sha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b"
+    },
+    {
+      "path": "scripts/TongMcpGateway.mjs",
+      "size": 40044,
+      "sha256": "8eb770493e1e784ee872bc3b3bc868e156bfcb69cf679f5f6ef45e95f5cf413e"
+    },
+    {
+      "path": "scripts/TongMcpTools.mjs",
+      "size": 24187,
+      "sha256": "0f5da03c3414a2768dc555718c253a95134b4370f5a7a94485cd9807aa1a70b8"
+    },
+    {
+      "path": "scripts/TongMultiAgentOrchestrator.mjs",
+      "size": 7731,
+      "sha256": "fd0ca9ee1acc037674a4ded118f10e1885ca1528c7be08aa21c1ef731ec5816a"
+    },
+    {
+      "path": "scripts/TongNativeWorkerSupervisor.mjs",
+      "size": 6543,
+      "sha256": "67f7a8b34ddfa3fb888e8668ecd1fc2a0b35aa1574c43b1605575a2a80606393"
+    },
+    {
+      "path": "scripts/TongP3LocalAcceptance.mjs",
+      "size": 13982,
+      "sha256": "6a2abd4534105069c272946f330e99b0a5b2014d7b5622520b4be9792b2c6dbe"
+    },
+    {
+      "path": "scripts/TongProductionApproval.ps1",
+      "size": 28729,
+      "sha256": "edfa756547910362eb3c5041d48373c68cee08ab4d033e00b60a9063770a4c98"
+    },
+    {
+      "path": "scripts/TongProductionProfile.mjs",
+      "size": 14746,
+      "sha256": "f1488670258fa3a713c095ec53ac823e933de6321e75a9cc26b5b440c952abb4"
+    },
+    {
+      "path": "scripts/TongProductionState.mjs",
+      "size": 23993,
+      "sha256": "84bb16b4c7cae9571194c1cb94cbc9871affb8fd0a0e153ff679ea47d8a83acf"
+    },
+    {
+      "path": "scripts/TongProductionState.ps1",
+      "size": 9976,
+      "sha256": "7280eff57cfe7c9ab256f2a7d893c19a000af4df45aee48a89015675c3831860"
+    },
+    {
+      "path": "scripts/TongProjectAccess.mjs",
+      "size": 16889,
+      "sha256": "94e50e6459229413dd5f4b1b166fa964bd5852c2af68f3972d5dc253572cf35a"
+    },
+    {
+      "path": "scripts/TongProjects.mjs",
+      "size": 2048,
+      "sha256": "e1974c5756cd77feeb8c4c5d64841a1297192a6e6cc899d5e639bb95bf5f46df"
+    },
+    {
+      "path": "scripts/TongQuickProject.mjs",
+      "size": 4234,
+      "sha256": "9a0edc5dd972e42774d99c3b20315ee69cfee730f067a238811835cd06eb09cb"
+    },
+    {
+      "path": "scripts/TongQuickTrustFullCutover.mjs",
+      "size": 18977,
+      "sha256": "c3ee4d9e918d8c8094453fbf1c73af6b68185b4a22ea2721e939288e3a65ff1a"
+    },
+    {
+      "path": "scripts/TongQuickTrustProductionCutover.mjs",
+      "size": 12597,
+      "sha256": "ed37df6133b41ad359beacd487c992f7d13049121643a66af1ff4144127550bb"
+    },
+    {
+      "path": "scripts/TongRestoredAuthorization.mjs",
+      "size": 302,
+      "sha256": "f5387f29de11a4206aa7a3c1f2fcd87e23c3838ceb4929f8ec1fdce3b482c0a7"
+    },
+    {
+      "path": "scripts/TongRunCommand.ps1",
+      "size": 3727,
+      "sha256": "319940816969511e5563ccf23136f1041cd7050307fd2dfa02dc37f717e8ac82"
+    },
+    {
+      "path": "scripts/TongRuntimeBackup.mjs",
+      "size": 25006,
+      "sha256": "330f5e020041d15aca96485420ff1f4bf8d9a126f08a35c47ec85f96fccb6070"
+    },
+    {
+      "path": "scripts/TongRuntimeCandidate.mjs",
+      "size": 4893,
+      "sha256": "b1f420078f76206bb1cd532d5737eeaf8349e49caed41fd331dfb3a65d39b5de"
+    },
+    {
+      "path": "scripts/TongRuntimeGuardian.ps1",
+      "size": 13001,
+      "sha256": "8f324c8ab1eaaebb9335c38ed2c4e2cfd976f8d67e345e8b1865ca2e24b2cc3f"
+    },
+    {
+      "path": "scripts/TongRuntimeLaunch.ps1",
+      "size": 4998,
+      "sha256": "fb61000f28c4b95ee5929765e7ce57e41cb3355db968dd6dd45d2eebfb6e9394"
+    },
+    {
+      "path": "scripts/TongRuntimeRelease.mjs",
+      "size": 17599,
+      "sha256": "de1008f0fdf8683dbdad578aba53ced053709f38a9c12d9d711568c8116b0da8"
+    },
+    {
+      "path": "scripts/TongRuntimeSecurity.mjs",
+      "size": 6844,
+      "sha256": "4f5036a6f4b2a631a4d9ed96e961511ffec8abaa1c7f03e0b89cf9fd7f545aa1"
+    },
+    {
+      "path": "scripts/TongRuntimeSecurity.ps1",
+      "size": 10177,
+      "sha256": "c9662fd7ae065d29e8ed8b5e2a316c1b49c613ee9fec5001d94cbc80d2421160"
+    },
+    {
+      "path": "scripts/TongRuntimeServer.mjs",
+      "size": 7652,
+      "sha256": "0ba3b5345809ba764f9a061ceac0bd8851dfdfea97f066779401e57295592bc0"
+    },
+    {
+      "path": "scripts/TongSafeFilePath.mjs",
+      "size": 4757,
+      "sha256": "9a081c2f879b06de671d59deea6837de5cac0c722b2211093c3d13a1675f43be"
+    },
+    {
+      "path": "scripts/TongStartupProtocol.ps1",
+      "size": 19525,
+      "sha256": "80b63372080cef47fcb1c98d6635a0b23a3423e04eb98190b61b5bbb42170b38"
+    },
+    {
+      "path": "scripts/TongTrustedCodexBroker.mjs",
+      "size": 32337,
+      "sha256": "d9e05fe203ea846fc956863e8d27f38d7a6cde1d8dcdbac6a98ce4be409db159"
+    },
+    {
+      "path": "scripts/TongTrustedControl.mjs",
+      "size": 10774,
+      "sha256": "98c8b20198a5f78a9e0f1c43e110f94b543cf1e3de220f0316b9ac028e80ad3b"
+    },
+    {
+      "path": "scripts/TongWindowsInspect.mjs",
+      "size": 4421,
+      "sha256": "6d5c289001f7d4e99a47cad962e39389f04b1be0caf5cc72e21d6737013739e4"
+    },
+    {
+      "path": "scripts/TongWindowsInspect.ps1",
+      "size": 1407,
+      "sha256": "348dbddafc47f4b9ff9f8d32ba36b504cfe5b71d07e0cc726c7d554ad8d1edf0"
+    },
+    {
+      "path": "scripts/TongWindowsTaskNotice.mjs",
+      "size": 1175,
+      "sha256": "777fc56a13fc223fbeb36c78dc4cc126d4bbecc9c88948c70c4e7fc1bf8e3737"
+    },
+    {
+      "path": "scripts/TongWindowsTaskNotice.ps1",
+      "size": 2671,
+      "sha256": "4f1d318653357b721b3d477bbf3283042b114152efec7a9a31911262ae9d3f34"
+    },
+    {
+      "path": "scripts/TongWorkerBroker.mjs",
+      "size": 9950,
+      "sha256": "cd31fc432d76c9fb04f0c529cb26bb71a93ff8b0c2ba300e4479a73c3c321f37"
+    },
+    {
+      "path": "scripts/TongWorkerProtocol.mjs",
+      "size": 11525,
+      "sha256": "e9af3c78d9f5f7d14dce04bd589ca0c6be5ddc24c33918c7d1d6b199430cca7c"
+    },
+    {
+      "path": "scripts/TongWorkerStdio.mjs",
+      "size": 10782,
+      "sha256": "70ae1663b93bcbc55ae472ebbc0e728f3ddc8a00b658dbc928164b91235ec6b9"
+    },
+    {
+      "path": "scripts/TongWorkflowJournal.mjs",
+      "size": 4911,
+      "sha256": "e866ecdceb05dfc6fb062efc41944af809f90e6828651b14bd7d75c73715e932"
+    },
+    {
+      "path": "scripts/TongWorkspaceTools.mjs",
+      "size": 11523,
+      "sha256": "4531ca175d6d8017d8817edc3bd6e8dd77575e893e4447cdc653f6811d433307"
+    },
+    {
+      "path": "scripts/Upgrade-Tong-QuickTrust.cmd",
+      "size": 723,
+      "sha256": "43006631a668438fd94039b49e650e683d60ca6e2eb961f3f48f58e7bd6dfc48"
+    },
+    {
+      "path": "tests/Manual-TongGoalLiveAcceptance-111.mjs",
+      "size": 6886,
+      "sha256": "fc6a045e9177cc5c1e6123507b787875da9afd97eec305dcc9ae6d293eb65ce9"
+    },
+    {
+      "path": "tests/Run-TongAgentDockExecutionLive.ps1",
+      "size": 4103,
+      "sha256": "1e6f65646b15f8613317e8e7236a3cc0b728a79db748ab769be699f8ff924165"
+    },
+    {
+      "path": "tests/Run-TongB24Regression.mjs",
+      "size": 2917,
+      "sha256": "5dfd2ed62a034e509dc91c971627f20447dc2c7d4cbee6d0de2c8d306ea2d6d8"
+    },
+    {
+      "path": "tests/Run-TongNativeAcceptance.mjs",
+      "size": 8677,
+      "sha256": "637decca17e97e1da8c6e92c0f6684004feb989116573e1ebe0c244dc6e5282e"
+    },
+    {
+      "path": "tests/Run-TongNativeWorkerSupervisor.mjs",
+      "size": 8690,
+      "sha256": "112b8adcf27ad4359ca2a4d4cdebe777195c400cf85bf9f91079d57d321dbced"
+    },
+    {
+      "path": "tests/Test-TongAgentDock.mjs",
+      "size": 15144,
+      "sha256": "d8482d0e2caf4d1d0d24d6b4649cadbcacfb75e0f9529d1bbadda0ea222c12dd"
+    },
+    {
+      "path": "tests/Test-TongAgentDockAuditPath.mjs",
+      "size": 1065,
+      "sha256": "8e94dec8f3484d05c01ed871aaa0ed2a8a0fd5cdd33b018d7cc8888944e33612"
+    },
+    {
+      "path": "tests/Test-TongAgentDockDevelopmentGrant.mjs",
+      "size": 4738,
+      "sha256": "54410f0218cdc5ec4a39961ac0d1207f6ad06965245169ce232da3fea21c05c1"
+    },
+    {
+      "path": "tests/Test-TongAgentDockDirectoryMapping.mjs",
+      "size": 4265,
+      "sha256": "1e28074359c4598415285ef26e8c9d2aab39ff450ce3266fb3edabf6e7837fa4"
+    },
+    {
+      "path": "tests/Test-TongAgentDockExecution.mjs",
+      "size": 22111,
+      "sha256": "ac721ebda8f0a7906cc7f200eec92f263323979f3ed7487ba77a87bebbb202b4"
+    },
+    {
+      "path": "tests/Test-TongAgentDockExecutionLive.mjs",
+      "size": 10283,
+      "sha256": "867dc89a250a9a88cf23750b961edbbf7998b9a3d0d79bca625663e0440f0664"
+    },
+    {
+      "path": "tests/Test-TongAgentDockLifecycle.mjs",
+      "size": 4479,
+      "sha256": "d34023a6c8bb0fbe360c24c27e152e7593ff3b66e85eb553062e8bec4a1dd8ab"
+    },
+    {
+      "path": "tests/Test-TongAgentDockLive.mjs",
+      "size": 6030,
+      "sha256": "7a429f6800d02b4950c0aef35138587cad12967b47419fc7f05d55cb5350382e"
+    },
+    {
+      "path": "tests/Test-TongAgentDockReplay.mjs",
+      "size": 4145,
+      "sha256": "e49e54b534882b8c980c0c3fbeec540509ffc0c0e8617cf68c19dddd013ea710"
+    },
+    {
+      "path": "tests/Test-TongAgentDockRuntime.mjs",
+      "size": 6294,
+      "sha256": "b14030d4bf65b8ef7ef3f7d6ead79a55c4a14bca6f56c81730d7f949968f817d"
+    },
+    {
+      "path": "tests/Test-TongAgentDockSessionCoordination.mjs",
+      "size": 10474,
+      "sha256": "072e58ab517831f3e90a7dbf2c381a024266a58ac23814c045caef63c09ab290"
+    },
+    {
+      "path": "tests/Test-TongAgentDockSessionOwnership.mjs",
+      "size": 11423,
+      "sha256": "7a4649ed5cda190713fb81c47af50667fd8bc3e0188ac1df08ac3d62b5829d1e"
+    },
+    {
+      "path": "tests/Test-TongAgentTasks.mjs",
+      "size": 17606,
+      "sha256": "5180dbf508afaaac13def414f790e8eaaf3fd3b0e4e8b335d756294ed32495fa"
+    },
+    {
+      "path": "tests/Test-TongApprovalBootstrap.mjs",
+      "size": 3581,
+      "sha256": "7493f9b758b1f806041da34cfffdf1396315d566799d2e7f7cef1b36e360a75b"
+    },
+    {
+      "path": "tests/Test-TongApprovalConsole.mjs",
+      "size": 12681,
+      "sha256": "d1eab476f5ceae55012e3abe42f3bcde64eef40c346b019dafd76a765f8b1889"
+    },
+    {
+      "path": "tests/Test-TongApprovalStorage.mjs",
+      "size": 8323,
+      "sha256": "2931c27c7dedede9ce9a9c6534f1c8f0faa3434b9923ed30f6318de0bb734a73"
+    },
+    {
+      "path": "tests/Test-TongB24CloseoutLive.mjs",
+      "size": 17197,
+      "sha256": "34d9d11b85ec764e69a701a49117818d6a617b0af78f53c4ff48f596904d9c06"
+    },
+    {
+      "path": "tests/Test-TongCandidateFileRollback.mjs",
+      "size": 7115,
+      "sha256": "3da9eeba3951f48729e5eebce92302cda3f4be6d0d205c6720af8a13dedd171e"
+    },
+    {
+      "path": "tests/Test-TongClaudeAuthDifferential.mjs",
+      "size": 3864,
+      "sha256": "061b93d35caa70c9ca91408b235763a0e97d4f603734f5856da8d16b83a6763a"
+    },
+    {
+      "path": "tests/Test-TongClaudeCodeAdapter.mjs",
+      "size": 4775,
+      "sha256": "86e648199b0fc599156cd5eb0f4f68702272e8d00a5b74da789f11cf83220051"
+    },
+    {
+      "path": "tests/Test-TongClaudeExplicitRouting.mjs",
+      "size": 4074,
+      "sha256": "76c2cf0ecb9a90a96aa6f6a92168c60ada1eb48fba84ecefdaf0e4712c0da514"
+    },
+    {
+      "path": "tests/Test-TongClaudeResumeContext.mjs",
+      "size": 4219,
+      "sha256": "55775b6823c5b85ff0a5f26542f5df992beef50d92b83b7a161309ac2418b536"
+    },
+    {
+      "path": "tests/Test-TongCodexAppServer.mjs",
+      "size": 17056,
+      "sha256": "f21a341155b4c8d311b40c5e3639efab5e0b5dda8cf9bf47593977abc39535c9"
+    },
+    {
+      "path": "tests/Test-TongCodexDesktopLink.mjs",
+      "size": 1361,
+      "sha256": "e1b32eb04ef339ba96e0e56154d45d7c7fe79f0945a435a830ee9637321f3011"
+    },
+    {
+      "path": "tests/Test-TongCodexDesktopOpening.mjs",
+      "size": 6814,
+      "sha256": "f8986548499bf82171b4bbffab20407758b10f6f126c2bc0d5eb05b5b41806f2"
+    },
+    {
+      "path": "tests/Test-TongCodexProxyEnvironment.mjs",
+      "size": 4429,
+      "sha256": "e594407c325327acf0c9cb3d0ddd732471feb5738cf10f979263418376f0dd48"
+    },
+    {
+      "path": "tests/Test-TongCompletedRuntimeCleanup.mjs",
+      "size": 2838,
+      "sha256": "a5d6eb2f016a4f37eacb4e296360b05d16b25fe84449bceb3e87a092ea477b23"
+    },
+    {
+      "path": "tests/Test-TongConfiguration.ps1",
+      "size": 2666,
+      "sha256": "52d163684c6b89cc2b753302816f94dc5567f61dc347025167dcf400fc35a5ad"
+    },
+    {
+      "path": "tests/Test-TongCutoverMonitorRecovery.ps1",
+      "size": 6585,
+      "sha256": "a19ae4df1aa58a1927f7bb13478ace63e17af38ba02cd279dee71db0e1d60202"
+    },
+    {
+      "path": "tests/Test-TongCutoverStoppedRunProbe.mjs",
+      "size": 5220,
+      "sha256": "ea7fbe7c3798f3e329ee24549a0f7d733c70436bb8e38a5f7e8c9ae4c89bcfc1"
+    },
+    {
+      "path": "tests/Test-TongDevEnvironment.mjs",
+      "size": 3527,
+      "sha256": "4a626aea17646708606b35f2ed5f4b1007e5770d4674737abf8ba1e7fb73748b"
+    },
+    {
+      "path": "tests/Test-TongDevSpaceRegistration.mjs",
+      "size": 8600,
+      "sha256": "980713d4d574a43a84ecc45b9c447fc18c5b9cc4ee98ace56e72cc9cffda3914"
+    },
+    {
+      "path": "tests/Test-TongDevelopmentAuthorization.mjs",
+      "size": 4192,
+      "sha256": "bdf9da964e365018e02376e295f1d5f54d433a8bd47f842b99b9c8114cd40b29"
+    },
+    {
+      "path": "tests/Test-TongDevelopmentTasks.mjs",
+      "size": 7681,
+      "sha256": "c86d3e0c18acda1da616b4ce8b660b224ac4f27c402666710cd3b0d1bf9ddc19"
+    },
+    {
+      "path": "tests/Test-TongDshDesktopRuntime.mjs",
+      "size": 3382,
+      "sha256": "084e598703d82fa3fc963919d4c97bfd80f456fb89dc1b7a74a33e60cca103c6"
+    },
+    {
+      "path": "tests/Test-TongDshS0Audit.mjs",
+      "size": 3644,
+      "sha256": "2eab308021fe50d00e35bba7aff972090f4c9aef07d2f073ccb36d35a9f41708"
+    },
+    {
+      "path": "tests/Test-TongDshS1B1BNativeLaunch.ps1",
+      "size": 5460,
+      "sha256": "c5bc93549410d2496fea70b695c7c3a164aa212e51cbd98563e1e66fcc2f4da0"
+    },
+    {
+      "path": "tests/Test-TongDshS1B1SyntheticGrant.mjs",
+      "size": 3528,
+      "sha256": "47ebd591cf845b698e08b461bca4e1b78de24beffa514e9b0c2c4a79d675e015"
+    },
+    {
+      "path": "tests/Test-TongDshS1B1TokenCanary.ps1",
+      "size": 2775,
+      "sha256": "7d96c1398de4daf54e75d74c99f37d64f7fb53233fedf758e2f35e5fc3b252a4"
+    },
+    {
+      "path": "tests/Test-TongDshS1BJobObject.ps1",
+      "size": 2982,
+      "sha256": "d18bea892d094ff523aca3d2502f74ec37c95997b6585d9a1b8159058b0f0c39"
+    },
+    {
+      "path": "tests/Test-TongDshS1Policy.mjs",
+      "size": 4140,
+      "sha256": "5cff6ba40150fc3ac5bdd769bd33b4e9af7dbc7c000bac9bb8357c3080fcf6d7"
+    },
+    {
+      "path": "tests/Test-TongDshS1SyntheticRunner.mjs",
+      "size": 5780,
+      "sha256": "07667bd1fe0754e1ebc726c07559ecf74a227f583e337e24f44c9ae0aa5498b6"
+    },
+    {
+      "path": "tests/Test-TongDshSdkAdapter.mjs",
+      "size": 6850,
+      "sha256": "de8c8793721c9348bdf0f0d4f60a6128b113d446d51d95cc76b88270a32ca673"
+    },
+    {
+      "path": "tests/Test-TongEndpoints.ps1",
+      "size": 16323,
+      "sha256": "7f2d207744562959adfbd4580a770a294a259c9e1d551a7d7ed63f280d30060f"
+    },
+    {
+      "path": "tests/Test-TongExternalTunnel.ps1",
+      "size": 1528,
+      "sha256": "249165679e6ba90800e1e86fe36d58a42a1a257cf335ba95f7ce0896378d1db4"
+    },
+    {
+      "path": "tests/Test-TongGoalDesktopHandoff.mjs",
+      "size": 5249,
+      "sha256": "c9f35a3db07df2bbaa280078f85fcd023aadd54852c644f1406becbe71e7391b"
+    },
+    {
+      "path": "tests/Test-TongGoalSupervisor.mjs",
+      "size": 15777,
+      "sha256": "0024ea4f3cbbbd91f18c6673d98a80709b575c3758ac13f5e813c2a714aa3f59"
+    },
+    {
+      "path": "tests/Test-TongGoalVerifiedProgress.mjs",
+      "size": 11776,
+      "sha256": "1793effc821c1c671f89ffde1ba29fa3242ec3b97785184e25c6d262b8055104"
+    },
+    {
+      "path": "tests/Test-TongLocalConfirmation.mjs",
+      "size": 1388,
+      "sha256": "47930dbcd2549fcf8efbdeed280532353be64c9015f1edcf882c16c650947ef2"
+    },
+    {
+      "path": "tests/Test-TongLocalState.mjs",
+      "size": 2471,
+      "sha256": "4fba061364ae659aeddf75b5747135716bbdb6c02d47330a1c85344873b05cf6"
+    },
+    {
+      "path": "tests/Test-TongLocalWorkspace.mjs",
+      "size": 11048,
+      "sha256": "65ae978120879716db38264438b896673db8f9432021211030cd9d4862b46f7f"
+    },
+    {
+      "path": "tests/Test-TongLoginAutoRecovery.mjs",
+      "size": 9957,
+      "sha256": "f5dc7dc288863c9dbb7f8f2561dd87d649b7d1c55281418e20ab47ff4b7039cf"
+    },
+    {
+      "path": "tests/Test-TongLoginHandoverRollback.ps1",
+      "size": 2303,
+      "sha256": "0ce66b5cf5a4f4094f1efdf32d4d9f0786be84699a799a36201c9c13aa2098f8"
+    },
+    {
+      "path": "tests/Test-TongLoginHost.ps1",
+      "size": 3263,
+      "sha256": "996814cd34bb9133cd9987c01865260e2c7ae93fc22b3cf53762a44d0b71897f"
+    },
+    {
+      "path": "tests/Test-TongLoginManagement.mjs",
+      "size": 22546,
+      "sha256": "eb2d33c8424359bcd4f2784461f2357d0c58df569a93a6e2a9f217aa389b3171"
+    },
+    {
+      "path": "tests/Test-TongLoginRecoveryAuthorization.mjs",
+      "size": 10543,
+      "sha256": "339037be32bf36598844e8a6bd6fd2cf5f7d39139375335ba0bf335fb8ce3555"
+    },
+    {
+      "path": "tests/Test-TongLoginRecoveryLifecycle.mjs",
+      "size": 5406,
+      "sha256": "bd591f15fbe1c1e5f3d08df0094efd00a297a0c2b88e47c48ddd619714fdcc9b"
+    },
+    {
+      "path": "tests/Test-TongMcpGateway.mjs",
+      "size": 12727,
+      "sha256": "3969ffa918833a327900d22fff98eb65867f29b905fc6114db0e8b95581bce1d"
+    },
+    {
+      "path": "tests/Test-TongMcpMetadataTools.mjs",
+      "size": 6315,
+      "sha256": "e5207812696f77332e86938b182e4ca1947814ba2912c7b6b0c95cd3a3e2f2b0"
+    },
+    {
+      "path": "tests/Test-TongMcpSessionContinuity.mjs",
+      "size": 19716,
+      "sha256": "0d696203e266cd3946100ae88b37f6bd9f717e1a706a998af48bff9f79dc5bbe"
+    },
+    {
+      "path": "tests/Test-TongMultiAgentOrchestrator.mjs",
+      "size": 12418,
+      "sha256": "1be09bac1cc96fbb1abd6b92f120d3eddb9e916fed41b55d561075e377816f88"
+    },
+    {
+      "path": "tests/Test-TongNativeSessions.mjs",
+      "size": 7671,
+      "sha256": "917d25f280ebf8758ca4054820b18b237a8c6e3ca81a13ff89ecc0a87984dc05"
+    },
+    {
+      "path": "tests/Test-TongNativeWorkerSupervisor.ps1",
+      "size": 15341,
+      "sha256": "1656edcef7c682dfa1a3bff6d5b308fa5d81ec440ee7b16c75fb15bce5b66e37"
+    },
+    {
+      "path": "tests/Test-TongP3LocalAcceptance.mjs",
+      "size": 15796,
+      "sha256": "bf1367cab29a0c5096cfb7242d62dc85ba3a847a2b099b3fc25dcf7d4769abb3"
+    },
+    {
+      "path": "tests/Test-TongPortListenerArray.ps1",
+      "size": 776,
+      "sha256": "5442835edfbc0c871f3c5b842a6b6138e5de3dec5c345ef94c078de2ea02b8ef"
+    },
+    {
+      "path": "tests/Test-TongPredeploymentLive.mjs",
+      "size": 19410,
+      "sha256": "a3b21d98ab198cd40ead6b8acbfd088bb0ec62c847d4cf5c5a0feaa16a6f2074"
+    },
+    {
+      "path": "tests/Test-TongPreservedRuntimeState.mjs",
+      "size": 2008,
+      "sha256": "c1339f0c250f5ebbb6a310756cc0b40a537b79d866ac66587c309d35e48d9e62"
+    },
+    {
+      "path": "tests/Test-TongProductionProfile.mjs",
+      "size": 8703,
+      "sha256": "7b37fdc2e7c8bfef4bfd0bb39185119fd32b897808888d5d9574244608090f72"
+    },
+    {
+      "path": "tests/Test-TongProductionRuntimeGate.mjs",
+      "size": 1573,
+      "sha256": "78bbfac0a01793e4efb01424417b879dbbff09f26f4173e0a2fd41529acf21c7"
+    },
+    {
+      "path": "tests/Test-TongProductionSwitch.mjs",
+      "size": 25620,
+      "sha256": "3dc591f1f1fef6bb5d26e16f8a78d4a55ca4f9be9bb43004995e752ea3d03beb"
+    },
+    {
+      "path": "tests/Test-TongProjectAccess.mjs",
+      "size": 8020,
+      "sha256": "6bfec41ec47ed89acb73c945345d58ba62169ea4dfff8db1619b54299088d467"
+    },
+    {
+      "path": "tests/Test-TongQuickProject.mjs",
+      "size": 6297,
+      "sha256": "8201a5e673dd62c10d7833dbfb0737860d92d6885471a97cfba303479f224777"
+    },
+    {
+      "path": "tests/Test-TongQuickTrustAllowlist.mjs",
+      "size": 2574,
+      "sha256": "b33e334f16a674d7e4ac39e4a584f903d568c296733291fa5cc1925570fbc99b"
+    },
+    {
+      "path": "tests/Test-TongQuickTrustFileRollback.mjs",
+      "size": 6688,
+      "sha256": "e0763b6c6ed516a7924d11a5b902b048fcf063172055ab2794d14232c07f3847"
+    },
+    {
+      "path": "tests/Test-TongQuickTrustFullProduction.ps1",
+      "size": 6973,
+      "sha256": "22a0ecf26a4c89c2f0206b1ff054745ab9f125ff1f7b9a3c7dd7216bd735d380"
+    },
+    {
+      "path": "tests/Test-TongRuntimeAcl.ps1",
+      "size": 5331,
+      "sha256": "18e7dc9bc939f72fcc5f427cd23b90ae021ba7dab12a1dfe3c13bb25520e5fcd"
+    },
+    {
+      "path": "tests/Test-TongRuntimeBackup.mjs",
+      "size": 15832,
+      "sha256": "66aec1815680289c18bb11775890b96cf5661be0fb3ec185c372eeba738f4756"
+    },
+    {
+      "path": "tests/Test-TongRuntimeChildEnvironment.mjs",
+      "size": 3322,
+      "sha256": "31a89cb63ff31a3c004c56efe6baa87a69f16c40606db13ca0eec5f19322d2fe"
+    },
+    {
+      "path": "tests/Test-TongRuntimeChildPreflight.mjs",
+      "size": 1972,
+      "sha256": "ee57694ae75144e7387262c6e15695e44dbb40e54b4f24a3c9dee2c5c4b9a5c8"
+    },
+    {
+      "path": "tests/Test-TongRuntimeGuardian.mjs",
+      "size": 4951,
+      "sha256": "ac38f1a8c38e33ca3eaff46f9d08ae78d06e95f1b5e4b17e3118db3f04c356ab"
+    },
+    {
+      "path": "tests/Test-TongRuntimePermissionBackup.mjs",
+      "size": 3162,
+      "sha256": "921737eb2f5d53e8b8fdf54231634f09e823bd5e3ff13ff813a5ac97fb85fb15"
+    },
+    {
+      "path": "tests/Test-TongRuntimePowerShell.ps1",
+      "size": 927,
+      "sha256": "3b6edffd98432da5a2cf8eaa29bb987d451cc4bd1be35622ec31e7138ae0854e"
+    },
+    {
+      "path": "tests/Test-TongRuntimeReadiness.mjs",
+      "size": 5404,
+      "sha256": "4c55ae70f86df223badce974cc2df6013c9bf7140eb0a1ee0068efb323163505"
+    },
+    {
+      "path": "tests/Test-TongRuntimeRelease.mjs",
+      "size": 6835,
+      "sha256": "c90319ad1575ba6baaa66f670ad244ed1820ffe38334ba689278a7b17c936b39"
+    },
+    {
+      "path": "tests/Test-TongRuntimeSecurity.mjs",
+      "size": 2504,
+      "sha256": "90652ffbf0941f20d60497ba8c446634152afcedcffebffd2a49e16244dfa90e"
+    },
+    {
+      "path": "tests/Test-TongRuntimeStartupCleanup.mjs",
+      "size": 5269,
+      "sha256": "d511c541ed3ca057caccf665e13e3cc3000ed218d39977635788ffca6c99e4f8"
+    },
+    {
+      "path": "tests/Test-TongRuntimeStopIdentity.mjs",
+      "size": 2658,
+      "sha256": "21222007c52f6c5307072f8301596c2ce32b84b8b7c5d14201985caea0b11fce"
+    },
+    {
+      "path": "tests/Test-TongStagedAutonomyIntegration.mjs",
+      "size": 7006,
+      "sha256": "2187b4b3ae9c1fd6ad2b3b155d7f234075d5c3ac10cba415dcbf1bf86e50a6c3"
+    },
+    {
+      "path": "tests/Test-TongStagedRealMcpLifecycle.mjs",
+      "size": 7517,
+      "sha256": "61294a2a1a524b5e99e69fc8101b79f7ea63d41c94e848ad2a4355c40f07fdea"
+    },
+    {
+      "path": "tests/Test-TongStagedRollbackBoot.mjs",
+      "size": 7976,
+      "sha256": "76cffd02228afb752f52f6d86b8b72c27831b641dc353793c96f0a61285763fd"
+    },
+    {
+      "path": "tests/Test-TongStagedRuntimeVersionSwitch.mjs",
+      "size": 6392,
+      "sha256": "f21c713fdd594c1826fdb6bea7039a0cbd5861445a8efd40247a2d0a6ccf116c"
+    },
+    {
+      "path": "tests/Test-TongStagedSourceRollback.py",
+      "size": 5407,
+      "sha256": "8828ffdb78739fafee2a64e5d5ddf7b3eed290ed2f35671ea46dc1f2a6df0e6f"
+    },
+    {
+      "path": "tests/Test-TongStaleRuntimeReconciliation.mjs",
+      "size": 6664,
+      "sha256": "73c9dd1757d89fb6cd2f4810a009b3c4cf3790966db25cc73f3ce3e356a3b81b"
+    },
+    {
+      "path": "tests/Test-TongStartupRecovery.mjs",
+      "size": 7974,
+      "sha256": "bbbd9131bec7ba5f62489644af5abb585a7d732733b02839ffbc274acef8078e"
+    },
+    {
+      "path": "tests/Test-TongTestDirectory.mjs",
+      "size": 1238,
+      "sha256": "02986b2ffc5ecac0f8e990f9e262c053eb9a9c4938f020a255a0166915de9e46"
+    },
+    {
+      "path": "tests/Test-TongToolBoundaries.mjs",
+      "size": 5171,
+      "sha256": "46ad54e5c540c6fe80125582af9aa4356f104bd5bf35a572421e19475a7b6eef"
+    },
+    {
+      "path": "tests/Test-TongTrustedApprovalTimeout.mjs",
+      "size": 3493,
+      "sha256": "d31b0ade461585c2fd05e8665b55667683e462974846089448febfa6adb2e8b7"
+    },
+    {
+      "path": "tests/Test-TongTrustedCodex.mjs",
+      "size": 6449,
+      "sha256": "636b5921062574bfb555f51f585ede8669f1dd1aecdc1ab737676f79460c7a5f"
+    },
+    {
+      "path": "tests/Test-TongTrustedTasks.mjs",
+      "size": 11284,
+      "sha256": "5db69d1b65334d5e4804449c3788732192683dbf924d17a2ff051152ade83213"
+    },
+    {
+      "path": "tests/Test-TongWindowsInspect.mjs",
+      "size": 3066,
+      "sha256": "ba3a8fdb7238d4cfcca0b4cff0cc4ce70b78a33224ab975ccb56da9edbac8553"
+    },
+    {
+      "path": "tests/Test-TongWindowsTaskNotice.mjs",
+      "size": 1724,
+      "sha256": "2af791022acc5963a60c7cdfcba656d073747706a65fc5466a012fd264f9a70a"
+    },
+    {
+      "path": "tests/Test-TongWorkerCanaries.ps1",
+      "size": 22490,
+      "sha256": "ab8def0f21463c6f0ce14c6e1acfed9f3f8b18efc52c7e01e90c4da98a13c0d7"
+    },
+    {
+      "path": "tests/Test-TongWorkerIsolation.mjs",
+      "size": 16058,
+      "sha256": "642144e68288c90dd1430b796ae41c59ec6a875f08a18802a152353295015bbe"
+    },
+    {
+      "path": "tests/Test-TongWorkflowJournal.mjs",
+      "size": 4916,
+      "sha256": "690083d8b85c8e6bf1f965e7611e1fa67d81292536e63f17716b3a332f951ddd"
+    },
+    {
+      "path": "tests/TongDshS1B1BNativeChild.c",
+      "size": 2023,
+      "sha256": "cd19ba9e38d17c3a9468d6743283e168b64d42cfd55df7fde563c0d9e857e526"
+    },
+    {
+      "path": "tests/TongDshS1B1BNativeLaunch.cs",
+      "size": 15903,
+      "sha256": "6689d2dd4b378c52d97289a8396e028f6d21f6981a9a2c1c732781b326f47233"
+    },
+    {
+      "path": "tests/TongDshS1B1TokenCanary.cs",
+      "size": 8608,
+      "sha256": "f3875cce47bffc7965c531740e0bddb5920e1b40f09df445d9f0db7d511bbef4"
+    },
+    {
+      "path": "tests/TongDshS1BJobCanary.cs",
+      "size": 9277,
+      "sha256": "b36297ccb192a712ca89222a911f11693284bac2b7692c90721875ca8709179d"
+    },
+    {
+      "path": "tests/fixtures/TongLoginRecoveryFixture.mjs",
+      "size": 7167,
+      "sha256": "b91267be0ccd2880a3f8d6c9932fdddce24d0bb2f162432c3903d85be9ee413d"
+    },
+    {
+      "path": "tests/fixtures/TongNativeMockWorker.mjs",
+      "size": 8817,
+      "sha256": "d36e101368581101299a2f51d43cdc82a406d75d05f074dc090790916404b342"
+    },
+    {
+      "path": "tests/fixtures/TongPredeploymentServer.mjs",
+      "size": 2760,
+      "sha256": "688490b876df6d72b729db694887b5e2f0d4a49cde07b52c0e1c78a67683f239"
+    },
+    {
+      "path": "tests/fixtures/TongProductionSwitchSupport.mjs",
+      "size": 13180,
+      "sha256": "bf56bda4a0723dbbc9aa6fdd049bd0286dc1a30f97de58af13cc3b07b387049c"
+    },
+    {
+      "path": "tests/fixtures/TongProjectSnapshot.mjs",
+      "size": 1538,
+      "sha256": "72fc946279a59453500c16b3f721536163b7a0333dae4fee790771888eb3990a"
+    },
+    {
+      "path": "tests/fixtures/TongTestDirectory.mjs",
+      "size": 1636,
+      "sha256": "f40563b1e7cfbdd879e1d772d5057410f28031635f21d86b6801d6ed9b600684"
+    },
+    {
+      "path": "tests/fixtures/TongWorkerCanary.mjs",
+      "size": 2565,
+      "sha256": "641d1d92669d099dfe438131e74bf486f01007c0bfd73da7ab4dc44e6f57662a"
+    }
+  ],
+  "native": [
+    {
+      "path": "node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+      "size": 1919488,
+      "sha256": "e75b8c024a85179d8e0e51203a8b8867916e9a51327ce3953db5f8483cc9a91e"
+    },
+    {
+      "path": "node_modules/node-pty/build/Release/conpty/OpenConsole.exe",
+      "size": 1148448,
+      "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+    },
+    {
+      "path": "node_modules/node-pty/build/Release/conpty/conpty.dll",
+      "size": 109600,
+      "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
+      "size": 85496,
+      "sha256": "e6457d66f45af3facd02920a5b212164e80fe0bb758afe6e6eab1eceeba3fc9a"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/darwin-x64/pty.node",
+      "size": 52864,
+      "sha256": "edab585d5c5c7bf35143a7a53b7d72652e90723b5f9635dfd55b2333f7069198"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty/OpenConsole.exe",
+      "size": 1194024,
+      "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty/conpty.dll",
+      "size": 106528,
+      "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty.node",
+      "size": 302592,
+      "sha256": "25a06916c5cb1a3aac7acc401424d8e6a6a9e8eea441a3604cd657a0619555cd"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty_console_list.node",
+      "size": 122368,
+      "sha256": "fda76b16afb3bf9a4de085c943b5fb4138ecbeb08e8254c09d5555ea5426bd4e"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/pty.node",
+      "size": 293376,
+      "sha256": "eae1266e3c34f4c7b67a756a6ff342b699847deaf29c944b7a6bed190ec61982"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/winpty-agent.exe",
+      "size": 286720,
+      "sha256": "9a5f66fbe444728988f51e8099d0d84c515945a1873dbbbec65aec6e07eac50a"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-arm64/winpty.dll",
+      "size": 236032,
+      "sha256": "0247b4d007fcb8059cc2221ec41d736fa548246ce1e10256c15c96d1ef6f2e9c"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/conpty/OpenConsole.exe",
+      "size": 1148448,
+      "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/conpty/conpty.dll",
+      "size": 109600,
+      "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/conpty.node",
+      "size": 312320,
+      "sha256": "ee8f4e6f4dad71939eecfda11de249400e34bfefe4c8b48af13f3b5476f4035b"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/conpty_console_list.node",
+      "size": 134656,
+      "sha256": "879dd94cfc79f1e263a00077597ae9448a5394b7d193381aaa50d992a1f91090"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/pty.node",
+      "size": 303104,
+      "sha256": "ae323edd0835ee7b9e18cc96a7b2bb4b8173ff768317d178af2788406feb71ff"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/winpty-agent.exe",
+      "size": 307712,
+      "sha256": "0c4834a0ab2a4f8c855a2f1db9b21fa6e5fc324ae8e3c82addd53d503d999825"
+    },
+    {
+      "path": "node_modules/node-pty/prebuilds/win32-x64/winpty.dll",
+      "size": 256000,
+      "sha256": "e1cb26d868c954ba26817bedf3e4a5744e4ca2030adf51a7156e5ff2fadb881b"
+    },
+    {
+      "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-arm64/OpenConsole.exe",
+      "size": 1194024,
+      "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+    },
+    {
+      "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-arm64/conpty.dll",
+      "size": 106528,
+      "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+    },
+    {
+      "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/OpenConsole.exe",
+      "size": 1148448,
+      "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+    },
+    {
+      "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/conpty.dll",
+      "size": 109600,
+      "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+    }
+  ],
+  "versions": {
+    "@waishnav/devspace": "1.0.8",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "better-sqlite3": "12.11.1",
+    "node-pty": "1.1.0"
+  },
+  "expectedDevspaceHashes": {
+    "pi-tools.js": "d6f47e98e061217ded7e9df070a8d6db3d252eaafce258ca97e0d08071b5e13e",
+    "server.js": "827e80e15951835c6b1a8ead93a25d30727ae41dd22a156be0aedcc0229eb019",
+    "workspaces.js": "544ac1ae6bd15f6177ff269c5d5918763d2821e83421de54e435df4233ca418a"
+  },
+  "node": {
+    "executable": "D:\\node\\node.exe",
+    "version": "v24.15.0",
+    "abi": "137",
+    "platform": "win32",
+    "arch": "x64",
+    "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+  },
+  "files": [
+    {
+      "path": "code/source/.github/workflows/p3-claude-adapter.yml",
+      "size": 700,
+      "sha256": "d1887dc19f323eb2477a55b777145627ee7c53b9f73980e6c4340063caf910fb"
+    },
+    {
+      "path": "code/source/.github/workflows/p3-dsh-desktop-runtime.yml",
+      "size": 1811,
+      "sha256": "4c673c3f4529586cfb35fa2f7dc86c32639473de8727f12bf815ff8212c915be"
+    },
+    {
+      "path": "code/source/.github/workflows/p3-dsh-durable.yml",
+      "size": 1105,
+      "sha256": "8f4075b086f314b50113b1b224fc7de855ac979435bbb58efa4d9c64c25a0f89"
+    },
+    {
+      "path": "code/source/.github/workflows/p3-local-acceptance.yml",
+      "size": 1373,
+      "sha256": "629eb4d19dbe4b81a869996659c678ed04c7b23423a629904e00483c9decece8"
+    },
+    {
+      "path": "code/source/.github/workflows/p3-multi-agent-core.yml",
+      "size": 1450,
+      "sha256": "1f9b761354adc7c8f17cf13704dd10ac09b3d2bafe2eedce13fa4c985e4a9f72"
+    },
+    {
+      "path": "code/source/.github/workflows/p3-windows-inspection.yml",
+      "size": 1605,
+      "sha256": "7bfe568994a67e80fba5557fde07b7f19f44ed411950582687dfc882dfe9e1af"
+    },
+    {
+      "path": "code/source/.gitignore",
+      "size": 722,
+      "sha256": "043e0193703044cecf2347d10cf5bb4d552f662429d23f65a2c4c550162a69a9"
+    },
+    {
+      "path": "code/source/AGENTS.md",
+      "size": 2258,
+      "sha256": "b2d764513c522ee07215c7b2962767eb9caca865a35a47b62746c614b8521467"
+    },
+    {
+      "path": "code/source/README.md",
+      "size": 31692,
+      "sha256": "a4fd092ba7647bc5c4d1a8ac172f6a61ebe993a66827983d53a5ef6960a3db7f"
+    },
+    {
+      "path": "code/source/config/tong.config.example.json",
+      "size": 281,
+      "sha256": "ac37c30cd20f8971f07d0b0a4a02738d7f850da198c8c9e7251e58fbf4a692e6"
+    },
+    {
+      "path": "code/source/demo-workspace/README.md",
+      "size": 156,
+      "sha256": "24bf0baa4892c060f308958ac38585b083ae6a2654e90e5935e4f5a606744cb4"
+    },
+    {
+      "path": "code/source/docs/2026-10-18-Codex-Cancel-Proxy-Stage.md",
+      "size": 4011,
+      "sha256": "15eaf0c03be0c8c62d0a391bb18abcd3d00d14f582740c210c746e02f15f573f"
+    },
+    {
+      "path": "code/source/docs/2026-10-18-Codex-Persistent-Local-Proxy.md",
+      "size": 3102,
+      "sha256": "1a9590abae9c6ec7554012543984c28efe3ebff206dff4a2e5113276caa972f9"
+    },
+    {
+      "path": "code/source/docs/2026-10-18-Codex-Writer-Ownership.md",
+      "size": 4914,
+      "sha256": "a2aa613df30424148e8a0e4c757d64ef1f0a8f335d0bb47dddb953667386d10b"
+    },
+    {
+      "path": "code/source/docs/2026-10-18-Tong-Exact-Cutover-Rehearsal.md",
+      "size": 4436,
+      "sha256": "88b4b8043df60021e7c7c4796e0e091e063587e975e39fdf1b24ee33a9c06192"
+    },
+    {
+      "path": "code/source/docs/2026-10-18-project-affinity-cutover-recovery.md",
+      "size": 3333,
+      "sha256": "7fded102e1e433ab1f24c8ea3b109343cb97675862db12125b0d7173380b67fa"
+    },
+    {
+      "path": "code/source/docs/P2.2-Worker-Isolation-B0.2.md",
+      "size": 9245,
+      "sha256": "f82443c11327e004f562b4949526ce224330f7e7037dad493b4e1116a22a650f"
+    },
+    {
+      "path": "code/source/docs/P2.2-Worker-Isolation-StageB.md",
+      "size": 20171,
+      "sha256": "f3f28dd4515c21917528c7108b7f6a7f04f5e070ba33e065a1f471bdb0eb9409"
+    },
+    {
+      "path": "code/source/docs/P2.3-Trusted-Windows-Codex.md",
+      "size": 7337,
+      "sha256": "4a069446b16d3e7a8f7ec2d1be3bafdb9b0ab17e5af85532f65a6e66f3e53645"
+    },
+    {
+      "path": "code/source/docs/P2.4.3-AgentDock-Client.md",
+      "size": 8192,
+      "sha256": "a304f57a2c611165bdcb3c7806d956214e92d5db4d075e52b33b8291c3c324f0"
+    },
+    {
+      "path": "code/source/docs/P2.4.4-A-Controlled-Execution.md",
+      "size": 15147,
+      "sha256": "a0b764726cd08fba652f23363f7b056e80efde3c3d88b7a16e162fa1bc2fa8f7"
+    },
+    {
+      "path": "code/source/docs/P2.4.4-B1-Predeployment.md",
+      "size": 18804,
+      "sha256": "10b3d131aa900d528adec39a54fb2990776408202a971e3e86d85dbc740db485"
+    },
+    {
+      "path": "code/source/docs/P2.4.4-B2.2-Runtime-Preparation.md",
+      "size": 22213,
+      "sha256": "bb8991f0071976141b1ef2a19ae1fb472aec57679a63dca4b7a5aed3bde1d8cc"
+    },
+    {
+      "path": "code/source/docs/P2.4.4-B2.3-Production-Candidate.md",
+      "size": 36128,
+      "sha256": "cc4a916be3046f8a958d2523e52a7b0c3184f4c0a5aca9bc74088b8eb39fc424"
+    },
+    {
+      "path": "code/source/docs/P2.4.4-B2.4-Closeout-Report.md",
+      "size": 23066,
+      "sha256": "418dade6818e1f157b18b0564b2e9b9b9dad1a08c6cbe6bbdc47ade61ef90e30"
+    },
+    {
+      "path": "code/source/docs/P2.4.4-B2.4-Production-Deployment.md",
+      "size": 76263,
+      "sha256": "f79114bdea0a567dacf4c8bea3c3738d173a8baeffa34ebeaedbd2ab69c10942"
+    },
+    {
+      "path": "code/source/docs/P3-Claude-Adapter-Stage-A.md",
+      "size": 3432,
+      "sha256": "b4de6b1d56940e139202b0c104f5892e4ea62d85ad920ba459a688e3c64dc782"
+    },
+    {
+      "path": "code/source/docs/P3-Claude-Live-Session-Closeout.md",
+      "size": 3921,
+      "sha256": "7f34574a89916f5e58cc25bc9d64efbcd2a4bbabd6d022312a80a3357c4ba57f"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-Desktop-StageD.md",
+      "size": 3386,
+      "sha256": "587d148f5390122958d0b2dfc9b2e60a80ac5260a8307f397de498398b68de5f"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-Next-Safe-Execution-Handoff.md",
+      "size": 3921,
+      "sha256": "8c7a2f846523090e26e209fedc2f64507a3a40ca6aacb3385cde1d1b1c184380"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-S0-Protocol-Capability-Audit.md",
+      "size": 7710,
+      "sha256": "8ef8d0a920487a933a8fec548d1fd5472c90f89a3d7f38aca75bd420251c7daf"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-S1-Restricted-Synthetic-Runner.md",
+      "size": 5368,
+      "sha256": "b0097c0c5353789e8bb5480fe726c4821e8427ca2f1e282b0cc3023eb22680b0"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-S1B0-Windows-Job-Canary.md",
+      "size": 4597,
+      "sha256": "c013d53e996067fce08b50b5b3db1afd0ce2b0065140a100e60a105c3f6c11a3"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-S1B1A-Restricted-ACL-and-Synthetic-Grant.md",
+      "size": 4846,
+      "sha256": "b181a4c405e45f19c65c54b79bec0b9d2c4eb7fd24cf20b06f11854a432080d9"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-S1B1B-Restricted-Native-Loader-Blocker.md",
+      "size": 4991,
+      "sha256": "15e1a573477110e83f90da90510657441bbaa1a507977f698ce10b5aa426541c"
+    },
+    {
+      "path": "code/source/docs/P3-DSH-and-Durable-StageC.md",
+      "size": 4721,
+      "sha256": "730c1db4957b1b779537cfcfcf7e4151d13a778c76bbdc919ec8392a36561134"
+    },
+    {
+      "path": "code/source/docs/P3-Local-Provider-Acceptance-StageE.md",
+      "size": 20599,
+      "sha256": "c406d7e6b13bf0a2bea194e33b569eebf126061431f7e2c378dd7ddc6c3866a4"
+    },
+    {
+      "path": "code/source/docs/P3-MultiAgent-Core-StageB.md",
+      "size": 4613,
+      "sha256": "1dfa6f7d65ed111a329efa460445a5ce4043f12b03d23ae469af2ef89db21caa"
+    },
+    {
+      "path": "code/source/docs/Tong-Codex-Desktop-Progress-Handoff-20261021.md",
+      "size": 46149,
+      "sha256": "c7fd31a3dcc45fbb77619f7295a35e03046325c617fd5b700c778a58047baf37"
+    },
+    {
+      "path": "code/source/docs/Tong-Project-Authorization.md",
+      "size": 6153,
+      "sha256": "b1c8a60e13a72d5d8c16839323f41bf774349e26cc12ff0d813e0d1d89d64741"
+    },
+    {
+      "path": "code/source/docs/Tong-Quick-Folder-Trust.md",
+      "size": 2749,
+      "sha256": "44634eaaa3602d61e37fa9cbe09c2e5929db8adc7f3dd75b50f82616de1515dc"
+    },
+    {
+      "path": "code/source/docs/Tong-QuickTrust-Full-Production-Retry.md",
+      "size": 5178,
+      "sha256": "692052bc8ded8c552f0d9bbb83b16926b5f21dd96ca0ccdf14a2aabd683d7925"
+    },
+    {
+      "path": "code/source/docs/Tong-QuickTrust-Production-Upgrade.md",
+      "size": 4056,
+      "sha256": "ec617718d995d20147199295ec2c2077261eaf170e0f7caf4ce3a807493f758b"
+    },
+    {
+      "path": "code/source/docs/Tong-Runtime-Recovery-Fix.md",
+      "size": 11489,
+      "sha256": "722ca1823540a12b2ec94924674903e33cb665381834851c3011d666919f5066"
+    },
+    {
+      "path": "code/source/docs/Tong-Silent-Login.md",
+      "size": 7667,
+      "sha256": "3b0d4f35e8ed4695db14d31be98b4ab574a0001e181f72df28a457ca786a94d8"
+    },
+    {
+      "path": "code/source/docs/evidence/B0.2-legacy-synthetic-roots.txt",
+      "size": 2334,
+      "sha256": "fbae78bb78be9981190d169f430d88d6f487a7ab3779c1bd7daaecb8e6d9f8c4"
+    },
+    {
+      "path": "code/source/docs/evidence/B0.2-native-file-stderr.txt",
+      "size": 4705,
+      "sha256": "6627e210f33c7bea406e15b47e7c361fdfaad5504d79da7c031ca9bc45962cdb"
+    },
+    {
+      "path": "code/source/docs/evidence/B0.2-native-pipe-1.txt",
+      "size": 938,
+      "sha256": "95d6743f0f5094494d464a6a15b98dcb356e51140d06328bdc5f397755f17e9c"
+    },
+    {
+      "path": "code/source/docs/evidence/B0.2-native-pipe-2.txt",
+      "size": 965,
+      "sha256": "bfdf1a0acafb7bf807121660d4c85df2dafa1631052db7f1f317bb8221a8c670"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-Commit-And-Delete-OldSwitch.ps1",
+      "size": 13234,
+      "sha256": "62e9af489da8ec816dcf4ea8b222a22ddbf481fa56b72902a0eb148f4d0c9784"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-Commit-And-FirstCacheCleanup.ps1",
+      "size": 6595,
+      "sha256": "7acabccc4ebaeeb593e83bc96471c42d4295c3506f4051e7f15fe4f8604d1052"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-Exact-OldSwitch-LongPath.py",
+      "size": 3722,
+      "sha256": "267d8b2bfca956206d9824788e8695d2c263106a9545bb52d46699a604bfc2fb"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-ReadOnly-Disk-Audit.ps1",
+      "size": 8799,
+      "sha256": "42fbc9764702477a38d87b73f53ac0fff51fb49a6637b375df555b099252e81c"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-Review-SecondBatch-Switch.ps1",
+      "size": 9850,
+      "sha256": "01a77f8b58b66c04057364545b7bb3ef961e5d6d1396ee170d8413e63ae29e7a"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-Verify-Cleanup-Candidates.ps1",
+      "size": 11232,
+      "sha256": "1a7ac7bb38203477620ce066a726c0c3d3350c698940df7ab5e05bdd2ab71d29"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-b23-switch-second-review.csv",
+      "size": 2347,
+      "sha256": "9ee00be78fa46c9b9e609c38742f0bd13d8fe74511f22e029153c2b2a06cae25"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-b23-switch-second-review.txt",
+      "size": 2756,
+      "sha256": "e43488f8d8a8e0dfb8280528eff20691b002d64c87dfdc975b14098c95104f3c"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-cleanup-dependency-review.csv",
+      "size": 2378,
+      "sha256": "6c10293d6a1de3994aa44b2a1512c44ab556aed477c1d5e45fbb4b940ae98c42"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-cleanup-dependency-review.txt",
+      "size": 3130,
+      "sha256": "173e9bba9f43877be8815e8329acdd84c577e0b6828edab16ec488bcd1e0b314"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-cleanup-final-review-20261013.md",
+      "size": 4977,
+      "sha256": "69c2d0e366161ce456b989c9aabe31f214ee5c7182ebdbbe5b2877bc739e9701"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-disk-audit-README.txt",
+      "size": 3833,
+      "sha256": "5884ba86368282f9464f3de3b169430b41ae1b2902d677e0a76f8ffbdcf74dcc"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-disk-audit-buckets.csv",
+      "size": 288193,
+      "sha256": "5db553acb7e143c0da454cbbb78b2cec76bad5679629800cc082509bd86748c0"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-disk-audit-summary.csv",
+      "size": 1680,
+      "sha256": "ebee4d011b66e897b21774c65f34d63d246efe49c30313e7d710d21abb7b997c"
+    },
+    {
+      "path": "code/source/docs/maintenance/2026-10-13-disk-audit/Tong-second-batch-cleanup-decision-20261013.md",
+      "size": 2780,
+      "sha256": "3df28f9b10ba93ee02d5b96f07e80f8b48beb1713f40cd0a2187c065d881f9bd"
+    },
+    {
+      "path": "code/source/native/TongWorkerSupervisor/AclJournal.cs",
+      "size": 8114,
+      "sha256": "a5bf920a52549a13db9f340fb66103fcc4cfa04b8acd526cfb9e007418a61d32"
+    },
+    {
+      "path": "code/source/native/TongWorkerSupervisor/Native.cs",
+      "size": 21659,
+      "sha256": "20a0c69b2b55c9e5eeff256c5779a53d6e95085d4cc52b02492508de81a2d2a6"
+    },
+    {
+      "path": "code/source/native/TongWorkerSupervisor/Policy.cs",
+      "size": 15741,
+      "sha256": "fc72f2b0a0d7b70a92145981d0d3b2218b2b21aa08f52ac9de5159630d7b2204"
+    },
+    {
+      "path": "code/source/native/TongWorkerSupervisor/Program.cs",
+      "size": 24892,
+      "sha256": "a92367a8996993b191df7e496efb7ce83e00eb9d825919dbd53d5be26709afaf"
+    },
+    {
+      "path": "code/source/native/TongWorkerSupervisor/RestrictedProcess.cs",
+      "size": 17505,
+      "sha256": "f1df5038af983417cae4c01207066cb4e79b400ec69fe709eb2bfecf9629f553"
+    },
+    {
+      "path": "code/source/package-lock.json",
+      "size": 183596,
+      "sha256": "2c3cb8667f929ff1a87a251f3d5d2ea0300c9846277f28f891968f431769ea01"
+    },
+    {
+      "path": "code/source/package.json",
+      "size": 340,
+      "sha256": "0d1a4fbf39a3f34b98952ff15c79915222dbf8fd93d43cd45aecbc482abb6368"
+    },
+    {
+      "path": "code/source/scripts/Apply-TongDevSpacePatch.mjs",
+      "size": 16430,
+      "sha256": "7b810c8fbfefb56074f3a827520123b49ff8ae6edbedb0c0713759cb14585691"
+    },
+    {
+      "path": "code/source/scripts/Build-TongLoginHost.ps1",
+      "size": 524,
+      "sha256": "33ecff6c74315f2853a36d64cb9e3990190f5e43e67c43c6e996068c7f8f60e1"
+    },
+    {
+      "path": "code/source/scripts/Build-TongWorkerSupervisor.ps1",
+      "size": 1171,
+      "sha256": "7c797d2d9d2a1faf53c9bfa5dc2864a116b68479dfb67a2de104b773ff66f5fd"
+    },
+    {
+      "path": "code/source/scripts/Connect-TongFolder.cmd",
+      "size": 360,
+      "sha256": "4fd62d6ab26ad16695ce918afbc15710b6de45cbdae1b4a0e192ad7dcc099949"
+    },
+    {
+      "path": "code/source/scripts/Connect-TongFolder.ps1",
+      "size": 1925,
+      "sha256": "f0cfc1dafc11e39c88932de3b74aee478acac6d83a27d4288e3826ba82c55826"
+    },
+    {
+      "path": "code/source/scripts/Get-TongDesktopControlStatus.ps1",
+      "size": 130,
+      "sha256": "02bc629be41cc1c52fbc4474bfa73368203facb93203ed71850b71d5172b2021"
+    },
+    {
+      "path": "code/source/scripts/Inspect-TongDshS1Config.mjs",
+      "size": 4784,
+      "sha256": "a4e413f901ced7116f9648360b3d7381b5f30eeae712b0f92eca205eb6481e90"
+    },
+    {
+      "path": "code/source/scripts/Install-TongLoginManagement.ps1",
+      "size": 6946,
+      "sha256": "55c96f58d2355b8f077ab159bb9f9076188325b7db330361972ac252f10b3d38"
+    },
+    {
+      "path": "code/source/scripts/Invoke-TongAutonomyProduction.ps1",
+      "size": 16528,
+      "sha256": "d4588471c91ae41845f2aac59830acf0203c138d8fb7b6333105fc3329860b6b"
+    },
+    {
+      "path": "code/source/scripts/Invoke-TongQuickTrustFullProduction.ps1",
+      "size": 22006,
+      "sha256": "1b0fcd0368b180c710338c7e5089d0353b2eefc72a43d60bfaae10f356844aff"
+    },
+    {
+      "path": "code/source/scripts/Invoke-TongQuickTrustProduction.ps1",
+      "size": 13815,
+      "sha256": "3f6fc079843fdc33e99111d478b876fd61793efd357522fd212d602d83861bde"
+    },
+    {
+      "path": "code/source/scripts/Plan-TongWorkerIsolation.ps1",
+      "size": 5138,
+      "sha256": "ad944adbb26ee9d66ff12ae0de31d1d77c47ba3146d01609669b5b2980fcb286"
+    },
+    {
+      "path": "code/source/scripts/Plan-TongWorkerIsolationRollback.ps1",
+      "size": 2505,
+      "sha256": "e5c699e1c005a3b8c9fabe90256b9bf264a183052c17a578e1f6cfa52f645baf"
+    },
+    {
+      "path": "code/source/scripts/Restart-TongDesktopControl.ps1",
+      "size": 151,
+      "sha256": "2b02760d76e6af88bc77d68b25226ade4f05822cfd7a86616c808e290f5a0ee5"
+    },
+    {
+      "path": "code/source/scripts/Run-TongP3LocalAcceptance.mjs",
+      "size": 18822,
+      "sha256": "26c19ca862a88939e9589af0c73302e15952ca6f251a17534e0cceedd958e971"
+    },
+    {
+      "path": "code/source/scripts/Set-TongSilentLogin.ps1",
+      "size": 10297,
+      "sha256": "0d8dbdc75619b437dbe7862591cf4167fa261b94af28e9d4e4031f2316152d15"
+    },
+    {
+      "path": "code/source/scripts/Start-TongDesktopControl.ps1",
+      "size": 126,
+      "sha256": "ab4659ba67b115398a9cb2d4cbe80f3cf8187bc841ae03f23b1d04e63aec70b8"
+    },
+    {
+      "path": "code/source/scripts/Stop-TongDesktopControl.ps1",
+      "size": 125,
+      "sha256": "ce1d6d89174af78db02d8775ac7aeb1970ded64eb1ccd7d404460b53ec0c13e5"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockAuthorization.mjs",
+      "size": 4725,
+      "sha256": "6e30a4c15575e1f7ba61e3a83e843ef1a9db6a8f0b87164b2a65e236b552784a"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockClient.mjs",
+      "size": 12154,
+      "sha256": "b5ff332c270ae967b17a9787a26e58941d1d8082f1873580f543b91764ab02b6"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockExecution.mjs",
+      "size": 30462,
+      "sha256": "4fbe25fcb00f48c17cd784352cd8838a69318f93a7ff7730d305f934eee00143"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockOperations.mjs",
+      "size": 3165,
+      "sha256": "4fa4d713ab919bc058c56b236787cfedb81f0b760dc6209481cad159e18294fd"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockPaths.mjs",
+      "size": 7290,
+      "sha256": "856c162f80c5a48aabb4b4e9ceeb58984af713ff06dcd8732cac8fddc0b0b7dd"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockPolicy.mjs",
+      "size": 4263,
+      "sha256": "d00d852e03ef4d4a41541c6ac168d61e74f55a18b2d67fb68f89fd8c874aaa10"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockRuntime.mjs",
+      "size": 56961,
+      "sha256": "2a69e574e92a5aa7f62a358c6a74336a1e0abc364acc0f60e363ffbb8e787a51"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockSessions.mjs",
+      "size": 3170,
+      "sha256": "3f5b874b5cebe3e2712b0d540d519e8d3125ff2d1ac547ace7cf6d8639b5ee89"
+    },
+    {
+      "path": "code/source/scripts/TongAgentDockTools.mjs",
+      "size": 15574,
+      "sha256": "1b6d580fa7fe748365287e41a8d576a61262d45019192bfc4841a7a5005a1653"
+    },
+    {
+      "path": "code/source/scripts/TongAgentProviders.mjs",
+      "size": 10646,
+      "sha256": "9f8c10a3606ab9b0b16054e92a8c0b2c11bf18aad48031d10f472ce865c4f491"
+    },
+    {
+      "path": "code/source/scripts/TongAgentTasks.mjs",
+      "size": 45213,
+      "sha256": "9788d5ce267b9a91b11c003a6ed4bde267afd87e45c5389edaeeb6f5a0e2c4aa"
+    },
+    {
+      "path": "code/source/scripts/TongAutonomyProductionCutover.mjs",
+      "size": 12018,
+      "sha256": "62b6b82b6dc366351521ac71c49b8c2b50f894cff728ec5d60fbe742441a3133"
+    },
+    {
+      "path": "code/source/scripts/TongClaudeAuthDifferential.mjs",
+      "size": 3751,
+      "sha256": "824aae70ae1610f2351a2fbd57733b12c70a388557a7522746f145cbdf961ec5"
+    },
+    {
+      "path": "code/source/scripts/TongClaudeCodeAdapter.mjs",
+      "size": 5464,
+      "sha256": "ba7ecb5f42ac24cadd6b365af2dfbb6855872559eb0a342f6bc550f2f1989c60"
+    },
+    {
+      "path": "code/source/scripts/TongClaudeExplicitRouting.mjs",
+      "size": 2398,
+      "sha256": "b99c5762b39797c8b51c97a2171c32513cfc505f9935b7a78d09da91631898dd"
+    },
+    {
+      "path": "code/source/scripts/TongClaudeResumeContext.mjs",
+      "size": 3079,
+      "sha256": "dc2a717498ed6ba9f389a90ebeadb499b05727572c1f37039c6abebff07385e7"
+    },
+    {
+      "path": "code/source/scripts/TongCodexAppServer.mjs",
+      "size": 26257,
+      "sha256": "5a5e98c3f3a748d84a44f4e77c53dc291aa945a3802995bc8c14c50bf9c6490a"
+    },
+    {
+      "path": "code/source/scripts/TongCodexDesktopLink.mjs",
+      "size": 860,
+      "sha256": "73ea1296a7c23fd36fc9b73bf95bfd51d60e140138fe3901363972452dba3430"
+    },
+    {
+      "path": "code/source/scripts/TongCodexWorker.mjs",
+      "size": 3181,
+      "sha256": "4e9dbff569d30280e459e802cf22ebcf9e3b1430c2f792b9061d73f37e53e5a0"
+    },
+    {
+      "path": "code/source/scripts/TongCodexWorkerMain.mjs",
+      "size": 3203,
+      "sha256": "5fb95080355cd5cb68071cf604a6d775ef563ce7d5db41720258f835d94eb9ba"
+    },
+    {
+      "path": "code/source/scripts/TongControl.psm1",
+      "size": 18109,
+      "sha256": "4b883d79bad33f136990181e66fbe1d01a77533cba8395691ea8547f456f20ca"
+    },
+    {
+      "path": "code/source/scripts/TongCutoverStoppedRunProbe.mjs",
+      "size": 3563,
+      "sha256": "544a545ce87c50a2e06c1dae5ad4329a69b2c28e71c1f0cd0265dd93d65367ac"
+    },
+    {
+      "path": "code/source/scripts/TongDevEnvironment.mjs",
+      "size": 4672,
+      "sha256": "b461e209eb70c74c76391d70e293d7dcc95f3e028efec4139667b77b5bbf91fb"
+    },
+    {
+      "path": "code/source/scripts/TongDevEnvironment.ps1",
+      "size": 2024,
+      "sha256": "b3301fa42f632463a55c0f5a628bb5eea516b45b1514cdf4c8b8486c9e59b698"
+    },
+    {
+      "path": "code/source/scripts/TongDevSpaceHttpDiagnostics.mjs",
+      "size": 4293,
+      "sha256": "1ef3ae0bcd6a8a831899eb67f6793c123c65b62d8141fddf6942f3825749d03c"
+    },
+    {
+      "path": "code/source/scripts/TongDshDesktopRuntime.mjs",
+      "size": 3388,
+      "sha256": "2e13778c06dd7436ad79c320f34ab64de41f7e356a51511494e910de7d1868a5"
+    },
+    {
+      "path": "code/source/scripts/TongDshS0Audit.mjs",
+      "size": 2909,
+      "sha256": "b56b4958dac09f4cf6204d8d913c467572d32eb8a6f8b5d7447b9d27f4d61cc5"
+    },
+    {
+      "path": "code/source/scripts/TongDshS1B1SyntheticGrant.mjs",
+      "size": 3608,
+      "sha256": "935af3d20c97cc6b64b1825901cb9db6601ef5c7ccc52084a253da3e1ac2493b"
+    },
+    {
+      "path": "code/source/scripts/TongDshS1Policy.mjs",
+      "size": 6426,
+      "sha256": "e4234d54e6ec225ef8510bf478e49b0932839841046388d068f298d05b3c351c"
+    },
+    {
+      "path": "code/source/scripts/TongDshS1SyntheticRunner.mjs",
+      "size": 6893,
+      "sha256": "5f5ddea5870a5187907e54e5458a80d1dad82d3874d3d63dd9b453862f43d07d"
+    },
+    {
+      "path": "code/source/scripts/TongDshSdkAdapter.mjs",
+      "size": 5336,
+      "sha256": "efacb1f22fce8d71cda1bd2583f73b680c077fe361521c6aa2acf0f495554947"
+    },
+    {
+      "path": "code/source/scripts/TongGoalSupervisor.mjs",
+      "size": 33512,
+      "sha256": "321096adc01fc2699e8c39da7a10d2bd89108642fe159d208bb6f70f9bbbab43"
+    },
+    {
+      "path": "code/source/scripts/TongLocalConfirmation.mjs",
+      "size": 1092,
+      "sha256": "9e6b9e32d3b2c5f64d8460ec7e5cd2bc37fe12b4fcb06ea8ce71c3d3251fbab8"
+    },
+    {
+      "path": "code/source/scripts/TongLocalConfirmation.ps1",
+      "size": 1638,
+      "sha256": "be842dd8b29bd36d8fe8e416db31197be749924ae50e4992d7f97186be5bdbb4"
+    },
+    {
+      "path": "code/source/scripts/TongLoginHost.cs",
+      "size": 2750,
+      "sha256": "c30f4f2f7bb1aa23db8ce367f435a9f7ec1653486f15a34b47fc4f394f361431"
+    },
+    {
+      "path": "code/source/scripts/TongLoginRecovery.mjs",
+      "size": 9552,
+      "sha256": "5bc9f5fa3d71c24862193b7a398fa61b38903e14aee1f1faee156116688b9097"
+    },
+    {
+      "path": "code/source/scripts/TongLoginRuntime.ps1",
+      "size": 11324,
+      "sha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b"
+    },
+    {
+      "path": "code/source/scripts/TongMcpGateway.mjs",
+      "size": 40044,
+      "sha256": "8eb770493e1e784ee872bc3b3bc868e156bfcb69cf679f5f6ef45e95f5cf413e"
+    },
+    {
+      "path": "code/source/scripts/TongMcpTools.mjs",
+      "size": 24187,
+      "sha256": "0f5da03c3414a2768dc555718c253a95134b4370f5a7a94485cd9807aa1a70b8"
+    },
+    {
+      "path": "code/source/scripts/TongMultiAgentOrchestrator.mjs",
+      "size": 7731,
+      "sha256": "fd0ca9ee1acc037674a4ded118f10e1885ca1528c7be08aa21c1ef731ec5816a"
+    },
+    {
+      "path": "code/source/scripts/TongNativeWorkerSupervisor.mjs",
+      "size": 6543,
+      "sha256": "67f7a8b34ddfa3fb888e8668ecd1fc2a0b35aa1574c43b1605575a2a80606393"
+    },
+    {
+      "path": "code/source/scripts/TongP3LocalAcceptance.mjs",
+      "size": 13982,
+      "sha256": "6a2abd4534105069c272946f330e99b0a5b2014d7b5622520b4be9792b2c6dbe"
+    },
+    {
+      "path": "code/source/scripts/TongProductionApproval.ps1",
+      "size": 28729,
+      "sha256": "edfa756547910362eb3c5041d48373c68cee08ab4d033e00b60a9063770a4c98"
+    },
+    {
+      "path": "code/source/scripts/TongProductionProfile.mjs",
+      "size": 14746,
+      "sha256": "f1488670258fa3a713c095ec53ac823e933de6321e75a9cc26b5b440c952abb4"
+    },
+    {
+      "path": "code/source/scripts/TongProductionState.mjs",
+      "size": 23993,
+      "sha256": "84bb16b4c7cae9571194c1cb94cbc9871affb8fd0a0e153ff679ea47d8a83acf"
+    },
+    {
+      "path": "code/source/scripts/TongProductionState.ps1",
+      "size": 9976,
+      "sha256": "7280eff57cfe7c9ab256f2a7d893c19a000af4df45aee48a89015675c3831860"
+    },
+    {
+      "path": "code/source/scripts/TongProjectAccess.mjs",
+      "size": 16889,
+      "sha256": "94e50e6459229413dd5f4b1b166fa964bd5852c2af68f3972d5dc253572cf35a"
+    },
+    {
+      "path": "code/source/scripts/TongProjects.mjs",
+      "size": 2048,
+      "sha256": "e1974c5756cd77feeb8c4c5d64841a1297192a6e6cc899d5e639bb95bf5f46df"
+    },
+    {
+      "path": "code/source/scripts/TongQuickProject.mjs",
+      "size": 4234,
+      "sha256": "9a0edc5dd972e42774d99c3b20315ee69cfee730f067a238811835cd06eb09cb"
+    },
+    {
+      "path": "code/source/scripts/TongQuickTrustFullCutover.mjs",
+      "size": 18977,
+      "sha256": "c3ee4d9e918d8c8094453fbf1c73af6b68185b4a22ea2721e939288e3a65ff1a"
+    },
+    {
+      "path": "code/source/scripts/TongQuickTrustProductionCutover.mjs",
+      "size": 12597,
+      "sha256": "ed37df6133b41ad359beacd487c992f7d13049121643a66af1ff4144127550bb"
+    },
+    {
+      "path": "code/source/scripts/TongRestoredAuthorization.mjs",
+      "size": 302,
+      "sha256": "f5387f29de11a4206aa7a3c1f2fcd87e23c3838ceb4929f8ec1fdce3b482c0a7"
+    },
+    {
+      "path": "code/source/scripts/TongRunCommand.ps1",
+      "size": 3727,
+      "sha256": "319940816969511e5563ccf23136f1041cd7050307fd2dfa02dc37f717e8ac82"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeBackup.mjs",
+      "size": 25006,
+      "sha256": "330f5e020041d15aca96485420ff1f4bf8d9a126f08a35c47ec85f96fccb6070"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeCandidate.mjs",
+      "size": 4893,
+      "sha256": "b1f420078f76206bb1cd532d5737eeaf8349e49caed41fd331dfb3a65d39b5de"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeGuardian.ps1",
+      "size": 13001,
+      "sha256": "8f324c8ab1eaaebb9335c38ed2c4e2cfd976f8d67e345e8b1865ca2e24b2cc3f"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeLaunch.ps1",
+      "size": 4998,
+      "sha256": "fb61000f28c4b95ee5929765e7ce57e41cb3355db968dd6dd45d2eebfb6e9394"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeRelease.mjs",
+      "size": 17599,
+      "sha256": "de1008f0fdf8683dbdad578aba53ced053709f38a9c12d9d711568c8116b0da8"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeSecurity.mjs",
+      "size": 6844,
+      "sha256": "4f5036a6f4b2a631a4d9ed96e961511ffec8abaa1c7f03e0b89cf9fd7f545aa1"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeSecurity.ps1",
+      "size": 10177,
+      "sha256": "c9662fd7ae065d29e8ed8b5e2a316c1b49c613ee9fec5001d94cbc80d2421160"
+    },
+    {
+      "path": "code/source/scripts/TongRuntimeServer.mjs",
+      "size": 7652,
+      "sha256": "0ba3b5345809ba764f9a061ceac0bd8851dfdfea97f066779401e57295592bc0"
+    },
+    {
+      "path": "code/source/scripts/TongSafeFilePath.mjs",
+      "size": 4757,
+      "sha256": "9a081c2f879b06de671d59deea6837de5cac0c722b2211093c3d13a1675f43be"
+    },
+    {
+      "path": "code/source/scripts/TongStartupProtocol.ps1",
+      "size": 19525,
+      "sha256": "80b63372080cef47fcb1c98d6635a0b23a3423e04eb98190b61b5bbb42170b38"
+    },
+    {
+      "path": "code/source/scripts/TongTrustedCodexBroker.mjs",
+      "size": 32337,
+      "sha256": "d9e05fe203ea846fc956863e8d27f38d7a6cde1d8dcdbac6a98ce4be409db159"
+    },
+    {
+      "path": "code/source/scripts/TongTrustedControl.mjs",
+      "size": 10774,
+      "sha256": "98c8b20198a5f78a9e0f1c43e110f94b543cf1e3de220f0316b9ac028e80ad3b"
+    },
+    {
+      "path": "code/source/scripts/TongWindowsInspect.mjs",
+      "size": 4421,
+      "sha256": "6d5c289001f7d4e99a47cad962e39389f04b1be0caf5cc72e21d6737013739e4"
+    },
+    {
+      "path": "code/source/scripts/TongWindowsInspect.ps1",
+      "size": 1407,
+      "sha256": "348dbddafc47f4b9ff9f8d32ba36b504cfe5b71d07e0cc726c7d554ad8d1edf0"
+    },
+    {
+      "path": "code/source/scripts/TongWindowsTaskNotice.mjs",
+      "size": 1175,
+      "sha256": "777fc56a13fc223fbeb36c78dc4cc126d4bbecc9c88948c70c4e7fc1bf8e3737"
+    },
+    {
+      "path": "code/source/scripts/TongWindowsTaskNotice.ps1",
+      "size": 2671,
+      "sha256": "4f1d318653357b721b3d477bbf3283042b114152efec7a9a31911262ae9d3f34"
+    },
+    {
+      "path": "code/source/scripts/TongWorkerBroker.mjs",
+      "size": 9950,
+      "sha256": "cd31fc432d76c9fb04f0c529cb26bb71a93ff8b0c2ba300e4479a73c3c321f37"
+    },
+    {
+      "path": "code/source/scripts/TongWorkerProtocol.mjs",
+      "size": 11525,
+      "sha256": "e9af3c78d9f5f7d14dce04bd589ca0c6be5ddc24c33918c7d1d6b199430cca7c"
+    },
+    {
+      "path": "code/source/scripts/TongWorkerStdio.mjs",
+      "size": 10782,
+      "sha256": "70ae1663b93bcbc55ae472ebbc0e728f3ddc8a00b658dbc928164b91235ec6b9"
+    },
+    {
+      "path": "code/source/scripts/TongWorkflowJournal.mjs",
+      "size": 4911,
+      "sha256": "e866ecdceb05dfc6fb062efc41944af809f90e6828651b14bd7d75c73715e932"
+    },
+    {
+      "path": "code/source/scripts/TongWorkspaceTools.mjs",
+      "size": 11523,
+      "sha256": "4531ca175d6d8017d8817edc3bd6e8dd77575e893e4447cdc653f6811d433307"
+    },
+    {
+      "path": "code/source/scripts/Upgrade-Tong-QuickTrust.cmd",
+      "size": 723,
+      "sha256": "43006631a668438fd94039b49e650e683d60ca6e2eb961f3f48f58e7bd6dfc48"
+    },
+    {
+      "path": "code/source/tests/Manual-TongGoalLiveAcceptance-111.mjs",
+      "size": 6886,
+      "sha256": "fc6a045e9177cc5c1e6123507b787875da9afd97eec305dcc9ae6d293eb65ce9"
+    },
+    {
+      "path": "code/source/tests/Run-TongAgentDockExecutionLive.ps1",
+      "size": 4103,
+      "sha256": "1e6f65646b15f8613317e8e7236a3cc0b728a79db748ab769be699f8ff924165"
+    },
+    {
+      "path": "code/source/tests/Run-TongB24Regression.mjs",
+      "size": 2917,
+      "sha256": "5dfd2ed62a034e509dc91c971627f20447dc2c7d4cbee6d0de2c8d306ea2d6d8"
+    },
+    {
+      "path": "code/source/tests/Run-TongNativeAcceptance.mjs",
+      "size": 8677,
+      "sha256": "637decca17e97e1da8c6e92c0f6684004feb989116573e1ebe0c244dc6e5282e"
+    },
+    {
+      "path": "code/source/tests/Run-TongNativeWorkerSupervisor.mjs",
+      "size": 8690,
+      "sha256": "112b8adcf27ad4359ca2a4d4cdebe777195c400cf85bf9f91079d57d321dbced"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDock.mjs",
+      "size": 15144,
+      "sha256": "d8482d0e2caf4d1d0d24d6b4649cadbcacfb75e0f9529d1bbadda0ea222c12dd"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockAuditPath.mjs",
+      "size": 1065,
+      "sha256": "8e94dec8f3484d05c01ed871aaa0ed2a8a0fd5cdd33b018d7cc8888944e33612"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockDevelopmentGrant.mjs",
+      "size": 4738,
+      "sha256": "54410f0218cdc5ec4a39961ac0d1207f6ad06965245169ce232da3fea21c05c1"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockDirectoryMapping.mjs",
+      "size": 4265,
+      "sha256": "1e28074359c4598415285ef26e8c9d2aab39ff450ce3266fb3edabf6e7837fa4"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockExecution.mjs",
+      "size": 22111,
+      "sha256": "ac721ebda8f0a7906cc7f200eec92f263323979f3ed7487ba77a87bebbb202b4"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockExecutionLive.mjs",
+      "size": 10283,
+      "sha256": "867dc89a250a9a88cf23750b961edbbf7998b9a3d0d79bca625663e0440f0664"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockLifecycle.mjs",
+      "size": 4479,
+      "sha256": "d34023a6c8bb0fbe360c24c27e152e7593ff3b66e85eb553062e8bec4a1dd8ab"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockLive.mjs",
+      "size": 6030,
+      "sha256": "7a429f6800d02b4950c0aef35138587cad12967b47419fc7f05d55cb5350382e"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockReplay.mjs",
+      "size": 4145,
+      "sha256": "e49e54b534882b8c980c0c3fbeec540509ffc0c0e8617cf68c19dddd013ea710"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockRuntime.mjs",
+      "size": 6294,
+      "sha256": "b14030d4bf65b8ef7ef3f7d6ead79a55c4a14bca6f56c81730d7f949968f817d"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockSessionCoordination.mjs",
+      "size": 10474,
+      "sha256": "072e58ab517831f3e90a7dbf2c381a024266a58ac23814c045caef63c09ab290"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentDockSessionOwnership.mjs",
+      "size": 11423,
+      "sha256": "7a4649ed5cda190713fb81c47af50667fd8bc3e0188ac1df08ac3d62b5829d1e"
+    },
+    {
+      "path": "code/source/tests/Test-TongAgentTasks.mjs",
+      "size": 17606,
+      "sha256": "5180dbf508afaaac13def414f790e8eaaf3fd3b0e4e8b335d756294ed32495fa"
+    },
+    {
+      "path": "code/source/tests/Test-TongApprovalBootstrap.mjs",
+      "size": 3581,
+      "sha256": "7493f9b758b1f806041da34cfffdf1396315d566799d2e7f7cef1b36e360a75b"
+    },
+    {
+      "path": "code/source/tests/Test-TongApprovalConsole.mjs",
+      "size": 12681,
+      "sha256": "d1eab476f5ceae55012e3abe42f3bcde64eef40c346b019dafd76a765f8b1889"
+    },
+    {
+      "path": "code/source/tests/Test-TongApprovalStorage.mjs",
+      "size": 8323,
+      "sha256": "2931c27c7dedede9ce9a9c6534f1c8f0faa3434b9923ed30f6318de0bb734a73"
+    },
+    {
+      "path": "code/source/tests/Test-TongB24CloseoutLive.mjs",
+      "size": 17197,
+      "sha256": "34d9d11b85ec764e69a701a49117818d6a617b0af78f53c4ff48f596904d9c06"
+    },
+    {
+      "path": "code/source/tests/Test-TongCandidateFileRollback.mjs",
+      "size": 7115,
+      "sha256": "3da9eeba3951f48729e5eebce92302cda3f4be6d0d205c6720af8a13dedd171e"
+    },
+    {
+      "path": "code/source/tests/Test-TongClaudeAuthDifferential.mjs",
+      "size": 3864,
+      "sha256": "061b93d35caa70c9ca91408b235763a0e97d4f603734f5856da8d16b83a6763a"
+    },
+    {
+      "path": "code/source/tests/Test-TongClaudeCodeAdapter.mjs",
+      "size": 4775,
+      "sha256": "86e648199b0fc599156cd5eb0f4f68702272e8d00a5b74da789f11cf83220051"
+    },
+    {
+      "path": "code/source/tests/Test-TongClaudeExplicitRouting.mjs",
+      "size": 4074,
+      "sha256": "76c2cf0ecb9a90a96aa6f6a92168c60ada1eb48fba84ecefdaf0e4712c0da514"
+    },
+    {
+      "path": "code/source/tests/Test-TongClaudeResumeContext.mjs",
+      "size": 4219,
+      "sha256": "55775b6823c5b85ff0a5f26542f5df992beef50d92b83b7a161309ac2418b536"
+    },
+    {
+      "path": "code/source/tests/Test-TongCodexAppServer.mjs",
+      "size": 17056,
+      "sha256": "f21a341155b4c8d311b40c5e3639efab5e0b5dda8cf9bf47593977abc39535c9"
+    },
+    {
+      "path": "code/source/tests/Test-TongCodexDesktopLink.mjs",
+      "size": 1361,
+      "sha256": "e1b32eb04ef339ba96e0e56154d45d7c7fe79f0945a435a830ee9637321f3011"
+    },
+    {
+      "path": "code/source/tests/Test-TongCodexDesktopOpening.mjs",
+      "size": 6814,
+      "sha256": "f8986548499bf82171b4bbffab20407758b10f6f126c2bc0d5eb05b5b41806f2"
+    },
+    {
+      "path": "code/source/tests/Test-TongCodexProxyEnvironment.mjs",
+      "size": 4429,
+      "sha256": "e594407c325327acf0c9cb3d0ddd732471feb5738cf10f979263418376f0dd48"
+    },
+    {
+      "path": "code/source/tests/Test-TongCompletedRuntimeCleanup.mjs",
+      "size": 2838,
+      "sha256": "a5d6eb2f016a4f37eacb4e296360b05d16b25fe84449bceb3e87a092ea477b23"
+    },
+    {
+      "path": "code/source/tests/Test-TongConfiguration.ps1",
+      "size": 2666,
+      "sha256": "52d163684c6b89cc2b753302816f94dc5567f61dc347025167dcf400fc35a5ad"
+    },
+    {
+      "path": "code/source/tests/Test-TongCutoverMonitorRecovery.ps1",
+      "size": 6585,
+      "sha256": "a19ae4df1aa58a1927f7bb13478ace63e17af38ba02cd279dee71db0e1d60202"
+    },
+    {
+      "path": "code/source/tests/Test-TongCutoverStoppedRunProbe.mjs",
+      "size": 5220,
+      "sha256": "ea7fbe7c3798f3e329ee24549a0f7d733c70436bb8e38a5f7e8c9ae4c89bcfc1"
+    },
+    {
+      "path": "code/source/tests/Test-TongDevEnvironment.mjs",
+      "size": 3527,
+      "sha256": "4a626aea17646708606b35f2ed5f4b1007e5770d4674737abf8ba1e7fb73748b"
+    },
+    {
+      "path": "code/source/tests/Test-TongDevSpaceRegistration.mjs",
+      "size": 8600,
+      "sha256": "980713d4d574a43a84ecc45b9c447fc18c5b9cc4ee98ace56e72cc9cffda3914"
+    },
+    {
+      "path": "code/source/tests/Test-TongDevelopmentAuthorization.mjs",
+      "size": 4192,
+      "sha256": "bdf9da964e365018e02376e295f1d5f54d433a8bd47f842b99b9c8114cd40b29"
+    },
+    {
+      "path": "code/source/tests/Test-TongDevelopmentTasks.mjs",
+      "size": 7681,
+      "sha256": "c86d3e0c18acda1da616b4ce8b660b224ac4f27c402666710cd3b0d1bf9ddc19"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshDesktopRuntime.mjs",
+      "size": 3382,
+      "sha256": "084e598703d82fa3fc963919d4c97bfd80f456fb89dc1b7a74a33e60cca103c6"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS0Audit.mjs",
+      "size": 3644,
+      "sha256": "2eab308021fe50d00e35bba7aff972090f4c9aef07d2f073ccb36d35a9f41708"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS1B1BNativeLaunch.ps1",
+      "size": 5460,
+      "sha256": "c5bc93549410d2496fea70b695c7c3a164aa212e51cbd98563e1e66fcc2f4da0"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS1B1SyntheticGrant.mjs",
+      "size": 3528,
+      "sha256": "47ebd591cf845b698e08b461bca4e1b78de24beffa514e9b0c2c4a79d675e015"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS1B1TokenCanary.ps1",
+      "size": 2775,
+      "sha256": "7d96c1398de4daf54e75d74c99f37d64f7fb53233fedf758e2f35e5fc3b252a4"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS1BJobObject.ps1",
+      "size": 2982,
+      "sha256": "d18bea892d094ff523aca3d2502f74ec37c95997b6585d9a1b8159058b0f0c39"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS1Policy.mjs",
+      "size": 4140,
+      "sha256": "5cff6ba40150fc3ac5bdd769bd33b4e9af7dbc7c000bac9bb8357c3080fcf6d7"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshS1SyntheticRunner.mjs",
+      "size": 5780,
+      "sha256": "07667bd1fe0754e1ebc726c07559ecf74a227f583e337e24f44c9ae0aa5498b6"
+    },
+    {
+      "path": "code/source/tests/Test-TongDshSdkAdapter.mjs",
+      "size": 6850,
+      "sha256": "de8c8793721c9348bdf0f0d4f60a6128b113d446d51d95cc76b88270a32ca673"
+    },
+    {
+      "path": "code/source/tests/Test-TongEndpoints.ps1",
+      "size": 16323,
+      "sha256": "7f2d207744562959adfbd4580a770a294a259c9e1d551a7d7ed63f280d30060f"
+    },
+    {
+      "path": "code/source/tests/Test-TongExternalTunnel.ps1",
+      "size": 1528,
+      "sha256": "249165679e6ba90800e1e86fe36d58a42a1a257cf335ba95f7ce0896378d1db4"
+    },
+    {
+      "path": "code/source/tests/Test-TongGoalDesktopHandoff.mjs",
+      "size": 5249,
+      "sha256": "c9f35a3db07df2bbaa280078f85fcd023aadd54852c644f1406becbe71e7391b"
+    },
+    {
+      "path": "code/source/tests/Test-TongGoalSupervisor.mjs",
+      "size": 15777,
+      "sha256": "0024ea4f3cbbbd91f18c6673d98a80709b575c3758ac13f5e813c2a714aa3f59"
+    },
+    {
+      "path": "code/source/tests/Test-TongGoalVerifiedProgress.mjs",
+      "size": 11776,
+      "sha256": "1793effc821c1c671f89ffde1ba29fa3242ec3b97785184e25c6d262b8055104"
+    },
+    {
+      "path": "code/source/tests/Test-TongLocalConfirmation.mjs",
+      "size": 1388,
+      "sha256": "47930dbcd2549fcf8efbdeed280532353be64c9015f1edcf882c16c650947ef2"
+    },
+    {
+      "path": "code/source/tests/Test-TongLocalState.mjs",
+      "size": 2471,
+      "sha256": "4fba061364ae659aeddf75b5747135716bbdb6c02d47330a1c85344873b05cf6"
+    },
+    {
+      "path": "code/source/tests/Test-TongLocalWorkspace.mjs",
+      "size": 11048,
+      "sha256": "65ae978120879716db38264438b896673db8f9432021211030cd9d4862b46f7f"
+    },
+    {
+      "path": "code/source/tests/Test-TongLoginAutoRecovery.mjs",
+      "size": 9957,
+      "sha256": "f5dc7dc288863c9dbb7f8f2561dd87d649b7d1c55281418e20ab47ff4b7039cf"
+    },
+    {
+      "path": "code/source/tests/Test-TongLoginHandoverRollback.ps1",
+      "size": 2303,
+      "sha256": "0ce66b5cf5a4f4094f1efdf32d4d9f0786be84699a799a36201c9c13aa2098f8"
+    },
+    {
+      "path": "code/source/tests/Test-TongLoginHost.ps1",
+      "size": 3263,
+      "sha256": "996814cd34bb9133cd9987c01865260e2c7ae93fc22b3cf53762a44d0b71897f"
+    },
+    {
+      "path": "code/source/tests/Test-TongLoginManagement.mjs",
+      "size": 22546,
+      "sha256": "eb2d33c8424359bcd4f2784461f2357d0c58df569a93a6e2a9f217aa389b3171"
+    },
+    {
+      "path": "code/source/tests/Test-TongLoginRecoveryAuthorization.mjs",
+      "size": 10543,
+      "sha256": "339037be32bf36598844e8a6bd6fd2cf5f7d39139375335ba0bf335fb8ce3555"
+    },
+    {
+      "path": "code/source/tests/Test-TongLoginRecoveryLifecycle.mjs",
+      "size": 5406,
+      "sha256": "bd591f15fbe1c1e5f3d08df0094efd00a297a0c2b88e47c48ddd619714fdcc9b"
+    },
+    {
+      "path": "code/source/tests/Test-TongMcpGateway.mjs",
+      "size": 12727,
+      "sha256": "3969ffa918833a327900d22fff98eb65867f29b905fc6114db0e8b95581bce1d"
+    },
+    {
+      "path": "code/source/tests/Test-TongMcpMetadataTools.mjs",
+      "size": 6315,
+      "sha256": "e5207812696f77332e86938b182e4ca1947814ba2912c7b6b0c95cd3a3e2f2b0"
+    },
+    {
+      "path": "code/source/tests/Test-TongMcpSessionContinuity.mjs",
+      "size": 19716,
+      "sha256": "0d696203e266cd3946100ae88b37f6bd9f717e1a706a998af48bff9f79dc5bbe"
+    },
+    {
+      "path": "code/source/tests/Test-TongMultiAgentOrchestrator.mjs",
+      "size": 12418,
+      "sha256": "1be09bac1cc96fbb1abd6b92f120d3eddb9e916fed41b55d561075e377816f88"
+    },
+    {
+      "path": "code/source/tests/Test-TongNativeSessions.mjs",
+      "size": 7671,
+      "sha256": "917d25f280ebf8758ca4054820b18b237a8c6e3ca81a13ff89ecc0a87984dc05"
+    },
+    {
+      "path": "code/source/tests/Test-TongNativeWorkerSupervisor.ps1",
+      "size": 15341,
+      "sha256": "1656edcef7c682dfa1a3bff6d5b308fa5d81ec440ee7b16c75fb15bce5b66e37"
+    },
+    {
+      "path": "code/source/tests/Test-TongP3LocalAcceptance.mjs",
+      "size": 15796,
+      "sha256": "bf1367cab29a0c5096cfb7242d62dc85ba3a847a2b099b3fc25dcf7d4769abb3"
+    },
+    {
+      "path": "code/source/tests/Test-TongPortListenerArray.ps1",
+      "size": 776,
+      "sha256": "5442835edfbc0c871f3c5b842a6b6138e5de3dec5c345ef94c078de2ea02b8ef"
+    },
+    {
+      "path": "code/source/tests/Test-TongPredeploymentLive.mjs",
+      "size": 19410,
+      "sha256": "a3b21d98ab198cd40ead6b8acbfd088bb0ec62c847d4cf5c5a0feaa16a6f2074"
+    },
+    {
+      "path": "code/source/tests/Test-TongPreservedRuntimeState.mjs",
+      "size": 2008,
+      "sha256": "c1339f0c250f5ebbb6a310756cc0b40a537b79d866ac66587c309d35e48d9e62"
+    },
+    {
+      "path": "code/source/tests/Test-TongProductionProfile.mjs",
+      "size": 8703,
+      "sha256": "7b37fdc2e7c8bfef4bfd0bb39185119fd32b897808888d5d9574244608090f72"
+    },
+    {
+      "path": "code/source/tests/Test-TongProductionRuntimeGate.mjs",
+      "size": 1573,
+      "sha256": "78bbfac0a01793e4efb01424417b879dbbff09f26f4173e0a2fd41529acf21c7"
+    },
+    {
+      "path": "code/source/tests/Test-TongProductionSwitch.mjs",
+      "size": 25620,
+      "sha256": "3dc591f1f1fef6bb5d26e16f8a78d4a55ca4f9be9bb43004995e752ea3d03beb"
+    },
+    {
+      "path": "code/source/tests/Test-TongProjectAccess.mjs",
+      "size": 8020,
+      "sha256": "6bfec41ec47ed89acb73c945345d58ba62169ea4dfff8db1619b54299088d467"
+    },
+    {
+      "path": "code/source/tests/Test-TongQuickProject.mjs",
+      "size": 6297,
+      "sha256": "8201a5e673dd62c10d7833dbfb0737860d92d6885471a97cfba303479f224777"
+    },
+    {
+      "path": "code/source/tests/Test-TongQuickTrustAllowlist.mjs",
+      "size": 2574,
+      "sha256": "b33e334f16a674d7e4ac39e4a584f903d568c296733291fa5cc1925570fbc99b"
+    },
+    {
+      "path": "code/source/tests/Test-TongQuickTrustFileRollback.mjs",
+      "size": 6688,
+      "sha256": "e0763b6c6ed516a7924d11a5b902b048fcf063172055ab2794d14232c07f3847"
+    },
+    {
+      "path": "code/source/tests/Test-TongQuickTrustFullProduction.ps1",
+      "size": 6973,
+      "sha256": "22a0ecf26a4c89c2f0206b1ff054745ab9f125ff1f7b9a3c7dd7216bd735d380"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeAcl.ps1",
+      "size": 5331,
+      "sha256": "18e7dc9bc939f72fcc5f427cd23b90ae021ba7dab12a1dfe3c13bb25520e5fcd"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeBackup.mjs",
+      "size": 15832,
+      "sha256": "66aec1815680289c18bb11775890b96cf5661be0fb3ec185c372eeba738f4756"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeChildEnvironment.mjs",
+      "size": 3322,
+      "sha256": "31a89cb63ff31a3c004c56efe6baa87a69f16c40606db13ca0eec5f19322d2fe"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeChildPreflight.mjs",
+      "size": 1972,
+      "sha256": "ee57694ae75144e7387262c6e15695e44dbb40e54b4f24a3c9dee2c5c4b9a5c8"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeGuardian.mjs",
+      "size": 4951,
+      "sha256": "ac38f1a8c38e33ca3eaff46f9d08ae78d06e95f1b5e4b17e3118db3f04c356ab"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimePermissionBackup.mjs",
+      "size": 3162,
+      "sha256": "921737eb2f5d53e8b8fdf54231634f09e823bd5e3ff13ff813a5ac97fb85fb15"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimePowerShell.ps1",
+      "size": 927,
+      "sha256": "3b6edffd98432da5a2cf8eaa29bb987d451cc4bd1be35622ec31e7138ae0854e"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeReadiness.mjs",
+      "size": 5404,
+      "sha256": "4c55ae70f86df223badce974cc2df6013c9bf7140eb0a1ee0068efb323163505"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeRelease.mjs",
+      "size": 6835,
+      "sha256": "c90319ad1575ba6baaa66f670ad244ed1820ffe38334ba689278a7b17c936b39"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeSecurity.mjs",
+      "size": 2504,
+      "sha256": "90652ffbf0941f20d60497ba8c446634152afcedcffebffd2a49e16244dfa90e"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeStartupCleanup.mjs",
+      "size": 5269,
+      "sha256": "d511c541ed3ca057caccf665e13e3cc3000ed218d39977635788ffca6c99e4f8"
+    },
+    {
+      "path": "code/source/tests/Test-TongRuntimeStopIdentity.mjs",
+      "size": 2658,
+      "sha256": "21222007c52f6c5307072f8301596c2ce32b84b8b7c5d14201985caea0b11fce"
+    },
+    {
+      "path": "code/source/tests/Test-TongStagedAutonomyIntegration.mjs",
+      "size": 7006,
+      "sha256": "2187b4b3ae9c1fd6ad2b3b155d7f234075d5c3ac10cba415dcbf1bf86e50a6c3"
+    },
+    {
+      "path": "code/source/tests/Test-TongStagedRealMcpLifecycle.mjs",
+      "size": 7517,
+      "sha256": "61294a2a1a524b5e99e69fc8101b79f7ea63d41c94e848ad2a4355c40f07fdea"
+    },
+    {
+      "path": "code/source/tests/Test-TongStagedRollbackBoot.mjs",
+      "size": 7976,
+      "sha256": "76cffd02228afb752f52f6d86b8b72c27831b641dc353793c96f0a61285763fd"
+    },
+    {
+      "path": "code/source/tests/Test-TongStagedRuntimeVersionSwitch.mjs",
+      "size": 6392,
+      "sha256": "f21c713fdd594c1826fdb6bea7039a0cbd5861445a8efd40247a2d0a6ccf116c"
+    },
+    {
+      "path": "code/source/tests/Test-TongStagedSourceRollback.py",
+      "size": 5407,
+      "sha256": "8828ffdb78739fafee2a64e5d5ddf7b3eed290ed2f35671ea46dc1f2a6df0e6f"
+    },
+    {
+      "path": "code/source/tests/Test-TongStaleRuntimeReconciliation.mjs",
+      "size": 6664,
+      "sha256": "73c9dd1757d89fb6cd2f4810a009b3c4cf3790966db25cc73f3ce3e356a3b81b"
+    },
+    {
+      "path": "code/source/tests/Test-TongStartupRecovery.mjs",
+      "size": 7974,
+      "sha256": "bbbd9131bec7ba5f62489644af5abb585a7d732733b02839ffbc274acef8078e"
+    },
+    {
+      "path": "code/source/tests/Test-TongTestDirectory.mjs",
+      "size": 1238,
+      "sha256": "02986b2ffc5ecac0f8e990f9e262c053eb9a9c4938f020a255a0166915de9e46"
+    },
+    {
+      "path": "code/source/tests/Test-TongToolBoundaries.mjs",
+      "size": 5171,
+      "sha256": "46ad54e5c540c6fe80125582af9aa4356f104bd5bf35a572421e19475a7b6eef"
+    },
+    {
+      "path": "code/source/tests/Test-TongTrustedApprovalTimeout.mjs",
+      "size": 3493,
+      "sha256": "d31b0ade461585c2fd05e8665b55667683e462974846089448febfa6adb2e8b7"
+    },
+    {
+      "path": "code/source/tests/Test-TongTrustedCodex.mjs",
+      "size": 6449,
+      "sha256": "636b5921062574bfb555f51f585ede8669f1dd1aecdc1ab737676f79460c7a5f"
+    },
+    {
+      "path": "code/source/tests/Test-TongTrustedTasks.mjs",
+      "size": 11284,
+      "sha256": "5db69d1b65334d5e4804449c3788732192683dbf924d17a2ff051152ade83213"
+    },
+    {
+      "path": "code/source/tests/Test-TongWindowsInspect.mjs",
+      "size": 3066,
+      "sha256": "ba3a8fdb7238d4cfcca0b4cff0cc4ce70b78a33224ab975ccb56da9edbac8553"
+    },
+    {
+      "path": "code/source/tests/Test-TongWindowsTaskNotice.mjs",
+      "size": 1724,
+      "sha256": "2af791022acc5963a60c7cdfcba656d073747706a65fc5466a012fd264f9a70a"
+    },
+    {
+      "path": "code/source/tests/Test-TongWorkerCanaries.ps1",
+      "size": 22490,
+      "sha256": "ab8def0f21463c6f0ce14c6e1acfed9f3f8b18efc52c7e01e90c4da98a13c0d7"
+    },
+    {
+      "path": "code/source/tests/Test-TongWorkerIsolation.mjs",
+      "size": 16058,
+      "sha256": "642144e68288c90dd1430b796ae41c59ec6a875f08a18802a152353295015bbe"
+    },
+    {
+      "path": "code/source/tests/Test-TongWorkflowJournal.mjs",
+      "size": 4916,
+      "sha256": "690083d8b85c8e6bf1f965e7611e1fa67d81292536e63f17716b3a332f951ddd"
+    },
+    {
+      "path": "code/source/tests/TongDshS1B1BNativeChild.c",
+      "size": 2023,
+      "sha256": "cd19ba9e38d17c3a9468d6743283e168b64d42cfd55df7fde563c0d9e857e526"
+    },
+    {
+      "path": "code/source/tests/TongDshS1B1BNativeLaunch.cs",
+      "size": 15903,
+      "sha256": "6689d2dd4b378c52d97289a8396e028f6d21f6981a9a2c1c732781b326f47233"
+    },
+    {
+      "path": "code/source/tests/TongDshS1B1TokenCanary.cs",
+      "size": 8608,
+      "sha256": "f3875cce47bffc7965c531740e0bddb5920e1b40f09df445d9f0db7d511bbef4"
+    },
+    {
+      "path": "code/source/tests/TongDshS1BJobCanary.cs",
+      "size": 9277,
+      "sha256": "b36297ccb192a712ca89222a911f11693284bac2b7692c90721875ca8709179d"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongLoginRecoveryFixture.mjs",
+      "size": 7167,
+      "sha256": "b91267be0ccd2880a3f8d6c9932fdddce24d0bb2f162432c3903d85be9ee413d"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongNativeMockWorker.mjs",
+      "size": 8817,
+      "sha256": "d36e101368581101299a2f51d43cdc82a406d75d05f074dc090790916404b342"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongPredeploymentServer.mjs",
+      "size": 2760,
+      "sha256": "688490b876df6d72b729db694887b5e2f0d4a49cde07b52c0e1c78a67683f239"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongProductionSwitchSupport.mjs",
+      "size": 13180,
+      "sha256": "bf56bda4a0723dbbc9aa6fdd049bd0286dc1a30f97de58af13cc3b07b387049c"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongProjectSnapshot.mjs",
+      "size": 1538,
+      "sha256": "72fc946279a59453500c16b3f721536163b7a0333dae4fee790771888eb3990a"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongTestDirectory.mjs",
+      "size": 1636,
+      "sha256": "f40563b1e7cfbdd879e1d772d5057410f28031635f21d86b6801d6ed9b600684"
+    },
+    {
+      "path": "code/source/tests/fixtures/TongWorkerCanary.mjs",
+      "size": 2565,
+      "sha256": "641d1d92669d099dfe438131e74bf486f01007c0bfd73da7ab4dc44e6f57662a"
+    },
+    {
+      "path": "code/source.tar",
+      "size": 3153920,
+      "sha256": "fc03213b58a9b050ba84502fe990b98b3d54866fdf603930113eb3f0ca16dea3"
+    },
+    {
+      "path": "native/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+      "size": 1919488,
+      "sha256": "e75b8c024a85179d8e0e51203a8b8867916e9a51327ce3953db5f8483cc9a91e"
+    },
+    {
+      "path": "native/node_modules/node-pty/build/Release/conpty/OpenConsole.exe",
+      "size": 1148448,
+      "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+    },
+    {
+      "path": "native/node_modules/node-pty/build/Release/conpty/conpty.dll",
+      "size": 109600,
+      "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
+      "size": 85496,
+      "sha256": "e6457d66f45af3facd02920a5b212164e80fe0bb758afe6e6eab1eceeba3fc9a"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/darwin-x64/pty.node",
+      "size": 52864,
+      "sha256": "edab585d5c5c7bf35143a7a53b7d72652e90723b5f9635dfd55b2333f7069198"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/conpty/OpenConsole.exe",
+      "size": 1194024,
+      "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/conpty/conpty.dll",
+      "size": 106528,
+      "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/conpty.node",
+      "size": 302592,
+      "sha256": "25a06916c5cb1a3aac7acc401424d8e6a6a9e8eea441a3604cd657a0619555cd"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/conpty_console_list.node",
+      "size": 122368,
+      "sha256": "fda76b16afb3bf9a4de085c943b5fb4138ecbeb08e8254c09d5555ea5426bd4e"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/pty.node",
+      "size": 293376,
+      "sha256": "eae1266e3c34f4c7b67a756a6ff342b699847deaf29c944b7a6bed190ec61982"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/winpty-agent.exe",
+      "size": 286720,
+      "sha256": "9a5f66fbe444728988f51e8099d0d84c515945a1873dbbbec65aec6e07eac50a"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-arm64/winpty.dll",
+      "size": 236032,
+      "sha256": "0247b4d007fcb8059cc2221ec41d736fa548246ce1e10256c15c96d1ef6f2e9c"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/conpty/OpenConsole.exe",
+      "size": 1148448,
+      "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/conpty/conpty.dll",
+      "size": 109600,
+      "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/conpty.node",
+      "size": 312320,
+      "sha256": "ee8f4e6f4dad71939eecfda11de249400e34bfefe4c8b48af13f3b5476f4035b"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/conpty_console_list.node",
+      "size": 134656,
+      "sha256": "879dd94cfc79f1e263a00077597ae9448a5394b7d193381aaa50d992a1f91090"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/pty.node",
+      "size": 303104,
+      "sha256": "ae323edd0835ee7b9e18cc96a7b2bb4b8173ff768317d178af2788406feb71ff"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/winpty-agent.exe",
+      "size": 307712,
+      "sha256": "0c4834a0ab2a4f8c855a2f1db9b21fa6e5fc324ae8e3c82addd53d503d999825"
+    },
+    {
+      "path": "native/node_modules/node-pty/prebuilds/win32-x64/winpty.dll",
+      "size": 256000,
+      "sha256": "e1cb26d868c954ba26817bedf3e4a5744e4ca2030adf51a7156e5ff2fadb881b"
+    },
+    {
+      "path": "native/node_modules/node-pty/third_party/conpty/1.23.251008001/win10-arm64/OpenConsole.exe",
+      "size": 1194024,
+      "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+    },
+    {
+      "path": "native/node_modules/node-pty/third_party/conpty/1.23.251008001/win10-arm64/conpty.dll",
+      "size": 106528,
+      "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+    },
+    {
+      "path": "native/node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/OpenConsole.exe",
+      "size": 1148448,
+      "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+    },
+    {
+      "path": "native/node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/conpty.dll",
+      "size": 109600,
+      "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+    }
+  ]
+}

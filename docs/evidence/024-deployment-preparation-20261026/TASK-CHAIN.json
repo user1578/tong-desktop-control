@@ -1,0 +1,106 @@
+{
+  "launcherPreflight": {
+    "startedAt": "2026-10-25T17:40:23.7464964Z",
+    "elapsedMs": 8554,
+    "exitCode": 0,
+    "child": {
+      "pid": 24236,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639285468237546320"
+    },
+    "jobName": "Local\\TongPreflight-launcher-06c00e3b-dee2-43b7-b68c-595ced0b7f97",
+    "jobActiveAfterCleanup": 0
+  },
+  "normalStop": {
+    "stopped": true,
+    "runId": "06c00e3b-dee2-43b7-b68c-595ced0b7f97",
+    "phase": "stopped",
+    "allExactIdentitiesGone": true,
+    "fourJobsEmpty": true,
+    "inventoryEmpty": true
+  },
+  "guardianPreflight": {
+    "startedAt": "2026-10-25T17:40:41.5962396Z",
+    "elapsedMs": 8477,
+    "exitCode": 0,
+    "child": {
+      "pid": 41760,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639285468415987730"
+    },
+    "jobName": "Local\\TongPreflight-guardian-06c00e3b-dee2-43b7-b68c-595ced0b7f97",
+    "jobActiveAfterCleanup": 0
+  },
+  "periodicDoctorExit": 0,
+  "ready": true,
+  "runId": "06c00e3b-dee2-43b7-b68c-595ced0b7f97",
+  "root": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f",
+  "chain": {
+    "launcher": {
+      "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "parentPid": 46248,
+      "pid": 16804,
+      "startTicks": "639285468231420990"
+    },
+    "manager": {
+      "exe": "D:\\node\\node.exe",
+      "parentPid": 23796,
+      "pid": 46248,
+      "startTicks": "639285468025463050"
+    },
+    "host": {
+      "exe": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\login-management\\TongLoginHost.exe",
+      "parentPid": 4044,
+      "pid": 27552,
+      "startTicks": "639285467963515910"
+    },
+    "runner": {
+      "exe": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "parentPid": 27552,
+      "pid": 23796,
+      "startTicks": "639285467963825930"
+    },
+    "guardian": {
+      "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "parentPid": 16804,
+      "pid": 22428,
+      "startTicks": "639285468323174100"
+    },
+    "supervisor": {
+      "exe": "D:\\node\\node.exe",
+      "parentPid": 22428,
+      "pid": 24064,
+      "startTicks": "639285468501117240"
+    }
+  },
+  "doctorHealthy": true,
+  "productionChanged": false,
+  "productionExecutionAllowed": false,
+  "testCommit": "61dbb317b3cba84ed4499fb9d3435d717f46c175",
+  "periodicDoctor": {
+    "exe": "D:\\node\\node.exe",
+    "parentPid": 23796,
+    "pid": 28864,
+    "startTicks": "639285469217793540"
+  },
+  "task": "Tong024StateRepair-5dc9bd7a-3318-43dd-800c-ff0fab62f8ac",
+  "health": {
+    "agentdock": {
+      "authenticatedMcp": true,
+      "toolCount": 7
+    },
+    "tong": {
+      "discovery": true,
+      "unauthenticatedRejected": true
+    }
+  },
+  "originalTestHostRestored": true,
+  "taskExit": 0,
+  "exactCandidate": "3740082b3c11ca4403d1abdceed75d539878a161",
+  "taskDefinitionChanged": false,
+  "atomicContainment": "create_process_job_list",
+  "passed": true,
+  "testTaskDisabled": true,
+  "originalTestHostState": "absent",
+  "originalTestRunnerState": "absent"
+}

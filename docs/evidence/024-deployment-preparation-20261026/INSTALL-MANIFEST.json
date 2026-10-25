@@ -1,0 +1,95 @@
+{
+  "status": "READY_FOR_PRODUCTION_REVIEW",
+  "basedOn": "69aba15451e1c2374291fdfe6af1e53037e43819",
+  "exactCandidateCommit": "3740082b3c11ca4403d1abdceed75d539878a161",
+  "testOnlyRelocatedCommit": "61dbb317b3cba84ed4499fb9d3435d717f46c175",
+  "localRelease": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\seven-file-release",
+  "sourceDigest": "fc03213b58a9b050ba84502fe990b98b3d54866fdf603930113eb3f0ca16dea3",
+  "releaseDigest": "ebd4f21fe831bc4e4cd8ff2db553a22cfd7c09341e94d0ce33427db977dfd750",
+  "productionProfileFileSha256": "8f7b5de159e9ac8c462d9c51da157b3ae833f820ab93b0cb0528b897c5284009",
+  "productionRuntimeProfileDigest": "b2caa04d53d8ae134ec6fea0ff372ab0b9a8eab8a8994703a47dcd191e1170e1",
+  "productionManagerProfileDigest": "f1a2bd59e168670ce45fbfbc1642691d1568dab838abad4eb4fd81bffd7cda30",
+  "productionProfileFieldsChanged": [
+    "sourceDigest",
+    "releaseDigest"
+  ],
+  "sourceFiles": 284,
+  "nativeFiles": 23,
+  "unchangedExistingSourceFiles": 277,
+  "nativeFilesUnchanged": true,
+  "seven": [
+    {
+      "path": "scripts/TongAgentDockRuntime.mjs",
+      "oldProductionSha256": "59bfef4b9e8a036767acc8b5b097d8734456e6fe27f9ea9b99b1a700cc46e0f6",
+      "oldProductionBytes": 44995,
+      "packagedSha256": "2a69e574e92a5aa7f62a358c6a74336a1e0abc364acc0f60e363ffbb8e787a51",
+      "packagedBytes": 56961,
+      "reviewedLfSha256": "fb4d26f75a4083b7c24890e7cf5ea1f29a5af0034380a85a84ac73469301cc41",
+      "normalizedMatches69aba": true
+    },
+    {
+      "path": "scripts/TongRuntimeLaunch.ps1",
+      "oldProductionSha256": "eb5f9a5438bc176014ad82237949761cd12949b3393bc53531159317a54ea19f",
+      "oldProductionBytes": 3892,
+      "packagedSha256": "fb61000f28c4b95ee5929765e7ce57e41cb3355db968dd6dd45d2eebfb6e9394",
+      "packagedBytes": 4998,
+      "reviewedLfSha256": "954d807bc5120f91a8e3932dc3759031a15feff1d15467c8e24076a3589f4ad3",
+      "normalizedMatches69aba": true
+    },
+    {
+      "path": "scripts/TongRuntimeGuardian.ps1",
+      "oldProductionSha256": "c7a948afbeaa632d960c4f35d96cd4b2b660c81fb6e36a4f8e68f9f31194daef",
+      "oldProductionBytes": 10403,
+      "packagedSha256": "8f324c8ab1eaaebb9335c38ed2c4e2cfd976f8d67e345e8b1865ca2e24b2cc3f",
+      "packagedBytes": 13001,
+      "reviewedLfSha256": "b5ebf2b786f958fdbafca9a53afead412544fc4e06f3ebdefc084362c711a033",
+      "normalizedMatches69aba": true
+    },
+    {
+      "path": "scripts/TongStartupProtocol.ps1",
+      "oldProductionSha256": null,
+      "oldProductionBytes": null,
+      "packagedSha256": "80b63372080cef47fcb1c98d6635a0b23a3423e04eb98190b61b5bbb42170b38",
+      "packagedBytes": 19525,
+      "reviewedLfSha256": "8716bff6c3546bbd273c609aa46a5b30d297f16d4e9fd7d662256b3648b1ac7a",
+      "normalizedMatches69aba": true
+    },
+    {
+      "path": "scripts/TongRuntimeSecurity.mjs",
+      "oldProductionSha256": "afdd5d8f34ccc3eda61ee22ea3982f593bd08b407be67fd92fd1d2a7846b4ec5",
+      "oldProductionBytes": 6571,
+      "packagedSha256": "4f5036a6f4b2a631a4d9ed96e961511ffec8abaa1c7f03e0b89cf9fd7f545aa1",
+      "packagedBytes": 6844,
+      "reviewedLfSha256": "fc4ab94f28dd57bd0afb45da5cd8fc872b67a69536067910d8135772295fdfaf",
+      "normalizedMatches69aba": true
+    },
+    {
+      "path": "scripts/TongRuntimeSecurity.ps1",
+      "oldProductionSha256": "74c9f5b0cb6aefdd26b63c40ef89934cc4c659123aa6af3fae4564fdd1f62faa",
+      "oldProductionBytes": 9555,
+      "packagedSha256": "c9662fd7ae065d29e8ed8b5e2a316c1b49c613ee9fec5001d94cbc80d2421160",
+      "packagedBytes": 10177,
+      "reviewedLfSha256": "34355cac45e5a06a2778f545b5070c2d170fcd58d6b9df0694be3827217245f0",
+      "normalizedMatches69aba": true
+    },
+    {
+      "path": "scripts/TongLoginRecovery.mjs",
+      "oldProductionSha256": "86e079dea24e4a4fb1aa4f45a1ce24b15c8ba81b0261206e1eb72963c510268f",
+      "oldProductionBytes": 9526,
+      "packagedSha256": "5bc9f5fa3d71c24862193b7a398fa61b38903e14aee1f1faee156116688b9097",
+      "packagedBytes": 9552,
+      "reviewedLfSha256": "fe107fa566ca85e2f2fd7cc9ee13e0c68b9c58da48deca1b434d5fc2cece659d",
+      "normalizedMatches69aba": true
+    }
+  ],
+  "byteFormat": "Git archive checkout bytes (CRLF here); compare packaged hashes. LF review hashes are normalization-only evidence.",
+  "productionReadOnlySourceAndNativeFilesVerified": 612,
+  "productionWrite": false,
+  "productionGrantIssued": false,
+  "productionReady": false,
+  "candidateCommitPublishedAsBranch": false,
+  "candidateArchiveRetainedLocally": true,
+  "productionProtocolAbsentInBothTargets": true,
+  "productionExternalHostSha256": "0d516bb5b26686b8ab2f0c3b1022beba7f48f8ad23e57a60e690cde9bdfc0c3b",
+  "productionRunnerSha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b"
+}

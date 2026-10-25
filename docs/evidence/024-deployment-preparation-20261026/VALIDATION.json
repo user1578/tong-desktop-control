@@ -1,0 +1,81 @@
+{
+  "status": "READY FOR PRODUCTION REVIEW",
+  "preparationBlockers": [],
+  "productionExecuted": false,
+  "productionReadyVerified": false,
+  "productionDoctorVerified": false,
+  "productionRootCause": "UNKNOWN",
+  "formalTaskChanged": false,
+  "ngrokChanged": false,
+  "oldProductionLockChanged": false,
+  "realProductionCredentialsUsed": false,
+  "testTaskReuseExplicitlyAuthorized": true,
+  "fullTaskRehearsalPassed": true,
+  "legacyBe3HandoffPassed": true,
+  "interruptedInstallRollbackPassed": true,
+  "existingBackup": {
+    "path": "D:/Tong/state/b23-login-68009b23f4794f16a6a9e03b1510f65a/offline-9850e1a/production-6ac61ad1-c9e5-4d21-8142-af1c4aa59956",
+    "sealSha256": "db00d0725d89b0141ae31d972b9d96800a2c53d7c2dd9d2876a467c71a273e8f",
+    "payloadSha256": "7f5a5bb2ec8d757af19834f5797777303cba0ffd3aecc4a58bdfa872af381208",
+    "encryptedManifestSha256": "495bec397f7143d91c635e379d26614b29b241a87ab23b82b2d8f64f369934f1",
+    "allThreeHashesRechecked": true,
+    "fullBackupRepeated": false,
+    "fullRestoreRepeated": false,
+    "decryptedThisTurn": false
+  },
+  "isolationResources": {
+    "root": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f",
+    "files": 3863,
+    "logicalBytes": 216381300,
+    "sharedDependenciesNotCountedOrCopied": true
+  },
+  "harnessCorrections": [
+    {
+      "code": "TOOL_REQUIRED / LINK_DENIED",
+      "explanation": "PATH tool selection did not satisfy the existing tool-file boundary; used the previously verified bundled Git, without weakening checks."
+    },
+    {
+      "code": "TEST_TASK_PRINCIPAL_CHANGED",
+      "explanation": "Task stores NTAccount rather than SID; resolved and proved same current SID."
+    },
+    {
+      "code": "PERIODIC_IDENTITY_CHANGED",
+      "explanation": "CIM microsecond precision versus native 100ns precision; standalone same-process difference6 ticks reproduced."
+    },
+    {
+      "code": "PERIODIC_DOCTOR_FAILED",
+      "explanation": "Unowned Process.ExitCode null reproduced with a non-Tong child while native handle exit0 and owned exit0; reused existing native observer."
+    },
+    {
+      "code": "CODE_HASH_MISMATCH at sealing",
+      "explanation": "LF source blobs differed from Git archive CRLF checkout bytes; exact archive bytes now extracted and verified. No production code or timeout was changed."
+    }
+  ],
+  "productionExecutionPrerequisites": [
+    "New explicit approval for this exact seven-file production install and rollback window; earlier state-only approval does not cover it.",
+    "Fresh complete native production inventory including administrator ngrok identity as needed, all four incident runs, empty Jobs, listeners/monitors absent, correct physical controls and formal Task Disabled/0.",
+    "Install exact bytes and profile/pins, then human visible native production recovery authorization matched to new digests.",
+    "Retire old active lifecycle records under the approved mutex/gate handoff; preserve originals and budget, no fabricated receipts.",
+    "Formal production Task must start its own new run and independently pass READY/doctor/periodic monitor."
+  ],
+  "remainingAcceptance": [
+    "Actual production Task instance, account environment and real data/config behavior",
+    "Real ChatGPT connection",
+    "Real logon trigger",
+    "Windows restart acceptance - not authorized or performed this turn"
+  ],
+  "finalTaskChainIdentitiesGone": true,
+  "finalInventoryComplete": true,
+  "finalMatchingProcesses": 0,
+  "finalSyntaxChecks": {
+    "nodeFiles": 3,
+    "powershell7": true,
+    "diffCheck": true
+  },
+  "independentReadOnlyReview": {
+    "passed": true,
+    "criticalFindings": 0,
+    "importantFindings": 0,
+    "productionExecutionReviewedOnlyAsFuturePlan": true
+  }
+}
