@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-25T14:55:40.3971908Z",
+  "originalHostHash": "0d516bb5b26686b8ab2f0c3b1022beba7f48f8ad23e57a60e690cde9bdfc0c3b",
+  "runnerHash": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+  "gateKey": "3025126315:89915392:3025673",
+  "taskDisabled": true,
+  "executionPolicy": "RemoteSigned",
+  "bootTime": "2026-10-16T16:32:56.5000000Z",
+  "held": true,
+  "controllerPid": 15016,
+  "sid": "<USER_IDENTITY>",
+  "sourceHostHash": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+  "fileCount": 16,
+  "psVersion": "7.6.6"
+}

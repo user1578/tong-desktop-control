@@ -1,0 +1,48 @@
+{
+  "collectedAt": "2026-10-25T16:05:38.444Z",
+  "readOnly": true,
+  "scopeUtc": {
+    "start": "2026-10-25T15:24:30Z",
+    "end": "2026-10-25T15:26:15Z"
+  },
+  "channels": [
+    {
+      "name": "Windows PowerShell",
+      "enabled": true,
+      "recordCountAtQuery": 11111
+    },
+    {
+      "name": "Microsoft-Windows-PowerShell/Operational",
+      "enabled": true,
+      "recordCountAtQuery": 3080
+    },
+    {
+      "name": "PowerShellCore/Operational",
+      "enabled": true,
+      "recordCountAtQuery": 660
+    },
+    {
+      "name": "Microsoft-Windows-TaskScheduler/Operational",
+      "enabled": false
+    },
+    {
+      "name": "Microsoft-Windows-Sysmon/Operational",
+      "available": false
+    }
+  ],
+  "results": [
+    {
+      "channel": "Windows PowerShell",
+      "errorId": "NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand"
+    },
+    {
+      "channel": "Microsoft-Windows-PowerShell/Operational",
+      "errorId": "NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand"
+    },
+    {
+      "channel": "PowerShellCore/Operational",
+      "errorId": "NoMatchingEventsFound,Microsoft.PowerShell.Commands.GetWinEventCommand"
+    }
+  ],
+  "limitations": "No matching events were returned by the narrow time-window queries. This is a collection-time observation, not evidence that a process never existed. Logging configuration was not changed."
+}

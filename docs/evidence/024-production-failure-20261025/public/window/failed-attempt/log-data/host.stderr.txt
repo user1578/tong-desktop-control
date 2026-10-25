@@ -1,0 +1,12 @@
+Tong manager refused doctor: REFUSED
+Tong manager refused start: START_FAILED
+Another Tong lifecycle operation is running
+Tong manager refused status: REFUSED
+Tong manager refused start: CLEANUP_REQUIRED
+Tong manager refused start: CLEANUP_REQUIRED
+Tong manager refused doctor: ACL_DENIED
+Tong manager refused status: ACL_DENIED
+Tong manager refused status: REFUSED
+Tong manager refused start: CLEANUP_REQUIRED
+Tong manager refused start: CLEANUP_REQUIRED
+Tong manager refused start: CLEANUP_REQUIRED

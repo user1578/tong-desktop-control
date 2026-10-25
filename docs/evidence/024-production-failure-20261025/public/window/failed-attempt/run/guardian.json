@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "runId": "74cd4ad3-f21b-40ec-96f5-3f9015649e5d",
+  "pid": 14116,
+  "exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+  "startTicks": "639282754410511510",
+  "nodePid": 45836,
+  "jobAssigned": true,
+  "jobName": "Local\\TongRuntime-74cd4ad3-f21b-40ec-96f5-3f9015649e5d",
+  "killOnJobClose": true,
+  "startedAt": "2026-10-22T14:17:42.6541036Z",
+  "finishedAt": "2026-10-23T01:51:05.3563237Z",
+  "nodeExitCode": 1,
+  "nodeExitHex": "0x00000001",
+  "jobActiveBeforeCleanup": 0,
+  "jobActiveAfterCleanup": 0
+}

@@ -1,0 +1,14 @@
+{
+  "gateKey": "3025126315:2031616:3364962",
+  "abortRunId": "be3f5c49-d824-4edd-b8fc-7ee70d7f9a00",
+  "gateExclusivelyReadable": true,
+  "formalTaskStartedAt": "2026-10-25T15:24:34.9945558Z",
+  "noLiveHostRunner": true,
+  "supervisorNotPublished": true,
+  "nativeAllJobsZero": true,
+  "stopRunNotInvokedReason": "No new Supervisor identity; current runtime record remains old incident",
+  "at": "2026-10-25T15:30:02.8810626Z",
+  "gateCreatedAt": "2026-10-25T15:25:05.7959406Z",
+  "requestRunId": "be3f5c49-d824-4edd-b8fc-7ee70d7f9a00",
+  "inventoryCompleteAndEmpty": true
+}

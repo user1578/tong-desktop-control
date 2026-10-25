@@ -1,0 +1,8 @@
+{
+  "source": "unique formal Task Run",
+  "at": "2026-10-25T15:24:34.9945558Z",
+  "instanceGuid": "{8F3B53A0-D5B7-4B37-8528-5F79E4FEEA1F}",
+  "enginePid": 37480,
+  "mutexReleased": true,
+  "directManagerStart": false
+}

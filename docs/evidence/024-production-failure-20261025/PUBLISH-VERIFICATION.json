@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-25T16:13:36.314Z",
+  "scope": "Static evidence and publication validation only. No production module invocation, process/service/task/lock control or runtime restart.",
+  "sourceFileCount": 77,
+  "windowFileCount": 61,
+  "windowFilesWithSanitizedContent": 58,
+  "windowFilesMetadataOnly": 3,
+  "allOriginal77FilesRehashedUnchanged": true,
+  "all9SourceFilesMatchPinnedBytes": true,
+  "exactV2GitNormalizedSourceMatch": true,
+  "v1V2CriticalSourceUnchanged": true,
+  "jsonFilesParsed": 55,
+  "jsonlRecordsParsed": 870,
+  "relativeLinksResolved": 50,
+  "derivativeHashesVerified": 74,
+  "knownPrivateCredentialIdsChecked": 20,
+  "personalIdentityAndCredentialPatternFindings": 0,
+  "recursiveSensitiveJsonFieldReviewFindings": 0,
+  "requestAbortRunIdsMatch": true,
+  "oldGuardianAndRuntimeRetained": true,
+  "requestToAbortMs": 15015,
+  "classification": "NEW_START_FAILURE_CLEANUP_NOT_OLD_RUN_GATE",
+  "initialLaunchCause": "UNKNOWN",
+  "publicationFileCountIncludingThisAndChecksum": 84,
+  "limitations": [
+    "No incident-time Launcher PID, raw stderr, initial exception or per-poll state exists in collected evidence.",
+    "Checks are constrained scans plus structural and content review, not proof that every conceivable secret format can be detected.",
+    "This verifies the diagnostic package, not production recovery."
+  ]
+}

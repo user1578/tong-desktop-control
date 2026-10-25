@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-25T15:20:01.0283846Z",
+  "state": "Stopped",
+  "pid": 0,
+  "originalIdentityGone": true,
+  "control": "Stop-Service",
+  "restoreRequired": true
+}

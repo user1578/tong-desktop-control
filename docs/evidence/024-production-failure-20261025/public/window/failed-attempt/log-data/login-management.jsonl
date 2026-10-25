@@ -1,0 +1,103 @@
+{"at":"2026-10-16T15:59:14.7384017Z","event":"runner_started","mode":"run","runnerPid":18456,"reason":""}
+{"at":"2026-10-16T15:59:29.3688220Z","event":"runtime_healthy","mode":"run","runnerPid":18456,"reason":"","runId":"ee703607-10b3-4ba5-b5ba-5e2e85a78dd8","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-16T16:17:28.4543751Z","event":"runtime_lost","mode":"run","runnerPid":18456,"reason":"process_or_readiness_lost","runId":"ee703607-10b3-4ba5-b5ba-5e2e85a78dd8","phase":"stale_record","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-16T16:17:28.4815380Z","event":"recovery_attempt","mode":"run","runnerPid":18456,"reason":"process_or_readiness_lost","runId":"ee703607-10b3-4ba5-b5ba-5e2e85a78dd8","phase":"stale_record","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-16T16:20:06.7821034Z","event":"recovery_succeeded","mode":"run","runnerPid":18456,"reason":"","runId":"9478371e-d0b2-4ccd-87ef-b71eb0cf65a8","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-16T16:33:39.6083527Z","event":"runner_started","mode":"run","runnerPid":29736,"reason":""}
+{"at":"2026-10-16T16:33:57.1207314Z","event":"recovery_attempt","mode":"run","runnerPid":29736,"reason":"login_start","runId":"9478371e-d0b2-4ccd-87ef-b71eb0cf65a8","phase":"stale_record","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-16T16:36:43.9402603Z","event":"runtime_healthy","mode":"run","runnerPid":29736,"reason":"","runId":"550dc0cf-13f3-4ed9-bbe7-3da6dd052cd0","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-16T17:10:40.5241047Z","event":"runner_started","mode":"run","runnerPid":15152,"reason":""}
+{"at":"2026-10-16T17:10:47.5496572Z","event":"runner_failed","mode":"run","runnerPid":29736,"reason":"Another Tong lifecycle operation is running"}
+{"at":"2026-10-16T17:10:54.4316516Z","event":"runtime_healthy","mode":"run","runnerPid":15152,"reason":"","runId":"550dc0cf-13f3-4ed9-bbe7-3da6dd052cd0","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-17T03:59:15.5637438Z","event":"runner_failed","mode":"run","runnerPid":15152,"reason":"Tong manager refused doctor: REFUSED"}
+{"at":"2026-10-17T07:43:40.7829321Z","event":"runner_started","mode":"run","runnerPid":26528,"reason":""}
+{"at":"2026-10-17T07:43:58.3589849Z","event":"recovery_attempt","mode":"run","runnerPid":26528,"reason":"login_start","runId":"550dc0cf-13f3-4ed9-bbe7-3da6dd052cd0","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-17T07:46:28.8134887Z","event":"runtime_healthy","mode":"run","runnerPid":26528,"reason":"","runId":"ed18ad7b-593a-44ab-b0cc-08d48ea69ffb","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-17T09:59:36.6063225Z","event":"runner_started","mode":"run","runnerPid":5040,"reason":""}
+{"at":"2026-10-17T09:59:52.1842484Z","event":"recovery_attempt","mode":"run","runnerPid":5040,"reason":"login_start","runId":"ed18ad7b-593a-44ab-b0cc-08d48ea69ffb","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-17T10:02:06.6377917Z","event":"runner_failed","mode":"run","runnerPid":5040,"reason":"Tong manager refused start: START_FAILED"}
+{"at":"2026-10-17T11:24:26.1596689Z","event":"runner_started","mode":"run","runnerPid":20328,"reason":""}
+{"at":"2026-10-17T11:24:39.9871332Z","event":"runtime_healthy","mode":"run","runnerPid":20328,"reason":"","runId":"f308bff5-2cb7-4480-b82c-4271a233dbf9","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-17T14:09:25.9997393Z","event":"runner_started","mode":"run","runnerPid":10220,"reason":""}
+{"at":"2026-10-17T14:09:26.1260504Z","event":"runner_failed","mode":"run","runnerPid":10220,"reason":"Another Tong lifecycle operation is running"}
+{"at":"2026-10-17T14:11:15.1402146Z","event":"runner_started","mode":"run","runnerPid":38148,"reason":""}
+{"at":"2026-10-17T14:11:29.6053193Z","event":"runtime_healthy","mode":"run","runnerPid":38148,"reason":"","runId":"f308bff5-2cb7-4480-b82c-4271a233dbf9","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-17T14:21:06.6226252Z","event":"runner_started","mode":"run","runnerPid":20464,"reason":""}
+{"at":"2026-10-17T14:21:12.3758900Z","event":"recovery_attempt","mode":"run","runnerPid":20464,"reason":"login_start","runId":"f308bff5-2cb7-4480-b82c-4271a233dbf9","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-17T14:23:37.7027051Z","event":"runtime_healthy","mode":"run","runnerPid":20464,"reason":"","runId":"94b31e68-6299-4e15-a492-7c05dd743a1c","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-17T14:42:12.3802620Z","event":"runner_started","mode":"run","runnerPid":25460,"reason":""}
+{"at":"2026-10-17T14:42:18.0857258Z","event":"recovery_attempt","mode":"run","runnerPid":25460,"reason":"login_start","runId":"94b31e68-6299-4e15-a492-7c05dd743a1c","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-17T14:44:21.9462730Z","event":"runtime_healthy","mode":"run","runnerPid":25460,"reason":"","runId":"35f71efe-d742-42ee-b370-7ff77d15c149","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-17T16:29:41.9996906Z","event":"manager_command_failed","mode":"run","runnerPid":25460,"reason":"REFUSED","outputKind":"empty","exitHex":"0xC000026B","managerAction":"status","nativeExitCode":-1073741205}
+{"at":"2026-10-17T16:29:42.0347629Z","event":"runner_failed","mode":"run","runnerPid":25460,"reason":"Tong manager refused status: REFUSED"}
+{"at":"2026-10-18T05:00:57.1712338Z","event":"runner_started","mode":"run","runnerPid":28844,"reason":""}
+{"at":"2026-10-18T05:01:11.3725130Z","event":"recovery_attempt","mode":"run","runnerPid":28844,"reason":"login_start","runId":"35f71efe-d742-42ee-b370-7ff77d15c149","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-18T05:03:37.0830828Z","event":"runtime_healthy","mode":"run","runnerPid":28844,"reason":"","runId":"2e6410ad-8914-4c96-86d4-20d8ae90748b","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-18T07:40:09.1106345Z","event":"runner_started","mode":"run","runnerPid":12756,"reason":""}
+{"at":"2026-10-18T07:40:14.8453259Z","event":"recovery_attempt","mode":"run","runnerPid":12756,"reason":"login_start","runId":"2e6410ad-8914-4c96-86d4-20d8ae90748b","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-18T07:42:39.2993124Z","event":"runtime_healthy","mode":"run","runnerPid":12756,"reason":"","runId":"baa2f57e-b540-4aa9-9bef-9c292c6fae43","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-18T08:56:19.8001688Z","event":"runner_started","mode":"run","runnerPid":12388,"reason":""}
+{"at":"2026-10-18T08:56:25.6414534Z","event":"recovery_attempt","mode":"run","runnerPid":12388,"reason":"login_start","runId":"baa2f57e-b540-4aa9-9bef-9c292c6fae43","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-18T08:56:43.1775203Z","event":"manager_command_failed","mode":"run","runnerPid":12388,"reason":"CLEANUP_REQUIRED","outputKind":"error_json","exitHex":"0x00000001","managerAction":"start","nativeExitCode":1}
+{"at":"2026-10-18T08:56:43.2105494Z","event":"runner_failed","mode":"run","runnerPid":12388,"reason":"Tong manager refused start: CLEANUP_REQUIRED"}
+{"at":"2026-10-18T09:15:42.0745199Z","event":"runner_started","mode":"start","runnerPid":25972,"reason":""}
+{"at":"2026-10-18T09:17:51.3106783Z","event":"runtime_healthy","mode":"start","runnerPid":25972,"reason":"","runId":"740d449c-c0f9-488b-beca-658820a81ae1","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-18T09:18:32.8492045Z","event":"runner_started","mode":"run","runnerPid":33612,"reason":""}
+{"at":"2026-10-18T09:18:46.8473544Z","event":"runtime_healthy","mode":"run","runnerPid":33612,"reason":"","runId":"740d449c-c0f9-488b-beca-658820a81ae1","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-18T09:46:10.5409423Z","event":"runner_started","mode":"run","runnerPid":16200,"reason":""}
+{"at":"2026-10-18T09:46:16.3501883Z","event":"recovery_attempt","mode":"run","runnerPid":16200,"reason":"login_start","runId":"740d449c-c0f9-488b-beca-658820a81ae1","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-18T09:48:24.6508555Z","event":"runtime_healthy","mode":"run","runnerPid":16200,"reason":"","runId":"dd744da5-a995-413a-ac85-5186e388795b","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-19T17:48:45.4759334Z","event":"runner_started","mode":"run","runnerPid":42108,"reason":""}
+{"at":"2026-10-19T17:48:51.6367756Z","event":"recovery_attempt","mode":"run","runnerPid":42108,"reason":"login_start","runId":"dd744da5-a995-413a-ac85-5186e388795b","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-19T17:51:25.3100395Z","event":"runtime_healthy","mode":"run","runnerPid":42108,"reason":"","runId":"e97ed0fb-be03-45a3-b9b4-1b9d2cc9ed63","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-20T08:54:43.8477884Z","event":"runner_started","mode":"run","runnerPid":6664,"reason":""}
+{"at":"2026-10-20T08:54:49.9500597Z","event":"recovery_attempt","mode":"run","runnerPid":6664,"reason":"login_start","runId":"e97ed0fb-be03-45a3-b9b4-1b9d2cc9ed63","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-20T08:55:07.2762017Z","event":"manager_command_failed","mode":"run","runnerPid":6664,"reason":"CLEANUP_REQUIRED","outputKind":"error_json","exitHex":"0x00000001","managerAction":"start","nativeExitCode":1}
+{"at":"2026-10-20T08:55:07.3102448Z","event":"runner_failed","mode":"run","runnerPid":6664,"reason":"Tong manager refused start: CLEANUP_REQUIRED"}
+{"at":"2026-10-20T09:51:05.9938139Z","event":"runner_started","mode":"run","runnerPid":7692,"reason":""}
+{"at":"2026-10-20T09:51:21.5464838Z","event":"runtime_healthy","mode":"run","runnerPid":7692,"reason":"","runId":"ab00c36d-3755-44e4-b039-08d92601abbb","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-20T09:52:54.5474238Z","event":"runtime_lost","mode":"run","runnerPid":7692,"reason":"process_or_readiness_lost","runId":"ab00c36d-3755-44e4-b039-08d92601abbb","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-20T09:52:54.5877342Z","event":"recovery_attempt","mode":"run","runnerPid":7692,"reason":"process_or_readiness_lost","runId":"ab00c36d-3755-44e4-b039-08d92601abbb","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-20T09:55:09.4847015Z","event":"recovery_succeeded","mode":"run","runnerPid":7692,"reason":"","runId":"003180d0-f129-42e5-a5c1-a24dfc3bfe58","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-20T10:36:57.4879225Z","event":"runner_started","mode":"run","runnerPid":15784,"reason":""}
+{"at":"2026-10-20T10:37:03.9356725Z","event":"recovery_attempt","mode":"run","runnerPid":15784,"reason":"login_start","runId":"003180d0-f129-42e5-a5c1-a24dfc3bfe58","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-20T10:39:38.6380030Z","event":"runtime_healthy","mode":"run","runnerPid":15784,"reason":"","runId":"317fe367-5803-459e-8c53-24d586347888","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-20T11:06:41.5479935Z","event":"manager_command_failed","mode":"run","runnerPid":15784,"reason":"ACL_DENIED","outputKind":"error_json","exitHex":"0x00000001","managerAction":"doctor","nativeExitCode":1}
+{"at":"2026-10-20T11:06:41.6116500Z","event":"runner_failed","mode":"run","runnerPid":15784,"reason":"Tong manager refused doctor: ACL_DENIED"}
+{"at":"2026-10-20T17:50:00.6165447Z","event":"runner_started","mode":"run","runnerPid":14188,"reason":""}
+{"at":"2026-10-20T17:50:06.6264187Z","event":"recovery_attempt","mode":"run","runnerPid":14188,"reason":"login_start","runId":"317fe367-5803-459e-8c53-24d586347888","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-20T17:52:30.6326801Z","event":"runtime_healthy","mode":"run","runnerPid":14188,"reason":"","runId":"8a59e87a-0b0d-490d-b27c-c752f027a70d","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-20T18:03:41.0022243Z","event":"manager_command_failed","mode":"run","runnerPid":14188,"reason":"ACL_DENIED","outputKind":"error_json","exitHex":"0x00000001","managerAction":"status","nativeExitCode":1}
+{"at":"2026-10-20T18:03:41.0394353Z","event":"runner_failed","mode":"run","runnerPid":14188,"reason":"Tong manager refused status: ACL_DENIED"}
+{"at":"2026-10-21T04:12:43.7730216Z","event":"runner_started","mode":"run","runnerPid":20500,"reason":""}
+{"at":"2026-10-21T04:12:50.1675514Z","event":"recovery_attempt","mode":"run","runnerPid":20500,"reason":"login_start","runId":"8a59e87a-0b0d-490d-b27c-c752f027a70d","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-21T04:15:29.3439144Z","event":"runtime_healthy","mode":"run","runnerPid":20500,"reason":"","runId":"02278c79-c0dc-4d76-94eb-cdd06838111d","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-21T05:45:14.3966303Z","event":"manager_command_failed","mode":"run","runnerPid":20500,"reason":"REFUSED","outputKind":"empty","exitHex":"0xC000026B","managerAction":"status","nativeExitCode":-1073741205}
+{"at":"2026-10-21T05:45:14.6443574Z","event":"runner_failed","mode":"run","runnerPid":20500,"reason":"Tong manager refused status: REFUSED"}
+{"at":"2026-10-21T06:30:16.5355762Z","event":"runner_started","mode":"run","runnerPid":7724,"reason":""}
+{"at":"2026-10-21T06:30:35.6750231Z","event":"recovery_attempt","mode":"run","runnerPid":7724,"reason":"login_start","runId":"02278c79-c0dc-4d76-94eb-cdd06838111d","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-21T06:33:18.0097899Z","event":"runtime_healthy","mode":"run","runnerPid":7724,"reason":"","runId":"4d054ed0-c6de-49d3-834a-84b43aca31ab","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-21T15:44:52.3053694Z","event":"runner_started","mode":"run","runnerPid":34532,"reason":""}
+{"at":"2026-10-21T15:44:58.6127110Z","event":"recovery_attempt","mode":"run","runnerPid":34532,"reason":"login_start","runId":"4d054ed0-c6de-49d3-834a-84b43aca31ab","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-21T15:47:37.1747902Z","event":"runtime_healthy","mode":"run","runnerPid":34532,"reason":"","runId":"014a7413-16ea-4343-b4cf-e18e94375b9d","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-22T03:31:26.2261548Z","event":"runner_started","mode":"run","runnerPid":672,"reason":""}
+{"at":"2026-10-22T03:31:32.3486443Z","event":"recovery_attempt","mode":"run","runnerPid":672,"reason":"login_start","runId":"014a7413-16ea-4343-b4cf-e18e94375b9d","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-22T03:33:47.2742974Z","event":"runtime_healthy","mode":"run","runnerPid":672,"reason":"","runId":"fb292106-8174-4ad8-9a0c-0ecb9b5ebfe9","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-22T09:32:08.0241567Z","event":"runner_started","mode":"run","runnerPid":38608,"reason":""}
+{"at":"2026-10-22T09:32:14.2309242Z","event":"recovery_attempt","mode":"run","runnerPid":38608,"reason":"login_start","runId":"fb292106-8174-4ad8-9a0c-0ecb9b5ebfe9","phase":"stopped","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-22T09:34:42.3806266Z","event":"manager_command_failed","mode":"run","runnerPid":38608,"reason":"START_TIMEOUT","outputKind":"error_json","exitHex":"0x00000001","managerAction":"start","nativeExitCode":1}
+{"at":"2026-10-22T09:34:48.4019189Z","event":"recovery_attempt","mode":"run","runnerPid":38608,"reason":"startup_retry","runId":"a2852795-670e-49da-b786-c5ec0bd4f08f","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-22T15:48:46.6422941Z","event":"runner_started","mode":"run","runnerPid":49316,"reason":""}
+{"at":"2026-10-22T15:49:02.3483874Z","event":"runtime_healthy","mode":"run","runnerPid":49316,"reason":"","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","phase":"ready","supervisorAlive":true,"guardianAlive":true}
+{"at":"2026-10-23T03:27:38.8131079Z","event":"runner_started","mode":"run","runnerPid":4476,"reason":""}
+{"at":"2026-10-23T03:28:01.1482411Z","event":"recovery_attempt","mode":"run","runnerPid":4476,"reason":"login_start","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-23T03:29:24.2567898Z","event":"manager_command_failed","mode":"run","runnerPid":4476,"reason":"CLEANUP_REQUIRED","outputKind":"error_json","exitHex":"0x00000001","managerAction":"start","nativeExitCode":1}
+{"at":"2026-10-23T03:29:24.2898418Z","event":"runner_failed","mode":"run","runnerPid":4476,"reason":"Tong manager refused start: CLEANUP_REQUIRED"}
+{"at":"2026-10-23T10:54:24.6223540Z","event":"runner_started","mode":"run","runnerPid":4968,"reason":""}
+{"at":"2026-10-23T10:54:37.8299494Z","event":"recovery_attempt","mode":"run","runnerPid":4968,"reason":"login_start","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-23T10:56:02.8302323Z","event":"manager_command_failed","mode":"run","runnerPid":4968,"reason":"CLEANUP_REQUIRED","outputKind":"error_json","exitHex":"0x00000001","managerAction":"start","nativeExitCode":1}
+{"at":"2026-10-23T10:56:02.8691357Z","event":"runner_failed","mode":"run","runnerPid":4968,"reason":"Tong manager refused start: CLEANUP_REQUIRED"}
+{"at":"2026-10-25T15:24:35.4437261Z","event":"runner_started","mode":"run","runnerPid":36620,"reason":""}
+{"at":"2026-10-25T15:24:44.6527643Z","event":"recovery_attempt","mode":"run","runnerPid":36620,"reason":"login_start","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","phase":"abnormal_exit","supervisorAlive":false,"guardianAlive":false}
+{"at":"2026-10-25T15:26:08.9355619Z","event":"manager_command_failed","mode":"run","runnerPid":36620,"reason":"CLEANUP_REQUIRED","nativeExitCode":1,"exitHex":"0x00000001","outputKind":"error_json","managerAction":"start"}
+{"at":"2026-10-25T15:26:08.9541920Z","event":"runner_failed","mode":"run","runnerPid":36620,"reason":"Tong manager refused start: CLEANUP_REQUIRED"}

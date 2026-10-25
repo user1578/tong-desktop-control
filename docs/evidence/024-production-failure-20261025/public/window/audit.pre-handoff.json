@@ -1,0 +1,303 @@
+{
+  "observedAt": "2026-10-25T15:21:42.726Z",
+  "productionReadOnly": true,
+  "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "sourceFiles": 283,
+  "nativeFiles": 23,
+  "bindings": {
+    "app": {
+      "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+      "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+      "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+      "node": {
+        "executable": "D:\\node\\node.exe",
+        "version": "v24.15.0",
+        "abi": "137",
+        "platform": "win32",
+        "arch": "x64",
+        "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+      },
+      "verified": true
+    },
+    "manager": {
+      "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+      "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+      "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+      "node": {
+        "executable": "D:\\node\\node.exe",
+        "version": "v24.15.0",
+        "abi": "137",
+        "platform": "win32",
+        "arch": "x64",
+        "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+      },
+      "verified": true
+    }
+  },
+  "identities": [
+    {
+      "pid": 14116,
+      "state": "GONE"
+    },
+    {
+      "pid": 45836,
+      "state": "GONE"
+    },
+    {
+      "pid": 14176,
+      "state": "GONE"
+    },
+    {
+      "pid": 51128,
+      "state": "GONE"
+    },
+    {
+      "pid": 27824,
+      "state": "GONE"
+    },
+    {
+      "pid": 12832,
+      "state": "GONE"
+    },
+    {
+      "pid": 49300,
+      "state": "GONE"
+    },
+    {
+      "pid": 17768,
+      "state": "GONE"
+    },
+    {
+      "pid": 49724,
+      "state": "GONE"
+    },
+    {
+      "pid": 24772,
+      "state": "GONE"
+    }
+  ],
+  "jobs": {
+    "74cd4ad3-f21b-40ec-96f5-3f9015649e5d": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    },
+    "bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    },
+    "d348ae39-27cf-4167-8e35-58de75421309": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    }
+  },
+  "inventory": {
+    "complete": true,
+    "count": 0
+  },
+  "status": {
+    "phase": "abnormal_exit",
+    "supervisorAlive": false,
+    "guardianAlive": false
+  },
+  "doctor": {
+    "probed": false,
+    "reason": "READ_ONLY_NO_SECRET_UNSEAL"
+  },
+  "observerDescendantCount": 0,
+  "native": {
+    "listeners": [],
+    "tasks": [
+      {
+        "name": "Tong024Acceptance-26fa6cba-eb42-4058-9b3b-ec4d29e25c24",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T06:02:15.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-2a4677a1-d9f0-40bf-abd9-74246cecc582",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T05:58:33.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-36edd458-3b4b-4221-88a4-99a45630fa1f",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T06:47:56.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-4f7c4df1-6203-45ea-8ea0-62eb93553e47",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T06:03:00.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-59cce095-cce9-42fd-9bcc-a182575eca04",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T02:41:04.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-63f79c84-c406-4f5d-8aa5-fda606ac9f32",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T06:43:32.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-684f4450-884b-4b20-8b57-efd5f3ea12be",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T06:52:24.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-6a3d156b-8850-49d0-8b4c-0dea762370b7",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T06:57:55.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-6b319410-07b4-46d0-b811-0ffe2a8173d7",
+        "state": "Disabled",
+        "lastTaskResult": 37,
+        "lastRunTime": "2026-10-25T05:54:58.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-703596ef-c548-4a69-a7e4-5664549c63e7",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T06:21:40.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-827449a1-3609-49a4-a06d-633109304aa0",
+        "state": "Disabled",
+        "lastTaskResult": 2,
+        "lastRunTime": "2026-10-25T06:46:07.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-88ca27ee-e599-4482-b849-7c96923272fb",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T07:49:44.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-89b84737-ae64-4fbd-b06f-dc6495101ed6",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T06:48:28.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-ca45a917-5ecd-499a-b935-4d6cb7cbe4be",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T07:00:35.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-d156b335-674b-4396-b34a-73f99cfb789d",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T02:54:16.0000000Z"
+      },
+      {
+        "name": "Tong024Acceptance-daeee3cc-c99e-4f73-b134-7fb8826f4750",
+        "state": "Disabled",
+        "lastTaskResult": 2,
+        "lastRunTime": "2026-10-25T06:46:50.0000000Z"
+      },
+      {
+        "name": "Tong024StateRepair-5dc9bd7a-3318-43dd-800c-ff0fab62f8ac",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T13:57:47.0000000Z"
+      },
+      {
+        "name": "Tong024StateRepair-8f88beaf-3e3a-4778-a5fb-e432be394c8b",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-25T13:51:17.0000000Z"
+      },
+      {
+        "name": "TongLoginRuntime",
+        "state": "Disabled",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-23T10:54:24.0000000Z"
+      },
+      {
+        "name": "TongNgrokRestore",
+        "state": "Disabled",
+        "lastTaskResult": 3221225786,
+        "lastRunTime": "2026-10-12T20:19:35.0000000Z"
+      },
+      {
+        "name": "TongStable1Offline-b1ad6a9b-e098-4bdf-90d5-73655153c109",
+        "state": "Disabled",
+        "lastTaskResult": 0,
+        "lastRunTime": "2026-10-25T08:57:41.0000000Z"
+      }
+    ],
+    "services": [
+      {
+        "Name": "ngrok",
+        "State": "Stopped",
+        "StartMode": "Auto",
+        "ProcessId": 0
+      }
+    ],
+    "ngrok": [],
+    "monitors": []
+  },
+  "historicalShutdown": {
+    "at": "2026-10-23T01:51:02.854Z",
+    "reason": "MONITOR_FAILED"
+  },
+  "legacyGuardianContainmentPresent": false,
+  "legacyFailedRunReceiptPresent": false,
+  "hashes": {
+    "profile.json": {
+      "size": 876,
+      "sha256": "ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35"
+    },
+    "run/release-pin.json": {
+      "size": 110871,
+      "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+    },
+    "run/manager-pin.json": {
+      "size": 110871,
+      "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+    },
+    "run/runtime.json": {
+      "size": 6089,
+      "sha256": "4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557"
+    },
+    "run/guardian.json": {
+      "size": 614,
+      "sha256": "383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7"
+    },
+    "run/request.json": {
+      "size": 194,
+      "sha256": "b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff"
+    },
+    "run/abort.json": {
+      "size": 126,
+      "sha256": "3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660"
+    },
+    "run/backup.freeze": {
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "logs/maintenance-transaction.json": {
+      "size": 2107,
+      "sha256": "76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473"
+    }
+  },
+  "hashedFileCount": 88,
+  "encryptedEnvelopesHashedOnly": true,
+  "controlledFileSetSha256": "ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642",
+  "controlledFilesUnchanged": true,
+  "productionExecutionAllowed": false
+}

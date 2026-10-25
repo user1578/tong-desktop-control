@@ -1,0 +1,6 @@
+{"at":"2026-10-22T14:17:31.7689276Z","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","event":"guardian_started","guardianPid":14116,"stage":"compile"}
+{"at":"2026-10-22T14:17:42.4687611Z","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","event":"job_created","guardianPid":14116,"stage":"create-job","killOnJobClose":true,"jobName":"Local\\TongRuntime-74cd4ad3-f21b-40ec-96f5-3f9015649e5d"}
+{"at":"2026-10-22T14:17:42.5058333Z","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","event":"node_spawned","guardianPid":14116,"stage":"spawn-node","nodePid":45836}
+{"at":"2026-10-22T14:17:42.6696885Z","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","event":"job_assigned","guardianPid":14116,"stage":"record-start","nodePid":45836}
+{"at":"2026-10-23T01:51:05.3563237Z","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","event":"node_supervisor_exit","pid":45836,"exitCode":1,"hex":"0x00000001","classification":"abnormal_exit","jobActiveAfterCleanup":0}
+{"at":"2026-10-23T01:51:05.4275956Z","runId":"74cd4ad3-f21b-40ec-96f5-3f9015649e5d","event":"job_handle_closed","guardianPid":14116,"stage":"wait-node"}

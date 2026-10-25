@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "runId": "74cd4ad3-f21b-40ec-96f5-3f9015649e5d",
+  "recoveryGrantId": "<REDACTED_CREDENTIAL>",
+  "phase": "abnormal_exit",
+  "profileMode": "production",
+  "codeRoot": "D:\\Tong\\app",
+  "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+  "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+  "sourceCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "managerCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "supervisor": {
+    "pid": 45836,
+    "parentPid": 14116,
+    "exe": "D:\\node\\node.exe",
+    "startTicks": "639282754624971660",
+    "markerMatches": true
+  },
+  "children": [
+    {
+      "role": "agentdock",
+      "pid": 14176,
+      "parentPid": 45836,
+      "exe": "D:\\Tong\\runtime\\agentdock\\agentdock.exe",
+      "startTicks": "639282754755053240",
+      "markerMatches": true,
+      "stdoutLog": "D:\\Tong\\runtime\\logs\\74cd4ad3-f21b-40ec-96f5-3f9015649e5d-agentdock.stdout.log",
+      "stderrLog": "D:\\Tong\\runtime\\logs\\74cd4ad3-f21b-40ec-96f5-3f9015649e5d-agentdock.stderr.log",
+      "tokenInArgv": false
+    },
+    {
+      "role": "devspace",
+      "pid": 51128,
+      "parentPid": 45836,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639282754774610230",
+      "markerMatches": true,
+      "stdoutLog": "D:\\Tong\\runtime\\logs\\74cd4ad3-f21b-40ec-96f5-3f9015649e5d-devspace.stdout.log",
+      "stderrLog": "D:\\Tong\\runtime\\logs\\74cd4ad3-f21b-40ec-96f5-3f9015649e5d-devspace.stderr.log",
+      "tokenInArgv": false
+    },
+    {
+      "role": "gateway",
+      "pid": 27824,
+      "parentPid": 45836,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639282755193992860",
+      "markerMatches": true,
+      "stdoutLog": "D:\\Tong\\runtime\\logs\\74cd4ad3-f21b-40ec-96f5-3f9015649e5d-gateway.stdout.log",
+      "stderrLog": "D:\\Tong\\runtime\\logs\\74cd4ad3-f21b-40ec-96f5-3f9015649e5d-gateway.stderr.log",
+      "tokenInArgv": false
+    }
+  ],
+  "descendants": [
+    {
+      "pid": 12832,
+      "parentPid": 45836,
+      "exe": "C:\\Windows\\system32\\conhost.exe",
+      "startTicks": "639282754625033260"
+    },
+    {
+      "pid": 14176,
+      "parentPid": 45836,
+      "exe": "D:\\Tong\\runtime\\agentdock\\agentdock.exe",
+      "startTicks": "639282754755053240"
+    },
+    {
+      "pid": 49300,
+      "parentPid": 14176,
+      "exe": "C:\\Windows\\system32\\conhost.exe",
+      "startTicks": "639282754755123180"
+    },
+    {
+      "pid": 51128,
+      "parentPid": 45836,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639282754774610230"
+    },
+    {
+      "pid": 17768,
+      "parentPid": 51128,
+      "exe": "C:\\Windows\\system32\\conhost.exe",
+      "startTicks": "639282754774673050"
+    },
+    {
+      "pid": 27824,
+      "parentPid": 45836,
+      "exe": "D:\\node\\node.exe",
+      "startTicks": "639282755193992860"
+    },
+    {
+      "pid": 49724,
+      "parentPid": 27824,
+      "exe": "C:\\Windows\\system32\\conhost.exe",
+      "startTicks": "639282755194032700"
+    },
+    {
+      "pid": 24772,
+      "parentPid": 31996,
+      "exe": "C:\\Windows\\system32\\conhost.exe",
+      "startTicks": "639283170618008280"
+    }
+  ],
+  "pids": [
+    45836,
+    14176,
+    51128,
+    27824,
+    12832,
+    49300,
+    17768,
+    49724,
+    24772
+  ],
+  "exits": [],
+  "startedAt": "2026-10-22T14:17:54.816Z",
+  "nodeVersion": "v24.15.0",
+  "nodeExecutable": "D:\\node\\node.exe",
+  "nodeSha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5",
+  "agentdockSha256": "bc1a7a35f1985e9f7827142577fc31bd4ca536e27252b08fc28c5ed636cf5e8d",
+  "startupProgress": {
+    "role": "gateway",
+    "stage": "candidate_verified",
+    "stageStartedAt": 1792678742434
+  },
+  "finishedAt": "2026-10-23T01:51:05.3563237Z"
+}

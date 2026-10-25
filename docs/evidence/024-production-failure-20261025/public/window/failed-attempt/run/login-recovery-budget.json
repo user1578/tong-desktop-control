@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "attempts": [
+    {
+      "at": "2026-10-25T15:24:44.6388627Z",
+      "runId": "74cd4ad3-f21b-40ec-96f5-3f9015649e5d",
+      "reason": "login_start"
+    }
+  ]
+}

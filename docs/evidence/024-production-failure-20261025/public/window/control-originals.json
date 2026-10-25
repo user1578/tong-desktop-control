@@ -1,0 +1,82 @@
+{
+  "stale-reconciliation.db1c58c8-4fe2-4841-9abc-473b2a16f773.archived-20261017-3442cbb-14f6cd5c.json": {
+    "sha256": "14f6cd5c1b05ba5a364961dd55bd0786b69adca9843a03e5a2b255e0ebda1de6",
+    "size": 345,
+    "fileKey": "3025126315:327680:2213879"
+  },
+  "backup.freeze": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0,
+    "fileKey": "3025126315:89915392:3025673"
+  },
+  "stale-reconciliation.a3eff4db-0b39-4a10-9fb6-9a94a6176ace.json": {
+    "sha256": "f8a2dfc40f27ec666dce1d55edcf50da5f142385863fe50b129c50075cfdee6e",
+    "size": 5162,
+    "fileKey": "3025126315:65536:2940230"
+  },
+  "stale-reconciliation.9478371e-d0b2-4ccd-87ef-b71eb0cf65a8.json": {
+    "sha256": "9222f5422da9cb905ac4cb6341a03f14c1095692bdb189952a8888507842dacf",
+    "size": 5013,
+    "fileKey": "3025126315:1769472:2261738"
+  },
+  "stale-reconciliation.json": {
+    "sha256": "f7424b813e950a800bebe40adc9979bd9b4c3935d613462d630f3c9489dea5bb",
+    "size": 345,
+    "fileKey": "3025126315:131072:2261679"
+  },
+  "release-pin.json": {
+    "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+    "size": 110871,
+    "fileKey": "3025126315:65536:2940005"
+  },
+  "stop.json": {
+    "sha256": "31edce2a9ca467859717c94709aa1b2afa142734819216204d862e6734169549",
+    "size": 99,
+    "fileKey": "3025126315:262144:497779"
+  },
+  "guardian.json": {
+    "sha256": "383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7",
+    "size": 614,
+    "fileKey": "3025126315:33226752:2940040"
+  },
+  "runtime.json": {
+    "sha256": "4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557",
+    "size": 6089,
+    "fileKey": "3025126315:4784128:2940014"
+  },
+  "stale-reconciliation.a9fb1ddd-e68b-49ce-928a-69677ae286e5.archived-20261016-db1c58c8.json": {
+    "sha256": "3243235c3307dcd682d36db25e48479eb10518bb2d6e3596d30711d044dae630",
+    "size": 345,
+    "fileKey": "3025126315:131072:2213007"
+  },
+  "stale-reconciliation.ee703607-10b3-4ba5-b5ba-5e2e85a78dd8.json": {
+    "sha256": "4951d904dae6360e101df762fe36da30307175500217ae28061b409051dd50b0",
+    "size": 5021,
+    "fileKey": "3025126315:131072:2261727"
+  },
+  "backup.freeze.bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd.evidence": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0,
+    "fileKey": "3025126315:524288:2763393"
+  },
+  "manager-pin.json": {
+    "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+    "size": 110871,
+    "fileKey": "3025126315:13172736:1673348"
+  },
+  "login-recovery-budget.json": {
+    "sha256": "1488a639de90adab3dfbae1de993414ad9ba1e93d0c0475ef6adcf0786963ac0",
+    "size": 310,
+    "fileKey": "3025126315:262144:3026393"
+  },
+  "request.json": {
+    "sha256": "b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff",
+    "size": 194,
+    "fileKey": "3025126315:131072:3026411"
+  },
+  "abort.json": {
+    "sha256": "3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660",
+    "size": 126,
+    "fileKey": "3025126315:50397184:2808255"
+  }
+}

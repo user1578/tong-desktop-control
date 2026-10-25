@@ -1,0 +1,171 @@
+{
+  "at": "2026-10-25T15:19:53.8721825Z",
+  "readOnly": true,
+  "taskCount": 300,
+  "serviceCount": 322,
+  "runValueCount": 16,
+  "startupFileCount": 3,
+  "wmiConsumerCount": 0,
+  "opaqueWrapperCount": 163,
+  "enumerationErrors": [],
+  "related": [
+    {
+      "kind": "task",
+      "xmlSha256": "b23b0dcb52a672d527e079464f8c28d43472954c812c5a8c8a076b61c7cf991f",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-26fa6cba-eb42-4058-9b3b-ec4d29e25c24"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "7839bd3b2911a2890d2ddc739191fa36060d393d76f39ad376441c1035051fc1",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-2a4677a1-d9f0-40bf-abd9-74246cecc582"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "888f424415c005d0ddcd0b9aff8fc8215f790d283393eaf08f7129f1973903f8",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-36edd458-3b4b-4221-88a4-99a45630fa1f"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "0a3b5f08896d71bf757bee9a8b67fbc6f8de481ab6ebf628ae29c3f11d73988e",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-4f7c4df1-6203-45ea-8ea0-62eb93553e47"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "cfa8901511a8677ae2f495b37ea4bac71191c8d9dd7c94350990c18be3a80352",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-59cce095-cce9-42fd-9bcc-a182575eca04"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "78fbe853389d3b3b3f5a10a469a29397df471a1bf6be7d8b44ddf82d1169fb95",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-63f79c84-c406-4f5d-8aa5-fda606ac9f32"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "0d109405041cc098477a4430428c59eac2446e0de6ee22c04c9421feb9eb09bf",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-684f4450-884b-4b20-8b57-efd5f3ea12be"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "0466b50f18d7a0be7eb964335a158308aab3e05331ad9be775e59f7d994bfe03",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-6a3d156b-8850-49d0-8b4c-0dea762370b7"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "6ed4150ed2e071431050464ace5f66be33134d7c995e21ea57653b005f828a51",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-6b319410-07b4-46d0-b811-0ffe2a8173d7"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "53ec07ae00861bc85de2050ae05c6bb559cdf55542320e86a024d2ade2572271",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-703596ef-c548-4a69-a7e4-5664549c63e7"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "ede8f6a53c9cbead2e23d46a2adaa6c0d049ccff33ea44ed61dafe0dacd4e69e",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-827449a1-3609-49a4-a06d-633109304aa0"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "4dd2559479294c33731c95f3df80f232ab9471b9f7f3e1ed516194d653f1ce89",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-88ca27ee-e599-4482-b849-7c96923272fb"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "1e9a3e00876064a3c17cba27bd82f5dc784d106ec6e988dcc5bbe655a7230eb7",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-89b84737-ae64-4fbd-b06f-dc6495101ed6"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "c668ec42707f94ca74875a91502c698080da0ac2ff4fade6e46f8ff079975d06",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-ca45a917-5ecd-499a-b935-4d6cb7cbe4be"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "f9fd48ca1c9ed81885702db8865d0b1ac28ef49238993302dcb57cc5aae0d51b",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-d156b335-674b-4396-b34a-73f99cfb789d"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "6dd5bb41731a3464d4bfcfd9887ed6c6c1ae8a15aca92b32664781fe119dba68",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024Acceptance-daeee3cc-c99e-4f73-b134-7fb8826f4750"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "699982ffad07e9a7ab8a1377c067178dd3ede359acdb355e26865bcecde03af4",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024StateRepair-5dc9bd7a-3318-43dd-800c-ff0fab62f8ac"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "ee894e440b0985541aa30b1c96cbc4a45d5d29b942e01e2cc0d9deb73e3b75f6",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\Tong024StateRepair-8f88beaf-3e3a-4778-a5fb-e432be394c8b"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "84a86de6a916315493d5afc6b3aba8d88c4e1731983b6595f9655df657b51c09",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\TongLoginRuntime"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "bea427997f9104a64b38d86c7e784554e14f1ccc4f2bfb9f514acb081b1e9a25",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\TongNgrokRestore"
+    },
+    {
+      "kind": "task",
+      "xmlSha256": "a60a5b43220fcba7ae0ae7a45cb9955658f5b63b1b09635696a8b0865cfc6356",
+      "instances": 0,
+      "enabled": false,
+      "path": "\\TongStable1Offline-b1ad6a9b-e098-4bdf-90d5-73655153c109"
+    },
+    {
+      "pid": 40452,
+      "imageSha256": "46ce37d721b267a650cc3445f824234a80822900591d2b2875259a5ce72b739c",
+      "state": "Running",
+      "kind": "service",
+      "startMode": "Auto",
+      "name": "ngrok"
+    }
+  ],
+  "allEntrypointsProvenClosed": false,
+  "productionReady": false,
+  "reason": "Inventory and current absence cannot exclude indirect launch wrappers or a future caller; original v1 has no inherited gate handoff."
+}

@@ -1,0 +1,50 @@
+param([ValidateSet('InspectStop','Restore')][string]$Action)
+$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+$window=$PSScriptRoot
+$repo='D:\Tong\development\tong-024-startup-recovery'
+$env:TEMP=Join-Path $window 'temp'; $env:TMP=$env:TEMP
+$identity=[Security.Principal.WindowsIdentity]::GetCurrent()
+if($identity.User.Value -cne '<USER_SID>' -or -not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'ORIGINAL_USER_ADMIN_REQUIRED'}
+function Save([string]$Name,$Object){[IO.File]::WriteAllText((Join-Path $window $Name),($Object|ConvertTo-Json -Depth 10),[Text.UTF8Encoding]::new($false))}
+try {
+ if($Action -eq 'InspectStop'){
+  $probeText=& pwsh.exe -NoLogo -NoProfile -NonInteractive -File (Join-Path $repo 'scripts\Tong024NgrokIdentity.ps1')
+  if($LASTEXITCODE -ne 0){throw 'ADMIN_PROBE_FAILED'}
+  $probe=$probeText|ConvertFrom-Json -DateKind String; Save 'ngrok.admin.before.json' $probe
+  if(-not $probe.processIdentityProven -or $probe.inventoryStatus -cne 'AVAILABLE' -or $probe.pid -ne 40452 -or $probe.nativeExe -ine 'D:\Tong\tools\ngrok\ngrok.exe' -or [DateTimeOffset]::Parse($probe.cimCreationUtc).UtcTicks -ne [DateTimeOffset]::Parse('2026-10-23T03:27:46.4025660Z').UtcTicks){throw 'NGROK_IDENTITY_DRIFT'}
+  $auditText=& D:\node\node.exe (Join-Path $repo 'tests\Test-Tong024PlanBProductionAudit.mjs')
+  if($LASTEXITCODE -ne 0){throw 'ADMIN_AUDIT_FAILED'}
+  $audit=$auditText|ConvertFrom-Json; Save 'audit.admin.before.json' $audit
+  if(-not $audit.bindings.app.verified -or -not $audit.bindings.manager.verified -or -not $audit.inventory.complete -or $audit.inventory.count -ne 0 -or @($audit.native.listeners).Count -or @($audit.native.monitors).Count -or @($audit.identities|Where-Object state -in @('UNKNOWN','ALIVE')).Count -or $audit.controlledFileSetSha256 -cne 'ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642'){throw 'ADMIN_NATIVE_GATE_REFUSED'}
+  foreach($job in $audit.jobs.PSObject.Properties){foreach($item in $job.Value.PSObject.Properties){if($item.Value -ne 0){throw 'JOB_NOT_EMPTY'}}}
+  $entryText=& pwsh.exe -NoLogo -NoProfile -NonInteractive -File (Join-Path $repo 'scripts\Inspect-TongStable1OfflineEntries.ps1')
+  if($LASTEXITCODE -ne 0){throw 'ENTRY_INSPECTION_FAILED'}
+  $entries=$entryText|ConvertFrom-Json; Save 'entrypoints.admin.before.json' $entries
+  if(@($entries.enumerationErrors).Count){throw 'ENTRY_ENUMERATION_INCOMPLETE'}
+  foreach($entry in $entries.related){if($entry.kind -eq 'task' -and ($entry.enabled -or $entry.instances -ne 0)){throw 'TASK_ENTRY_STILL_ARMED'};if($entry.kind -notin @('task','service') -or ($entry.kind -eq 'service' -and $entry.name -cne 'ngrok')){throw 'OTHER_TONG_ENTRY_FOUND'}}
+  $service=Get-CimInstance Win32_Service -Filter "Name='ngrok'"
+  $beforeStopText=& pwsh.exe -NoLogo -NoProfile -NonInteractive -File (Join-Path $repo 'scripts\Tong024NgrokIdentity.ps1')
+  if($LASTEXITCODE -ne 0){throw 'BEFORE_STOP_NATIVE_PROBE_FAILED'}
+  $beforeStop=$beforeStopText|ConvertFrom-Json -DateKind String; Save 'ngrok.admin.before-stop.json' $beforeStop
+  if($service.ProcessId -ne 40452 -or $service.State -cne 'Running' -or -not $beforeStop.processIdentityProven -or $beforeStop.inventoryStatus -cne 'AVAILABLE' -or $beforeStop.pid -ne $probe.pid -or $beforeStop.nativeExe -ine $probe.nativeExe -or $beforeStop.nativeStartTicks -cne $probe.nativeStartTicks -or [DateTimeOffset]::Parse($beforeStop.cimCreationUtc).UtcTicks -ne [DateTimeOffset]::Parse($probe.cimCreationUtc).UtcTicks){throw 'NGROK_CHANGED_BEFORE_STOP'}
+  Stop-Service -Name ngrok -ErrorAction Stop
+  (Get-Service -Name ngrok).WaitForStatus('Stopped',[TimeSpan]::FromSeconds(30))
+  $service=Get-CimInstance Win32_Service -Filter "Name='ngrok'"
+  if($service.State -cne 'Stopped' -or $service.ProcessId -ne 0 -or (Get-CimInstance Win32_Process -Filter 'ProcessId=40452')){throw 'NGROK_STOP_NOT_PROVEN'}
+  Save 'ngrok.stopped.json' ([ordered]@{at=[DateTime]::UtcNow.ToString('o');state=$service.State;pid=$service.ProcessId;originalIdentityGone=$true;control='Stop-Service';restoreRequired=$true})
+  Write-Host 'ngrok identity verified; normal service stop completed. Evidence saved.'
+ }else{
+  $prior=Get-Content -LiteralPath (Join-Path $window 'ngrok.admin.before.json') -Raw|ConvertFrom-Json
+  if($prior.serviceState -ne 4 -or -not $prior.processIdentityProven){throw 'NO_VERIFIED_RUNNING_BASELINE'}
+  $service=Get-CimInstance Win32_Service -Filter "Name='ngrok'"
+  if($service.State -cne 'Stopped' -or $service.ProcessId -ne 0){throw 'UNEXPECTED_NGROK_STATE'}
+  Start-Service -Name ngrok -ErrorAction Stop
+  (Get-Service -Name ngrok).WaitForStatus('Running',[TimeSpan]::FromSeconds(30))
+  $probeText=& pwsh.exe -NoLogo -NoProfile -NonInteractive -File (Join-Path $repo 'scripts\Tong024NgrokIdentity.ps1')
+  if($LASTEXITCODE -ne 0){throw 'RESTORE_PROBE_FAILED'}
+  $probe=$probeText|ConvertFrom-Json; Save 'ngrok.admin.restored.json' $probe
+  if(-not $probe.processIdentityProven -or $probe.inventoryStatus -cne 'AVAILABLE' -or $probe.nativeExe -ine $prior.nativeExe -or $probe.startMode -cne $prior.startMode -or $probe.account -cne $prior.account){throw 'NGROK_RESTORE_NOT_PROVEN'}
+  Write-Host 'ngrok restored through Start-Service; native identity verified. Evidence saved.'
+ }
+ Save ('ngrok.'+$Action+'.result.json') @{at=[DateTime]::UtcNow.ToString('o');success=$true;action=$Action}
+}catch{Save ('ngrok.'+$Action+'.result.json') @{at=[DateTime]::UtcNow.ToString('o');success=$false;action=$Action;error=$_.Exception.Message};Write-Host $_.Exception.Message -ForegroundColor Red;exit 1}

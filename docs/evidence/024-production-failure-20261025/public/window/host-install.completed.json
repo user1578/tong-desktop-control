@@ -1,0 +1,10 @@
+{
+  "changedFiles": [
+    "login-management/TongLoginHost.exe"
+  ],
+  "at": "2026-10-25T15:23:36.0470589Z",
+  "runnerUnchanged": true,
+  "originalGateStillActive": true,
+  "installedHash": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+  "originalHostKeyRetained": true
+}

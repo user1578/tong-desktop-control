@@ -1,0 +1,6 @@
+{
+  "success": false,
+  "at": "2026-10-25T15:09:17.8677352Z",
+  "action": "InspectStop",
+  "error": "NGROK_IDENTITY_DRIFT"
+}

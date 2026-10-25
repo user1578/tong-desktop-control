@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "kind": "guardian-lost",
+  "runId": "db1c58c8-4fe2-4841-9abc-473b2a16f773",
+  "runtimeSha256": "5e430806ad8dba77158abfc5f2aa0aab5a77e7f83a2f6b65727f59d4a0a53594",
+  "guardianSha256": "1aff66b8ebd761b34fc09a0459f1a624340426954d72bcbba1379180d11ca42b",
+  "observedAt": "2026-10-16T11:10:57.445Z",
+  "identityCount": 13
+}

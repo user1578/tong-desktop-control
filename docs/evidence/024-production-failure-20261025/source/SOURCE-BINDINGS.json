@@ -1,0 +1,156 @@
+{
+  "version": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "verification": "Read files and Git blobs only; no production module imported or executed.",
+  "files": [
+    {
+      "file": "TongAgentDockRuntime.mjs",
+      "bytes": 44995,
+      "sha256": "59bfef4b9e8a036767acc8b5b097d8734456e6fe27f9ea9b99b1a700cc46e0f6",
+      "gitBlobSha256": "f609d906e7025ab64be872b94398c4a57f04dceefb2a25c8b4d0b8cee3f7924e",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "59bfef4b9e8a036767acc8b5b097d8734456e6fe27f9ea9b99b1a700cc46e0f6",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongRuntimeLaunch.ps1",
+      "bytes": 3892,
+      "sha256": "eb5f9a5438bc176014ad82237949761cd12949b3393bc53531159317a54ea19f",
+      "gitBlobSha256": "0b245454b29c552be9c0869e2cd16c2ca159ffebfb324bacc1204671ad849f21",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "eb5f9a5438bc176014ad82237949761cd12949b3393bc53531159317a54ea19f",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongRuntimeGuardian.ps1",
+      "bytes": 10403,
+      "sha256": "c7a948afbeaa632d960c4f35d96cd4b2b660c81fb6e36a4f8e68f9f31194daef",
+      "gitBlobSha256": "528abbd00bcfcc4a89492e2ee0de130196b71f63d8956f6636c27afd2117c910",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "c7a948afbeaa632d960c4f35d96cd4b2b660c81fb6e36a4f8e68f9f31194daef",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongRuntimeSecurity.mjs",
+      "bytes": 6571,
+      "sha256": "afdd5d8f34ccc3eda61ee22ea3982f593bd08b407be67fd92fd1d2a7846b4ec5",
+      "gitBlobSha256": "d2762f51aabaadf9a35095a8e4dfd0c10b4a042568b461a186e714edc666edca",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "afdd5d8f34ccc3eda61ee22ea3982f593bd08b407be67fd92fd1d2a7846b4ec5",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongRuntimeSecurity.ps1",
+      "bytes": 9555,
+      "sha256": "74c9f5b0cb6aefdd26b63c40ef89934cc4c659123aa6af3fae4564fdd1f62faa",
+      "gitBlobSha256": "9d895570d5ba0943b0c58d86ebb1ec17c287e95635625ff71e89e66236036835",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "74c9f5b0cb6aefdd26b63c40ef89934cc4c659123aa6af3fae4564fdd1f62faa",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongLoginRuntime.ps1",
+      "bytes": 11324,
+      "sha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+      "gitBlobSha256": "da74feac0547133ddf0a672a621424f949345dc95e9df7833f62842e74ba0fde",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongLoginRecovery.mjs",
+      "bytes": 9526,
+      "sha256": "86e079dea24e4a4fb1aa4f45a1ce24b15c8ba81b0261206e1eb72963c510268f",
+      "gitBlobSha256": "2d9ba2e7d32038b64eeef3561184060443510cf5f8178feb9933724872419ae7",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "86e079dea24e4a4fb1aa4f45a1ce24b15c8ba81b0261206e1eb72963c510268f",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongProductionProfile.mjs",
+      "bytes": 14746,
+      "sha256": "f1488670258fa3a713c095ec53ac823e933de6321e75a9cc26b5b440c952abb4",
+      "gitBlobSha256": "d285146bf4fe9cf3689da164b5ce0f61395ca9ad25b932d36f47856ec2687cd7",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "f1488670258fa3a713c095ec53ac823e933de6321e75a9cc26b5b440c952abb4",
+      "matchesPinnedBytes": true
+    },
+    {
+      "file": "TongLoginHost.cs",
+      "bytes": 2750,
+      "sha256": "c30f4f2f7bb1aa23db8ce367f435a9f7ec1653486f15a34b47fc4f394f361431",
+      "gitBlobSha256": "1d3358bb3fd3e60b0910f92012c91e1df19234108adf17b1bef67e1f4efef20f",
+      "byteIdentical": false,
+      "lineEndingNormalizedEqual": true,
+      "pinnedSha256": "c30f4f2f7bb1aa23db8ce367f435a9f7ec1653486f15a34b47fc4f394f361431",
+      "matchesPinnedBytes": true
+    }
+  ],
+  "historicalComparison": {
+    "v1": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "v2": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "files": [
+      {
+        "path": "scripts/TongAgentDockRuntime.mjs",
+        "v1Sha256": "f609d906e7025ab64be872b94398c4a57f04dceefb2a25c8b4d0b8cee3f7924e",
+        "v2Sha256": "f609d906e7025ab64be872b94398c4a57f04dceefb2a25c8b4d0b8cee3f7924e",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongRuntimeLaunch.ps1",
+        "v1Sha256": "0b245454b29c552be9c0869e2cd16c2ca159ffebfb324bacc1204671ad849f21",
+        "v2Sha256": "0b245454b29c552be9c0869e2cd16c2ca159ffebfb324bacc1204671ad849f21",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongRuntimeGuardian.ps1",
+        "v1Sha256": "528abbd00bcfcc4a89492e2ee0de130196b71f63d8956f6636c27afd2117c910",
+        "v2Sha256": "528abbd00bcfcc4a89492e2ee0de130196b71f63d8956f6636c27afd2117c910",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongRuntimeSecurity.mjs",
+        "v1Sha256": "d2762f51aabaadf9a35095a8e4dfd0c10b4a042568b461a186e714edc666edca",
+        "v2Sha256": "d2762f51aabaadf9a35095a8e4dfd0c10b4a042568b461a186e714edc666edca",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongRuntimeSecurity.ps1",
+        "v1Sha256": "9d895570d5ba0943b0c58d86ebb1ec17c287e95635625ff71e89e66236036835",
+        "v2Sha256": "9d895570d5ba0943b0c58d86ebb1ec17c287e95635625ff71e89e66236036835",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongLoginRuntime.ps1",
+        "v1Sha256": "da74feac0547133ddf0a672a621424f949345dc95e9df7833f62842e74ba0fde",
+        "v2Sha256": "da74feac0547133ddf0a672a621424f949345dc95e9df7833f62842e74ba0fde",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongLoginRecovery.mjs",
+        "v1Sha256": "2d9ba2e7d32038b64eeef3561184060443510cf5f8178feb9933724872419ae7",
+        "v2Sha256": "2d9ba2e7d32038b64eeef3561184060443510cf5f8178feb9933724872419ae7",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongProductionProfile.mjs",
+        "v1Sha256": "d285146bf4fe9cf3689da164b5ce0f61395ca9ad25b932d36f47856ec2687cd7",
+        "v2Sha256": "d285146bf4fe9cf3689da164b5ce0f61395ca9ad25b932d36f47856ec2687cd7",
+        "gitBytesIdentical": true
+      },
+      {
+        "path": "scripts/TongLoginHost.cs",
+        "v1Sha256": "1d3358bb3fd3e60b0910f92012c91e1df19234108adf17b1bef67e1f4efef20f",
+        "v2Sha256": "1d3358bb3fd3e60b0910f92012c91e1df19234108adf17b1bef67e1f4efef20f",
+        "gitBytesIdentical": true
+      }
+    ]
+  }
+}

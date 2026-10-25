@@ -1,0 +1,19 @@
+{
+  "taskDefinitionRetained": true,
+  "mutexReleased": true,
+  "ngrokServiceChanged": false,
+  "doctorProbed": false,
+  "productDeployed": false,
+  "taskEnabled": false,
+  "remaining": "Native administrator interaction required; task intentionally paused per failure instructions",
+  "originalGateKey": "3025126315:89915392:3025673",
+  "ngrokCurrentState": "Running",
+  "businessOrCredentialFilesRestored": false,
+  "productionReady": false,
+  "hostUnchanged": true,
+  "status": "BLOCKED_LOCAL_UAC_NOT_COMPLETED",
+  "at": "2026-10-25T14:57:26.0124890Z",
+  "originalControlHashesAndPhysicalKeysUnchanged": true,
+  "taskInstances": 0,
+  "runtimePhase": "abnormal_exit"
+}

@@ -1,0 +1,292 @@
+{
+  "root": "D:\\Tong\\runtime",
+  "phase": "abnormal_exit",
+  "healthy": false,
+  "binaryHash": "bc1a7a35f1985e9f7827142577fc31bd4ca536e27252b08fc28c5ed636cf5e8d",
+  "security": {
+    "userSid": "<USER_IDENTITY>",
+    "items": [
+      {
+        "path": "D:\\Tong\\runtime",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": true,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\backend-state",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": true,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\workspace",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": true,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": false
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\tong-policy",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\tong-policy\\agentdock-operations",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\secrets",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\run",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\logs",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\temp",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      },
+      {
+        "path": "D:\\Tong\\runtime\\home",
+        "secure": true,
+        "ownerSid": "<USER_IDENTITY>",
+        "protected": false,
+        "ordinaryWriteDenied": true,
+        "method": "allow-SID enumeration with non-null canonical DACL",
+        "aces": [
+          {
+            "sid": "S-1-5-18",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "S-1-5-32-544",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          },
+          {
+            "sid": "<USER_IDENTITY>",
+            "type": "Allow",
+            "rights": "FullControl",
+            "inherited": true
+          }
+        ]
+      }
+    ]
+  },
+  "health": null
+}

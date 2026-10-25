@@ -1,0 +1,1674 @@
+{
+  "schemaVersion": 1,
+  "collectionDate": "2026-10-26",
+  "incidentDateUtc": "2026-10-25",
+  "maintenanceRoot": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08",
+  "scope": "All 61 files present under the maintenance root, plus 16 explicitly listed related source/log/context files. No database or credential envelope contents read.",
+  "sourceFileCount": 77,
+  "windowFileCount": 61,
+  "originalsRemainInPlace": true,
+  "hashAlgorithm": "SHA-256",
+  "hashNotice": "originalSha256 hashes original bytes; publicFiles SHA hashes transformed bytes and will normally differ. Gate FileKey values originate from saved maintenance evidence, not a new native file-id probe.",
+  "files": [
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.admin.before.json",
+      "relativePath": "audit.admin.before.json",
+      "originalBytes": 9104,
+      "originalSha256": "fbd680be937070cc90a36c7ecc1796403b9b180839bf77c3f3384a9b071c5686",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.admin.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:19:51.507Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.admin.before.json",
+          "bytes": 8793,
+          "sha256": "db9222af3f56bd093da1fd9a1f1a8d3b786d32f6099904d1a93449dd17787211"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.before.json",
+      "relativePath": "audit.before.json",
+      "originalBytes": 6629,
+      "originalSha256": "68e3dda63cd3492a95a33cc204198f04ffd29b8abbd632f5799c9681a67f0b12",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:52:37.796Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.before.json",
+          "bytes": 8985,
+          "sha256": "8b3bd4ea80262654950d728ba871e0f03c06deb3603268d519c3ceee1c2c8ab2"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.failed-start.json",
+      "relativePath": "audit.failed-start.json",
+      "originalBytes": 6412,
+      "originalSha256": "4a42038f68790b86a793184c827a67adccc234e93de4cd3d463727fa809d3e17",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.failed-start.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:28:02.498Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.failed-start.json",
+          "bytes": 8679,
+          "sha256": "2b7d860d9f9405bf80bb053602b13433d3ccda0e968289bb72f6e45f50a20c10"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.post-host-pre-gate.json",
+      "relativePath": "audit.post-host-pre-gate.json",
+      "originalBytes": 6412,
+      "originalSha256": "b7155954e7bb91618e50af66f1d6cdc653f7c70f8ece5b9ebf984007f19120eb",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.post-host-pre-gate.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:23:55.022Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.post-host-pre-gate.json",
+          "bytes": 8679,
+          "sha256": "44982243c93eb0f7e9ecf6d0a545e6dcc7a6aa9870f5795b1a8c8cdf17eb1d66"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.post-rollback-ngrok-stopped.json",
+      "relativePath": "audit.post-rollback-ngrok-stopped.json",
+      "originalBytes": 6412,
+      "originalSha256": "c699618932a2b0e781e6600ec3bbc4b83315aef91c5fd67a20431a65427ad855",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.post-rollback-ngrok-stopped.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:31:53.596Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.post-rollback-ngrok-stopped.json",
+          "bytes": 8679,
+          "sha256": "8b813e19cbd3bc25efa46a055fc9308e198f6538bed74b5239359b2d9fc6a41f"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.pre-handoff.json",
+      "relativePath": "audit.pre-handoff.json",
+      "originalBytes": 6412,
+      "originalSha256": "3c78436e81946b03ebcada67841456891ec5b33e89dc0687ef2f7c902a80e025",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.pre-handoff.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:21:42.746Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.pre-handoff.json",
+          "bytes": 8679,
+          "sha256": "f17e97fa954f5623dd739b3f7ef8e7e69b1f3b0a75188b10e0cf7c6645a22b6d"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\audit.resume-before.json",
+      "relativePath": "audit.resume-before.json",
+      "originalBytes": 6632,
+      "originalSha256": "9daf7eb002b3d7c9b9b097ec5233e2933277ca145310518d38a4281e8eecd3f6",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/audit.resume-before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:05:49.245Z",
+      "publicFiles": [
+        {
+          "path": "public/window/audit.resume-before.json",
+          "bytes": 8988,
+          "sha256": "b1ca3a9053ad95b3f74d3fb84d36050bad172b9d852a954342f5c6adb38f8f5e"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\blocked-local-uac.json",
+      "relativePath": "blocked-local-uac.json",
+      "originalBytes": 686,
+      "originalSha256": "0f4fc38d7276912155647b8df22f8c9391c2222fb2dea0f52bb2f6c4c6e4edab",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/blocked-local-uac.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:57:26.028Z",
+      "publicFiles": [
+        {
+          "path": "public/window/blocked-local-uac.json",
+          "bytes": 669,
+          "sha256": "101e7df1e691c01046de7212b8256f6d5ffb63696921fb998947d17e6fa6ed7a"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\control-archive.completed.json",
+      "relativePath": "control-archive.completed.json",
+      "originalBytes": 198,
+      "originalSha256": "ddf21d33afa1197c60b3ede2f56b3050707f4ff599dc756813fd419f3d0635b9",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/control-archive.completed.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:23:08.903Z",
+      "publicFiles": [
+        {
+          "path": "public/window/control-archive.completed.json",
+          "bytes": 192,
+          "sha256": "a99331a5870df28452fd8a6a530aae3db8faf2c3f07122bb06c648ad17cf66eb"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\control-originals.json",
+      "relativePath": "control-originals.json",
+      "originalBytes": 3158,
+      "originalSha256": "fa2a7e6008365848e1da00e1620a9df7efc3b7b6fc346ff1a508acccbfb4bcc4",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/control-originals.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:55:40.397Z",
+      "publicFiles": [
+        {
+          "path": "public/window/control-originals.json",
+          "bytes": 3078,
+          "sha256": "495ad5eebcd2cb1c07973435f7c3c89f6083118735ddb950b42130b8245a39a6"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\doctor.post-rollback.json",
+      "relativePath": "doctor.post-rollback.json",
+      "originalBytes": 5186,
+      "originalSha256": "2dfdc3114f68bef3e46bf2a042eaa9b5982a9c6a6386af45567187871b327785",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/doctor.post-rollback.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:32:05.638Z",
+      "publicFiles": [
+        {
+          "path": "public/window/doctor.post-rollback.json",
+          "bytes": 7851,
+          "sha256": "5fd7a4e94e8fae2f2e58589c45e3b4c68ffc1f25ffff04403fbcb698caf0ef82"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\entrypoints.admin.before.json",
+      "relativePath": "entrypoints.admin.before.json",
+      "originalBytes": 5848,
+      "originalSha256": "65abf736c3128856b501609902d8149ec5dbdc2ffb2daef5c511e2eb921a2031",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/entrypoints.admin.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:19:53.948Z",
+      "publicFiles": [
+        {
+          "path": "public/window/entrypoints.admin.before.json",
+          "bytes": 5679,
+          "sha256": "50dd782003a4090aba20b69d62a6e6bb38cbe632c76f48b36520c6a84dd9ddd4"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\entrypoints.before.json",
+      "relativePath": "entrypoints.before.json",
+      "originalBytes": 4540,
+      "originalSha256": "a34541310541fd22ec917744d3d24d85800f547dde14e3a81691a4b972c0a8a0",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/entrypoints.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:53:09.179Z",
+      "publicFiles": [
+        {
+          "path": "public/window/entrypoints.before.json",
+          "bytes": 5713,
+          "sha256": "a2197dc5b08319457934ab1edbb24eff3df22f3edd15b28addd4af9a9f43fc6a"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\environment.before.json",
+      "relativePath": "environment.before.json",
+      "originalBytes": 613,
+      "originalSha256": "485ba2f1d00bcb8210c696d197f4b83ea086a76e438b5cda5545410836f92095",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/environment.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:55:40.676Z",
+      "publicFiles": [
+        {
+          "path": "public/window/environment.before.json",
+          "bytes": 569,
+          "sha256": "31fc402f7f52e193feb7c8d9de05640661fb434519933fb42f49fee8397123c9"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\TongLoginHost.exe",
+      "relativePath": "failed-attempt/TongLoginHost.exe",
+      "originalBytes": 6656,
+      "originalSha256": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+      "rawBytesUploaded": false,
+      "contentIncluded": false,
+      "publication": "METADATA_ONLY",
+      "publicPaths": [],
+      "omissionReason": "Compiled executable is not uploaded; binary may contain opaque embedded data. Hash and size retained; reviewed external-Host hash is recorded in JSON evidence.",
+      "originalLastWriteUtc": "2026-10-25T07:45:19.129Z",
+      "publicFiles": []
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\control-index.json",
+      "relativePath": "failed-attempt/control-index.json",
+      "originalBytes": 3150,
+      "originalSha256": "3634da5d6224a154754fb8f4cc70386d2f887b71d79d362e49c30d4d619acba7",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/control-index.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:30:02.877Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/control-index.json",
+          "bytes": 3070,
+          "sha256": "8fd44f103352d3217affa32c0fe57080ab98092895c5db6b6a4ee59a530ae794"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\gate-binding.json",
+      "relativePath": "failed-attempt/gate-binding.json",
+      "originalBytes": 587,
+      "originalSha256": "ad8e3d463008e95338e6cc8fc5961581bab7e0ac8ec531a89713122de9cbeb5e",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/gate-binding.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:30:02.881Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/gate-binding.json",
+          "bytes": 575,
+          "sha256": "e5da68b6a70607a2ea583c0664619ee8d7158fc9b772f92dbdb456bcb4459576"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\logs\\host.failure.log",
+      "relativePath": "failed-attempt/logs/host.failure.log",
+      "originalBytes": 170,
+      "originalSha256": "e8e34523214f8cfb1626eff00796d035bd02219be5373c0be45cbd98be4d3385",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/failed-attempt/log-data/host.failure.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-17T14:07:28.937Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/log-data/host.failure.txt",
+          "bytes": 169,
+          "sha256": "dd4cb55dd959a237f33c2f6095fe3bda0197af34b3100566b868e0f9faed0763"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\logs\\host.stderr.log",
+      "relativePath": "failed-attempt/logs/host.stderr.log",
+      "originalBytes": 513,
+      "originalSha256": "ac2d760a1a30c3c58dd35111413ec263f385b5788a821bf99d7e00483440819d",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/failed-attempt/log-data/host.stderr.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:26:08.959Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/log-data/host.stderr.txt",
+          "bytes": 501,
+          "sha256": "efe3307efa833be0a2a0bf5c836c4e656d300d1b61073605b5493754f1138d5b"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\logs\\host.stdout.log",
+      "relativePath": "failed-attempt/logs/host.stdout.log",
+      "originalBytes": 1653,
+      "originalSha256": "d42499f7573f8048d2c6e9489c499a00d84feb8159d30a009e2fb389551412a7",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/failed-attempt/log-data/host.stdout.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-22T15:49:02.360Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/log-data/host.stdout.txt",
+          "bytes": 1634,
+          "sha256": "361dc004d2ffedf501cc44255397066e362fbc164a5ab15c17d92bd64d91e88c"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\logs\\lifecycle.jsonl",
+      "relativePath": "failed-attempt/logs/lifecycle.jsonl",
+      "originalBytes": 128668,
+      "originalSha256": "00e795447d21ee9fed79ca7c00f65fe7daa237bafdf6222242c6a9289493f28e",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSONL",
+      "publicPaths": [
+        "public/window/failed-attempt/log-data/lifecycle.jsonl"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-23T01:51:05.264Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/log-data/lifecycle.jsonl",
+          "bytes": 128668,
+          "sha256": "00e795447d21ee9fed79ca7c00f65fe7daa237bafdf6222242c6a9289493f28e"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\logs\\login-management.jsonl",
+      "relativePath": "failed-attempt/logs/login-management.jsonl",
+      "originalBytes": 18500,
+      "originalSha256": "309406f6042e31f14e0ffdaaa81d8157f7d4dc2a0c0c1ec92a25b610aeaf7380",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSONL",
+      "publicPaths": [
+        "public/window/failed-attempt/log-data/login-management.jsonl"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:26:08.954Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/log-data/login-management.jsonl",
+          "bytes": 18500,
+          "sha256": "309406f6042e31f14e0ffdaaa81d8157f7d4dc2a0c0c1ec92a25b610aeaf7380"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\logs\\login-management.log",
+      "relativePath": "failed-attempt/logs/login-management.log",
+      "originalBytes": 1263,
+      "originalSha256": "6201ba6372ce7767003648c85daab4e4d3a51450c02098c7b0d75464cdc810cb",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/failed-attempt/log-data/login-management.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:26:08.960Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/log-data/login-management.txt",
+          "bytes": 1263,
+          "sha256": "6201ba6372ce7767003648c85daab4e4d3a51450c02098c7b0d75464cdc810cb"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\abort.json",
+      "relativePath": "failed-attempt/run/abort.json",
+      "originalBytes": 126,
+      "originalSha256": "16fb5a99ccbe796278c72fd392073e4ae8d201b2792ab27a765833a706754834",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/abort.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:25:34.836Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/abort.json",
+          "bytes": 126,
+          "sha256": "16fb5a99ccbe796278c72fd392073e4ae8d201b2792ab27a765833a706754834"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\backup.freeze",
+      "relativePath": "failed-attempt/run/backup.freeze",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rawBytesUploaded": false,
+      "contentIncluded": false,
+      "publication": "METADATA_ONLY",
+      "publicPaths": [],
+      "omissionReason": "Zero-byte gate/evidence file has no content to publish. Original SHA256 and physical file keys remain in metadata; no lock artifact is recreated in the repository.",
+      "originalLastWriteUtc": "2026-10-25T15:25:05.796Z",
+      "publicFiles": []
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\backup.freeze.bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd.evidence",
+      "relativePath": "failed-attempt/run/backup.freeze.bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd.evidence",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rawBytesUploaded": false,
+      "contentIncluded": false,
+      "publication": "METADATA_ONLY",
+      "publicPaths": [],
+      "omissionReason": "Zero-byte gate/evidence file has no content to publish. Original SHA256 and physical file keys remain in metadata; no lock artifact is recreated in the repository.",
+      "originalLastWriteUtc": "2026-10-23T03:28:20.553Z",
+      "publicFiles": []
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\guardian.json",
+      "relativePath": "failed-attempt/run/guardian.json",
+      "originalBytes": 614,
+      "originalSha256": "383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/guardian.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-23T01:51:05.376Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/guardian.json",
+          "bytes": 554,
+          "sha256": "64aae9991716a40d609054430cbf39fb3d038008e406b67c90540347a40b1508"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\login-recovery-budget.json",
+      "relativePath": "failed-attempt/run/login-recovery-budget.json",
+      "originalBytes": 195,
+      "originalSha256": "0076c83c4c181299993ae15bf7b1b359b5a6fc31019fd231644a4948545b2a8e",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/login-recovery-budget.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:24:44.644Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/login-recovery-budget.json",
+          "bytes": 187,
+          "sha256": "3dc607755ee135adcb4f22d01d86a989a960b5ef7726a48d63f60a5850f34d44"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\request.json",
+      "relativePath": "failed-attempt/run/request.json",
+      "originalBytes": 194,
+      "originalSha256": "2438131c5c7543064ff040435380b0cb2481cbd2fcae05e3acc464d350bcb5d5",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/request.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:25:19.822Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/request.json",
+          "bytes": 179,
+          "sha256": "6c0d1b26328f813351b9161ff7fb301af98b9ab823b5763d0fba283c6dd088f2"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\runtime.json",
+      "relativePath": "failed-attempt/run/runtime.json",
+      "originalBytes": 6089,
+      "originalSha256": "4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/runtime.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-23T01:51:05.423Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/runtime.json",
+          "bytes": 3792,
+          "sha256": "bab8dd0971d368aa0746a6ae48b1094f434beec3e53cfd0ee87f3cdbebc412d6"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stale-reconciliation.9478371e-d0b2-4ccd-87ef-b71eb0cf65a8.json",
+      "relativePath": "failed-attempt/run/stale-reconciliation.9478371e-d0b2-4ccd-87ef-b71eb0cf65a8.json",
+      "originalBytes": 5013,
+      "originalSha256": "9222f5422da9cb905ac4cb6341a03f14c1095692bdb189952a8888507842dacf",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stale-reconciliation.9478371e-d0b2-4ccd-87ef-b71eb0cf65a8.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-16T16:34:14.305Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stale-reconciliation.9478371e-d0b2-4ccd-87ef-b71eb0cf65a8.json",
+          "bytes": 4022,
+          "sha256": "f2cb4d51fb895b247cfa30b245cf534aedead4de995f53d9effd4245ecbc3085"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stale-reconciliation.a3eff4db-0b39-4a10-9fb6-9a94a6176ace.json",
+      "relativePath": "failed-attempt/run/stale-reconciliation.a3eff4db-0b39-4a10-9fb6-9a94a6176ace.json",
+      "originalBytes": 5162,
+      "originalSha256": "f8a2dfc40f27ec666dce1d55edcf50da5f142385863fe50b129c50075cfdee6e",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stale-reconciliation.a3eff4db-0b39-4a10-9fb6-9a94a6176ace.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-22T12:16:44.347Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stale-reconciliation.a3eff4db-0b39-4a10-9fb6-9a94a6176ace.json",
+          "bytes": 4141,
+          "sha256": "88c3de63f88ebf910d379e09fb99683049cd4881ad314e0b82f76b1ffd9f68f2"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stale-reconciliation.a9fb1ddd-e68b-49ce-928a-69677ae286e5.archived-20261016-db1c58c8.json",
+      "relativePath": "failed-attempt/run/stale-reconciliation.a9fb1ddd-e68b-49ce-928a-69677ae286e5.archived-20261016-db1c58c8.json",
+      "originalBytes": 345,
+      "originalSha256": "3243235c3307dcd682d36db25e48479eb10518bb2d6e3596d30711d044dae630",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stale-reconciliation.a9fb1ddd-e68b-49ce-928a-69677ae286e5.archived-20261016-db1c58c8.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-15T14:23:44.652Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stale-reconciliation.a9fb1ddd-e68b-49ce-928a-69677ae286e5.archived-20261016-db1c58c8.json",
+          "bytes": 345,
+          "sha256": "3243235c3307dcd682d36db25e48479eb10518bb2d6e3596d30711d044dae630"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stale-reconciliation.db1c58c8-4fe2-4841-9abc-473b2a16f773.archived-20261017-3442cbb-14f6cd5c.json",
+      "relativePath": "failed-attempt/run/stale-reconciliation.db1c58c8-4fe2-4841-9abc-473b2a16f773.archived-20261017-3442cbb-14f6cd5c.json",
+      "originalBytes": 345,
+      "originalSha256": "14f6cd5c1b05ba5a364961dd55bd0786b69adca9843a03e5a2b255e0ebda1de6",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stale-reconciliation.db1c58c8-4fe2-4841-9abc-473b2a16f773.archived-20261017-3442cbb-14f6cd5c.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-16T11:10:57.446Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stale-reconciliation.db1c58c8-4fe2-4841-9abc-473b2a16f773.archived-20261017-3442cbb-14f6cd5c.json",
+          "bytes": 345,
+          "sha256": "14f6cd5c1b05ba5a364961dd55bd0786b69adca9843a03e5a2b255e0ebda1de6"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stale-reconciliation.ee703607-10b3-4ba5-b5ba-5e2e85a78dd8.json",
+      "relativePath": "failed-attempt/run/stale-reconciliation.ee703607-10b3-4ba5-b5ba-5e2e85a78dd8.json",
+      "originalBytes": 5021,
+      "originalSha256": "4951d904dae6360e101df762fe36da30307175500217ae28061b409051dd50b0",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stale-reconciliation.ee703607-10b3-4ba5-b5ba-5e2e85a78dd8.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-16T16:17:44.977Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stale-reconciliation.ee703607-10b3-4ba5-b5ba-5e2e85a78dd8.json",
+          "bytes": 4030,
+          "sha256": "f895c564cdf76e49915fe8bd4f8aee6fa4e867ea1fec60b86cd1c54629c7cb57"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stale-reconciliation.json",
+      "relativePath": "failed-attempt/run/stale-reconciliation.json",
+      "originalBytes": 345,
+      "originalSha256": "f7424b813e950a800bebe40adc9979bd9b4c3935d613462d630f3c9489dea5bb",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stale-reconciliation.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-16T15:40:06.386Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stale-reconciliation.json",
+          "bytes": 345,
+          "sha256": "f7424b813e950a800bebe40adc9979bd9b4c3935d613462d630f3c9489dea5bb"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-attempt\\run\\stop.json",
+      "relativePath": "failed-attempt/run/stop.json",
+      "originalBytes": 99,
+      "originalSha256": "31edce2a9ca467859717c94709aa1b2afa142734819216204d862e6734169549",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-attempt/run/stop.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-22T09:28:01.400Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-attempt/run/stop.json",
+          "bytes": 99,
+          "sha256": "31edce2a9ca467859717c94709aa1b2afa142734819216204d862e6734169549"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failed-run.native-proof.json",
+      "relativePath": "failed-run.native-proof.json",
+      "originalBytes": 131,
+      "originalSha256": "b545f38e94e50c08043ba384f11b801d5391fac8840d70f97d4cdbe20fed6fb9",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failed-run.native-proof.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:30:02.863Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failed-run.native-proof.json",
+          "bytes": 176,
+          "sha256": "6e73b15ca7b6f5f202007d1476e7efcedb47cf05d735fbae6cbe2e9cfeb8dd7d"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\failure-rollback.completed.json",
+      "relativePath": "failure-rollback.completed.json",
+      "originalBytes": 665,
+      "originalSha256": "48dea7e1945786c42ada74c5e710ad76fb72d5d92989dee6087b19fe2bd796fc",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/failure-rollback.completed.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:30:51.833Z",
+      "publicFiles": [
+        {
+          "path": "public/window/failure-rollback.completed.json",
+          "bytes": 649,
+          "sha256": "606143a3fc48d66d7458a465371c0b280fe0b605b6c3ef3c4c6d142ae9039bcd"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\files.pre-handoff.json",
+      "relativePath": "files.pre-handoff.json",
+      "originalBytes": 17883,
+      "originalSha256": "079b7f22f2a3c92c1008eb5d22d5612d192e760909a4fb96d4c1063a8c34fc4d",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_PROJECTION",
+      "publicPaths": [
+        "public/window/files.pre-handoff.json"
+      ],
+      "omissionReason": "Private authorization envelope filenames omitted; only aliased size/SHA metadata retained. No envelope contents were read.",
+      "originalLastWriteUtc": "2026-10-25T15:22:56.424Z",
+      "publicFiles": [
+        {
+          "path": "public/window/files.pre-handoff.json",
+          "bytes": 13814,
+          "sha256": "efda0a0885c5e6e09e458947795c7cfd0155beb89e2e61249cec486b661e65c7"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\gate-handoff.completed.json",
+      "relativePath": "gate-handoff.completed.json",
+      "originalBytes": 340,
+      "originalSha256": "7177e70ae6a05a2ce540b0e6cd9f5f9b2691e3272d9d8d506d61ee39ba78d334",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/gate-handoff.completed.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:24:34.981Z",
+      "publicFiles": [
+        {
+          "path": "public/window/gate-handoff.completed.json",
+          "bytes": 332,
+          "sha256": "396795eeba9d2d92ff744718910dde1333accd93816866410be6e3259ab0bf96"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\host-install.completed.json",
+      "relativePath": "host-install.completed.json",
+      "originalBytes": 301,
+      "originalSha256": "119cdbc53136b2a702d5058e5b997b84d4f957a3ec9ed34d86bf02d1f407dbba",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/host-install.completed.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:23:36.047Z",
+      "publicFiles": [
+        {
+          "path": "public/window/host-install.completed.json",
+          "bytes": 293,
+          "sha256": "965267eae9069811aa71d9907a9ca2e498c500aeab762624074401ebaedf9044"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\host.original.json",
+      "relativePath": "host.original.json",
+      "originalBytes": 128,
+      "originalSha256": "bcd57716e9eabef48165b634197f6278793115c4746913d46a873db46af5cceb",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/host.original.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:22:56.426Z",
+      "publicFiles": [
+        {
+          "path": "public/window/host.original.json",
+          "bytes": 126,
+          "sha256": "490c9d42ce5b9a074d7b86a649220de0accf867627b9f660d5366400424ceda3"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\local-recovery.final.json",
+      "relativePath": "local-recovery.final.json",
+      "originalBytes": 10128,
+      "originalSha256": "60386c7c984d56bb717d9a0a2101403b5db3ff72ced84d2006a4d3beeef415a3",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/local-recovery.final.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:32:05.641Z",
+      "publicFiles": [
+        {
+          "path": "public/window/local-recovery.final.json",
+          "bytes": 9164,
+          "sha256": "e6c6f8e6375afadd7d32768b17b00eb25f497574023e16e3e57ac7dfe5a5114e"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\maintenance.closed.failure.json",
+      "relativePath": "maintenance.closed.failure.json",
+      "originalBytes": 1456,
+      "originalSha256": "c41447a0f815c85368a8ac9810841b653c0c23d2225d1417e04330ee60a69ac2",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/maintenance.closed.failure.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:41:34.914Z",
+      "publicFiles": [
+        {
+          "path": "public/window/maintenance.closed.failure.json",
+          "bytes": 1419,
+          "sha256": "bbe1df354d34b47a344ceef2e2fcae5fd4f21facf304b9bb10ba2bb7a92a58d4"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok-guard-verification.json",
+      "relativePath": "ngrok-guard-verification.json",
+      "originalBytes": 811,
+      "originalSha256": "11564fafba72ace2946acc0d76f9c918ba0860b8a2d7d85b238ff4fde4884049",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok-guard-verification.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:11:42.908Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok-guard-verification.json",
+          "bytes": 790,
+          "sha256": "fd11f188f4ea9af76a6d6774bd13806ca93fcede7a60d483ad54adf8c78997e3"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok-window.before-time-fix.ps1",
+      "relativePath": "ngrok-window.before-time-fix.ps1",
+      "originalBytes": 5130,
+      "originalSha256": "11df89d05c0a8686b5143b40cc0e2d2d36c9b9d2b43e8bfb1f348ab7646f8c46",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/ngrok-window.before-time-fix.ps1.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:53:58.472Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok-window.before-time-fix.ps1.txt",
+          "bytes": 5094,
+          "sha256": "636616756054708bc5b2f00475dadded1efe14d87a5817b318f514764fd96bab"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok-window.ps1",
+      "relativePath": "ngrok-window.ps1",
+      "originalBytes": 5672,
+      "originalSha256": "02abe04dc86fd2c3a34a677f892caf2f2b4bb6f8bc99f6700a40bbd4eddf5d48",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/ngrok-window.ps1.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:11:07.527Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok-window.ps1.txt",
+          "bytes": 5636,
+          "sha256": "70905cb5255d7c83cfe0f3f31844603077d213a5a26c1bb2679232bc3f0dfe29"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.InspectStop.identity-refusal.result.json",
+      "relativePath": "ngrok.InspectStop.identity-refusal.result.json",
+      "originalBytes": 129,
+      "originalSha256": "c6821bffbd07ed7f6bd0fde4a2b9f0b9b8b840caa10b185b44b1e1a605b39fb8",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.InspectStop.identity-refusal.result.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:09:17.870Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.InspectStop.identity-refusal.result.json",
+          "bytes": 125,
+          "sha256": "925e7a4da67c667fae016e6216041b554bf6e8512da63e573ba1c3c07332fd9c"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.InspectStop.result.json",
+      "relativePath": "ngrok.InspectStop.result.json",
+      "originalBytes": 92,
+      "originalSha256": "ecd08cd455637ef13ec02d6919b6b91acb9c89b5cee4872b84acef4548b664c8",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.InspectStop.result.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:20:01.033Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.InspectStop.result.json",
+          "bytes": 89,
+          "sha256": "d507677284b1a6a83e6c87b23f2a7444c7352a1f2ccab2c7cd1cf5886827c94c"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.Restore.result.json",
+      "relativePath": "ngrok.Restore.result.json",
+      "originalBytes": 88,
+      "originalSha256": "7547b371338ec2ad68eab5f67868c3748f7879b0091eb48d6c71f63e78749aae",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.Restore.result.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:38:36.728Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.Restore.result.json",
+          "bytes": 85,
+          "sha256": "5f19be3dc585a0578fc2726875ae544974635a86c202d1700151e457a18dc56d"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.admin.before-stop.json",
+      "relativePath": "ngrok.admin.before-stop.json",
+      "originalBytes": 607,
+      "originalSha256": "b2a796cb702f54c8f8d8b04dda273ced1a2c149c4c353bd37bc13d03cddd510c",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.admin.before-stop.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:19:58.939Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.admin.before-stop.json",
+          "bytes": 589,
+          "sha256": "286cd91ec9b126d3e1f3b8154ce42ddaab31cd7160d859295cccdb1f8cd5cf35"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.admin.before.json",
+      "relativePath": "ngrok.admin.before.json",
+      "originalBytes": 607,
+      "originalSha256": "de7c6648aa30311e0ee64c58a91997f02e7eca3173dce499d2eae1b1dc46e440",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.admin.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:19:34.697Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.admin.before.json",
+          "bytes": 589,
+          "sha256": "c31cb0e9485e998c5953acc4d4828146c3e55e3d696c2a71619d28f34b64ff42"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.admin.identity-refusal.json",
+      "relativePath": "ngrok.admin.identity-refusal.json",
+      "originalBytes": 604,
+      "originalSha256": "e5befe032723990f595d2156baf92d3d872138abc7d69b01f62b67973c4bd643",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.admin.identity-refusal.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:09:17.862Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.admin.identity-refusal.json",
+          "bytes": 586,
+          "sha256": "99c26ef8eec2744b834a8e1fb7e422fa152113833b12ea7d0f3920c7a84869d5"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.admin.restored.json",
+      "relativePath": "ngrok.admin.restored.json",
+      "originalBytes": 604,
+      "originalSha256": "404b7b9ce1c057748cc2a362df4a170469e8a8adb6d956ae337a311d024e8d60",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.admin.restored.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:38:36.720Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.admin.restored.json",
+          "bytes": 586,
+          "sha256": "642d4233b537c0a36dbe1fc8adef1a51bdbf42746cde2cc320c3a37a619988a8"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\ngrok.stopped.json",
+      "relativePath": "ngrok.stopped.json",
+      "originalBytes": 171,
+      "originalSha256": "36b684bdffe75aa3388c355160872a35463c4ff001fa7f5d71c7de1a4462da39",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/ngrok.stopped.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:20:01.028Z",
+      "publicFiles": [
+        {
+          "path": "public/window/ngrok.stopped.json",
+          "bytes": 165,
+          "sha256": "112b0dbcea0a2e68c7c975cd9bd6000e99fb26b4969653e6efc83e394cd8460c"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\preflight.pre-handoff.json",
+      "relativePath": "preflight.pre-handoff.json",
+      "originalBytes": 202,
+      "originalSha256": "051877ea1454e518ba919274a2b1d63df97641c34c4f3923f040413b33cac946",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/preflight.pre-handoff.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:22:00.476Z",
+      "publicFiles": [
+        {
+          "path": "public/window/preflight.pre-handoff.json",
+          "bytes": 209,
+          "sha256": "eb5ae227e47b43ac145ad52c42f0cb2752164ad7b15cc95c4749830087016aa9"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\task-start.failure.json",
+      "relativePath": "task-start.failure.json",
+      "originalBytes": 133,
+      "originalSha256": "87a83cde39dec82e8a9237084af96e683c4e88223b92a866560a3f0eb3c5e31d",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/task-start.failure.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:26:09.956Z",
+      "publicFiles": [
+        {
+          "path": "public/window/task-start.failure.json",
+          "bytes": 129,
+          "sha256": "0dfef2e6d4d82de8969af8b942c446ede727e9a763ba3c4339cc88d7356f5dfb"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\task-start.requested.json",
+      "relativePath": "task-start.requested.json",
+      "originalBytes": 225,
+      "originalSha256": "2be66eb8e373c5e1f78f37ee0a402e67b167bd13a31de676d45103797c85251e",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/task-start.requested.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T15:24:35.047Z",
+      "publicFiles": [
+        {
+          "path": "public/window/task-start.requested.json",
+          "bytes": 219,
+          "sha256": "b35765c4a6a2b2a964c151595d21a5293818bba557609d785c38f59ffd2ff1c0"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\task.before.json",
+      "relativePath": "task.before.json",
+      "originalBytes": 103,
+      "originalSha256": "d1f31b8d50119a499e049831e5c7c5b08a6f2933e9a0cc1fa5c920e716fb82c2",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSON",
+      "publicPaths": [
+        "public/window/task.before.json"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:54:14.779Z",
+      "publicFiles": [
+        {
+          "path": "public/window/task.before.json",
+          "bytes": 99,
+          "sha256": "fc2fce9878b56a1bd0d69cd80ef4a0905143b04b59839b4758b8f1e5861ba26e"
+        }
+      ]
+    },
+    {
+      "sourceKind": "maintenance-window-file",
+      "originalPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-state2-71f18ee9-734c-48d1-b550-129af5c5fb08\\task.before.xml",
+      "relativePath": "task.before.xml",
+      "originalBytes": 1607,
+      "originalSha256": "925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_TEXT",
+      "publicPaths": [
+        "public/window/task.before.xml.txt"
+      ],
+      "omissionReason": null,
+      "originalLastWriteUtc": "2026-10-25T14:54:14.774Z",
+      "publicFiles": [
+        {
+          "path": "public/window/task.before.xml.txt",
+          "bytes": 1532,
+          "sha256": "2563aa25cee0cd06fd3903b2eb9af870cbfee412e09f70fc070bb26c0b244f75"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongAgentDockRuntime.mjs",
+      "originalBytes": 44995,
+      "originalSha256": "59bfef4b9e8a036767acc8b5b097d8734456e6fe27f9ea9b99b1a700cc46e0f6",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongAgentDockRuntime.mjs.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.398Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongAgentDockRuntime.mjs.txt",
+          "bytes": 44609,
+          "sha256": "f609d906e7025ab64be872b94398c4a57f04dceefb2a25c8b4d0b8cee3f7924e"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongRuntimeLaunch.ps1",
+      "originalBytes": 3892,
+      "originalSha256": "eb5f9a5438bc176014ad82237949761cd12949b3393bc53531159317a54ea19f",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongRuntimeLaunch.ps1.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.412Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongRuntimeLaunch.ps1.txt",
+          "bytes": 3845,
+          "sha256": "0b245454b29c552be9c0869e2cd16c2ca159ffebfb324bacc1204671ad849f21"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongRuntimeGuardian.ps1",
+      "originalBytes": 10403,
+      "originalSha256": "c7a948afbeaa632d960c4f35d96cd4b2b660c81fb6e36a4f8e68f9f31194daef",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongRuntimeGuardian.ps1.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.412Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongRuntimeGuardian.ps1.txt",
+          "bytes": 10300,
+          "sha256": "528abbd00bcfcc4a89492e2ee0de130196b71f63d8956f6636c27afd2117c910"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongRuntimeSecurity.mjs",
+      "originalBytes": 6571,
+      "originalSha256": "afdd5d8f34ccc3eda61ee22ea3982f593bd08b407be67fd92fd1d2a7846b4ec5",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongRuntimeSecurity.mjs.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.412Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongRuntimeSecurity.mjs.txt",
+          "bytes": 6481,
+          "sha256": "d2762f51aabaadf9a35095a8e4dfd0c10b4a042568b461a186e714edc666edca"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongRuntimeSecurity.ps1",
+      "originalBytes": 9555,
+      "originalSha256": "74c9f5b0cb6aefdd26b63c40ef89934cc4c659123aa6af3fae4564fdd1f62faa",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongRuntimeSecurity.ps1.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.412Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongRuntimeSecurity.ps1.txt",
+          "bytes": 9435,
+          "sha256": "9d895570d5ba0943b0c58d86ebb1ec17c287e95635625ff71e89e66236036835"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongLoginRuntime.ps1",
+      "originalBytes": 11324,
+      "originalSha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongLoginRuntime.ps1.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.405Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongLoginRuntime.ps1.txt",
+          "bytes": 11153,
+          "sha256": "da74feac0547133ddf0a672a621424f949345dc95e9df7833f62842e74ba0fde"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongLoginRecovery.mjs",
+      "originalBytes": 9526,
+      "originalSha256": "86e079dea24e4a4fb1aa4f45a1ce24b15c8ba81b0261206e1eb72963c510268f",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongLoginRecovery.mjs.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.405Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongLoginRecovery.mjs.txt",
+          "bytes": 9411,
+          "sha256": "2d9ba2e7d32038b64eeef3561184060443510cf5f8178feb9933724872419ae7"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongProductionProfile.mjs",
+      "originalBytes": 14746,
+      "originalSha256": "f1488670258fa3a713c095ec53ac823e933de6321e75a9cc26b5b440c952abb4",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongProductionProfile.mjs.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.408Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongProductionProfile.mjs.txt",
+          "bytes": 14543,
+          "sha256": "eeb71d68f03b29399b137737f988a320358393e56b337185409211a2d4089229"
+        }
+      ]
+    },
+    {
+      "sourceKind": "original-v2-source",
+      "originalPath": "D:\\Tong\\runtime\\releases\\manager\\scripts\\TongLoginHost.cs",
+      "originalBytes": 2750,
+      "originalSha256": "c30f4f2f7bb1aa23db8ce367f435a9f7ec1653486f15a34b47fc4f394f361431",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "GIT_V2_SOURCE_TEXT",
+      "publicPaths": [
+        "source/original-v2/TongLoginHost.cs.txt"
+      ],
+      "omissionReason": "CRLF normalized by selecting verified exact-v2 Git blob; any publication redaction is documented.",
+      "originalLastWriteUtc": "2026-10-22T03:57:22.405Z",
+      "publicFiles": [
+        {
+          "path": "source/original-v2/TongLoginHost.cs.txt",
+          "bytes": 2696,
+          "sha256": "1d3358bb3fd3e60b0910f92012c91e1df19234108adf17b1bef67e1f4efef20f"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-production-log",
+      "originalPath": "D:\\Tong\\runtime\\logs\\guardian.jsonl",
+      "originalBytes": 1446322,
+      "originalSha256": "3fdb39ef62dc44212fe1e5bd65dbfa9c22513eb5ff3d1c395483302abbf5e2d2",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_SELECTION",
+      "publicPaths": [
+        "public/related/guardian.selected.jsonl"
+      ],
+      "originalRecords": 7876,
+      "publishedRecords": 6,
+      "omissionReason": "Unrelated historical records and repetitive heartbeats omitted; original full-file metadata retained. No new-run Guardian/Supervisor events were found.",
+      "originalLastWriteUtc": "2026-10-23T01:51:05.429Z",
+      "publicFiles": [
+        {
+          "path": "public/related/guardian.selected.jsonl",
+          "bytes": 1092,
+          "sha256": "36d79f2a104c454a4ac69c72051e528ce2fb09dce9d7c324f792646e52879572"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-production-log",
+      "originalPath": "D:\\Tong\\runtime\\logs\\supervisor.jsonl",
+      "originalBytes": 5657,
+      "originalSha256": "0e7324b446beab29cc814752e95901164fa7dfaadf182c13e02fcd55d3d5ab38",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_JSONL",
+      "publicPaths": [
+        "public/related/supervisor.sanitized.jsonl"
+      ],
+      "originalRecords": 24,
+      "publishedRecords": 24,
+      "omissionReason": "Credential identifiers and user paths redacted.",
+      "originalLastWriteUtc": "2026-10-23T01:51:05.311Z",
+      "publicFiles": [
+        {
+          "path": "public/related/supervisor.sanitized.jsonl",
+          "bytes": 5657,
+          "sha256": "0e7324b446beab29cc814752e95901164fa7dfaadf182c13e02fcd55d3d5ab38"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-production-log",
+      "originalPath": "D:\\Tong\\runtime\\logs\\production.login-recovery.audit.jsonl",
+      "originalBytes": 38382,
+      "originalSha256": "20b008551be6a9a39ac4ecb924cc8fb1904aef8b5dad0d7cbeff9507fb66b7d3",
+      "rawBytesUploaded": false,
+      "contentIncluded": true,
+      "publication": "SANITIZED_SELECTION",
+      "publicPaths": [
+        "public/related/login-recovery.selected.jsonl"
+      ],
+      "originalRecords": 104,
+      "publishedRecords": 2,
+      "omissionReason": "Unrelated historical records and repetitive heartbeats omitted; original full-file metadata retained. No new-run Guardian/Supervisor events were found.",
+      "originalLastWriteUtc": "2026-10-25T15:26:08.279Z",
+      "publicFiles": [
+        {
+          "path": "public/related/login-recovery.selected.jsonl",
+          "bytes": 646,
+          "sha256": "bdf6ca8d23a0e1e876a4abada130f6880b4a789f2c2898fc73c40594b6edaba7"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-context-or-pin",
+      "originalPath": "D:\\Tong\\development\\tong-024-startup-recovery\\docs\\TongCurrentWindowsRecovery.md",
+      "originalBytes": 23498,
+      "originalSha256": "16fe0daeb49c0aed687d9b26593af706174d6d9813958c94dcb3a422350aa265",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "SANITIZED_CONTEXT",
+      "publicPaths": [
+        "context/pre-maintenance-runbook.sanitized.md"
+      ],
+      "omissionReason": "Historical context; identity and authorization identifiers redacted.",
+      "originalLastWriteUtc": "2026-10-25T14:12:17.210Z",
+      "publicFiles": [
+        {
+          "path": "context/pre-maintenance-runbook.sanitized.md",
+          "bytes": 23569,
+          "sha256": "7dfeba3917657796c5bb80e63beb6844fb4d25ee30218fb0a148e583851b9261"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-context-or-pin",
+      "originalPath": "D:\\Tong\\development\\tong-024-startup-recovery\\docs\\evidence\\024-state-only-recovery-20261025.json",
+      "originalBytes": 6560,
+      "originalSha256": "a7abbf170fb2519eb537825602b9e02cf9e19fbb0f09b9ed92e287ca21064a8a",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "SANITIZED_CONTEXT",
+      "publicPaths": [
+        "context/isolation-only-evidence.json"
+      ],
+      "omissionReason": "Historical context; identity and authorization identifiers redacted.",
+      "originalLastWriteUtc": "2026-10-25T14:12:17.211Z",
+      "publicFiles": [
+        {
+          "path": "context/isolation-only-evidence.json",
+          "bytes": 6602,
+          "sha256": "04c29d6f6505e88f595f6d41c0635d4d0589b3b4a00af136d91d0a7223ae6847"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-context-or-pin",
+      "originalPath": "D:\\Tong\\runtime\\run\\release-pin.json",
+      "originalBytes": 110871,
+      "originalSha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "PIN_METADATA_PROJECTION",
+      "publicPaths": [
+        "context/release-pin.summary.json"
+      ],
+      "omissionReason": "Full release manifest replaced by commit, hash, counts and critical source bindings.",
+      "originalLastWriteUtc": "2026-10-22T09:29:29.340Z",
+      "publicFiles": [
+        {
+          "path": "context/release-pin.summary.json",
+          "bytes": 1866,
+          "sha256": "da1b8f335e029d22b521839141197cb529e6d13001412c98023eddbee96bbc9a"
+        }
+      ]
+    },
+    {
+      "sourceKind": "related-context-or-pin",
+      "originalPath": "D:\\Tong\\runtime\\run\\manager-pin.json",
+      "originalBytes": 110871,
+      "originalSha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+      "contentIncluded": true,
+      "rawBytesUploaded": false,
+      "publication": "PIN_METADATA_PROJECTION",
+      "publicPaths": [
+        "context/manager-pin.summary.json"
+      ],
+      "omissionReason": "Full release manifest replaced by commit, hash, counts and critical source bindings.",
+      "originalLastWriteUtc": "2026-10-22T09:29:16.202Z",
+      "publicFiles": [
+        {
+          "path": "context/manager-pin.summary.json",
+          "bytes": 1866,
+          "sha256": "da1b8f335e029d22b521839141197cb529e6d13001412c98023eddbee96bbc9a"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-25T15:11:42.8897100Z",
+  "parseErrors": 0,
+  "guardCases": [
+    "verified saved identity accepted",
+    "equivalent ISO precision accepted",
+    "initial rejects pid",
+    "initial rejects nativeExe",
+    "initial rejects cimCreationUtc",
+    "initial rejects processIdentityProven",
+    "initial rejects inventoryStatus",
+    "stable native exact ticks accepted alongside CIM precision",
+    "before-stop rejects nativeStartTicks",
+    "before-stop rejects pid",
+    "before-stop rejects nativeExe",
+    "before-stop rejects processIdentityProven",
+    "before-stop rejects inventoryStatus"
+  ],
+  "casesPassed": 13,
+  "serviceCommandsInvoked": false,
+  "productFilesChanged": false,
+  "helperHash": "02abe04dc86fd2c3a34a677f892caf2f2b4bb6f8bc99f6700a40bbd4eddf5d48"
+}

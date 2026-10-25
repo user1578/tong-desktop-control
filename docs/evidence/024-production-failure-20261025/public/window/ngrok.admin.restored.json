@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-25T15:38:36.60185Z",
+  "service": "ngrok",
+  "serviceState": 4,
+  "pid": 40764,
+  "scmStable": true,
+  "startMode": "Auto",
+  "account": "LocalSystem",
+  "requestedProcessAccess": "PROCESS_QUERY_LIMITED_INFORMATION",
+  "nativeError": 0,
+  "nativeExe": "D:\\Tong\\tools\\ngrok\\ngrok.exe",
+  "nativeStartTicks": "639285395135197149",
+  "cimParentPid": 2728,
+  "cimCreationUtc": "2026-10-25T15:38:33.519714Z",
+  "cimExeReadable": true,
+  "cimCommandLineReadable": true,
+  "processIdentityProven": true,
+  "inventoryStatus": "AVAILABLE",
+  "productionMutation": false
+}

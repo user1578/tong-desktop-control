@@ -1,0 +1,18 @@
+{
+  "businessDataRestored": false,
+  "at": "2026-10-25T15:30:51.8321542Z",
+  "failedAttemptControlsHostTempAndLogsRetained": true,
+  "runnerUnchanged": true,
+  "productionReady": false,
+  "mutexHeld": true,
+  "failedAttemptRunId": "be3f5c49-d824-4edd-b8fc-7ee70d7f9a00",
+  "originalHostHashAndPhysicalKeyRestored": true,
+  "originalGateRestoredFileKey": "3025126315:89915392:3025673",
+  "all16OriginalControlsHashesAndPhysicalKeysRestored": true,
+  "oldIncidentRunId": "74cd4ad3-f21b-40ec-96f5-3f9015649e5d",
+  "failure": "CLEANUP_REQUIRED",
+  "taskInstances": 0,
+  "taskEnabled": false,
+  "ngrokRestorePending": true,
+  "productInstalled": false
+}
