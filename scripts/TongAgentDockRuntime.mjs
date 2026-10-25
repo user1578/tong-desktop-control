@@ -5,6 +5,7 @@ import { createWriteStream, appendFileSync } from 'node:fs';
 import { join, resolve, isAbsolute, dirname, basename, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createConnection } from 'node:net';
+import { assertPortUnused } from './TongRuntimePort.mjs';
 import { once } from 'node:events';
 import { Transform } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
@@ -120,7 +121,7 @@ export async function updateRuntimeProfile(profile,{releaseRoot}={}){
   else if(previous.agentdockEnabled){await verifyRuntimeApproval(profile,'disable-agentdock');await recordApprovedEnabledState(profile);}
   await pinRuntimeRelease(profile,releaseRoot,{replace:true});await save(join(profile.root,'profile.json'),profile);return profile;
 }
-async function unused(port){await new Promise((ok,reject)=>{const socket=createConnection({host:'127.0.0.1',port});const timer=setTimeout(()=>{socket.destroy();reject(fail('PORT_CHECK_FAILED'));},1000);socket.once('connect',()=>{clearTimeout(timer);socket.destroy();reject(fail('PORT_OCCUPIED'));});socket.once('error',error=>{clearTimeout(timer);socket.destroy();error.code==='ECONNREFUSED'?ok():reject(fail('PORT_CHECK_FAILED'));});});}
+async function unused(port){await assertPortUnused(port);}
 async function freeze(root,{handoffId,profile,action}={}){if(handoffId!==undefined)return borrow024Handoff(root,{sessionId:handoffId,profile,action});try{return await open(join(root,'run','backup.freeze'),'wx');}catch{throw fail('RUNTIME_BUSY');}}
 async function releaseFreeze(root,handle){if(is024Borrowed(handle))return handle.close();await handle.close();await unlink(join(root,'run','backup.freeze'));}
 export async function initializeRuntime({root,tongRoot,withTong=false,gatewayPort=17876,upstreamPort=17877}) {
