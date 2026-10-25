@@ -1,5 +1,7 @@
 # Tong 1号版本恢复准备（2026-10-25）
 
+> 最新恢复路线见 [当前Windows最小操作单](TongCurrentWindowsRecovery.md)：先保留原版2号，通过原生门槛后受控保留旧锁/事故原件，正式Task自行启动；不继续WinRE/方案B。本文的1号验收证据继续有效，下文现场状态属于当时观察。
+
 > 本文保留接手提交 `9850e1a80912ec18d80112544a7ab524d4798365` 的原始验收结论；其中“尚无新备份/中断回退验收”的状态已由 [一次性离线恢复操作单](TongStable1OfflineRecovery.md) 更新。原有原生验收未重复；生产仍为 NOT READY，未执行回退。
 
 **NOT READY。1号原版在当前 Windows 隔离环境可运行；生产回退条件尚未具备，禁止执行生产回滚。** 本轮仅修改指定开发分支的验收测试和本文，生产只读。停止扩展方案B和3号，不部署5362210，不修改main。
@@ -73,7 +75,7 @@ App及Manager当前均验证为2号：283源码/23原生；双pin摘要均为 `4
 
 正式 `TongLoginRuntime` Enabled/Ready，0实例，LastTaskResult=1，XML SHA256 `925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3`。未发现生产Host/runner。ngrok为Running/Auto，PID40452；exe/命令行不可读，完整库存仍返回SECURITY_UNAVAILABLE，不把SCM PID当作完整身份。历史MONITOR_FAILED原因保持UNKNOWN。
 
-1号与2号的Runtime、Security、Guardian、Launcher、StartupProtocol、Login Host/runner、生产profile/授权/业务备份源码逐字节相同（定向git diff退出0）。**单独替换为1号不会解决旧freeze或缺失清理证明。** 1号使用 `open(backup.freeze,'wx')`，没有方案B的继承/借用持续gate协议，不能把3号Handoff安装链直接用于1号。
+纠正精确提交比较：1号与2号的Runtime、Security、Guardian、Launcher、Login Host/runner、生产profile/授权/业务备份源码逐字节相同；`TongStartupProtocol.ps1` 在两个原版中均不存在，不能将“两个文件不存在”算成相同blob。原版没有开发分支新增的Launcher终态回执/containment断言。单独替换为1号仍需安全处理现场freeze，但缺失新增格式的证明不能直接判定原版无法启动。两版均使用 `open(backup.freeze,'wx')`，不能借用3号Handoff协议；本轮原版2号状态恢复的正向实测及限定交接见最新操作单。
 
 业务只读结果：1号项目注册解析器接受当前11项注册；1号可信授权策略解析器接受当前3个development grants；29个任务满足1号任务文档谓词，当前queued/running=0。4个goal中2个blocked，1号不支持goal supervisor，应完整保留文件并停止自动续接，不删改或转换。OAuth SQLite用readonly连接检查integrity=ok，27个schema对象。前后业务文件及数据库摘要相同。**这只是读取/格式兼容性，不是当前真实业务快照在1号下的恢复执行验收。** 1号release/profile不同，生产生命周期授权必须由用户在本机重新精确绑定，不能复制模拟授权或篡改旧密文。
 
