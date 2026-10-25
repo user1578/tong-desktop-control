@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile, mkdir, readdir, lstat, realpath, rename, open } from 'node:fs/promises';
 import { join, dirname, resolve, relative, sep } from 'node:path';
-import { connect } from 'node:net';
+import { assertPortUnused } from './TongRuntimePort.mjs';
 import {pathToFileURL} from 'node:url';
 import { validateProductionProfile, productionProfileDigest, verifyRuntimeApproval, runtimeApprovalPath, runtimeApprovalStore, readApprovedEnabledState, loadApprovedProfile } from './TongProductionProfile.mjs';
 import { verifyRuntimeCandidate } from './TongRuntimeCandidate.mjs';
@@ -88,12 +88,7 @@ async function quiescent(profile, runIds = [], known = []) {
   }
   const ports = [];
   for (const port of [profile.gatewayPort, profile.upstreamPort, profile.agentdockPort]) {
-    await new Promise((accept, reject) => {
-      const socket = connect({ host: '127.0.0.1', port, timeout: 1000 });
-      socket.once('connect', () => { socket.destroy(); reject(new Error('MAINTENANCE_PORT_BUSY')); });
-      socket.once('timeout', () => { socket.destroy(); reject(new Error('MAINTENANCE_PORT_UNKNOWN')); });
-      socket.once('error', error => { socket.destroy(); error.code === 'ECONNREFUSED' ? accept() : reject(new Error('MAINTENANCE_PORT_UNKNOWN')); });
-    }); ports.push({ port, free: true });
+    await assertPortUnused(port);ports.push({ port, free: true });
   }
   return { checkedAt: new Date().toISOString(), identities: identities.length, jobs, ports, inventoryComplete: true };
 }

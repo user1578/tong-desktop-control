@@ -4,7 +4,7 @@ import {spawn} from 'node:child_process';
 import {createServer} from 'node:net';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {open024Handoff,recover024Freeze} from '../scripts/Tong024Handoff.mjs';
 import {runMaintenanceTransaction,resumeMaintenanceTransaction} from '../scripts/TongMaintenanceTransaction.mjs';
 import {maintenanceFreeze,withMaintenanceFreeze} from '../scripts/TongLifecycleFreeze.mjs';
@@ -29,11 +29,12 @@ if(action==='run'){
   const enabled=join(runtimeApprovalStore(root),productionProfileDigest(profile)+'.enabled.dpapi.json');
   try{await lstat(enabled);await readApprovedEnabledState(profile);}catch(error){if(error.code!=='ENOENT')throw error;await recordApprovedEnabledState(profile);}
  }
- try{await lstat(metadata);await rename(metadata,join(root,'024-handoff-crash-fixture-before-'+release.candidate.slice(0,7)+'.json'));}catch(error){if(error.code!=='ENOENT')throw error;}
+ try{await lstat(metadata);await rename(metadata,join(root,'024-handoff-crash-fixture-before-'+release.candidate.slice(0,7)+'-'+randomUUID()+'.json'));}catch(error){if(error.code!=='ENOENT')throw error;}
  await writeFile(metadata,JSON.stringify(fx),{flag:'wx'});
- const evidence=join(root,'024-handoff-crash-evidence-'+release.candidate.slice(0,7));await mkdir(evidence);const results=[];
+ const evidence=join(root,'024-handoff-crash-evidence-'+release.candidate.slice(0,7)+'-'+randomUUID());await mkdir(evidence);const results=[];
  async function invoke(action,stage){const child=spawn(process.execPath,[script,action,root,evidence,stage],{windowsHide:true,stdio:['ignore','pipe','pipe']});let out='',err='';child.stdout.on('data',b=>out+=b);child.stderr.on('data',b=>err+=b);const code=await new Promise((ok,reject)=>{child.once('error',reject);child.once('close',ok);});await writeFile(join(evidence,stage+'-'+action+'.json'),JSON.stringify({code,stdout:out,stderr:err}),{flag:'wx'});results.push({stage,action,code,stdoutSha256:sha(out),stderrSha256:sha(err)});console.log(JSON.stringify({...results.at(-1),stdout:out,stderr:err}));return {code,events:out.trim().split(/\r?\n/).filter(Boolean).map(JSON.parse)};}
- for(const stage of ['start-failure','controller-crash']){
+ const stages=stage?[stage]:['start-failure','controller-crash'];assert.ok(stages.every(s=>['start-failure','controller-crash'].includes(s)));
+ for(const stage of stages){
   const installation=await invoke('install',stage);assert.equal(installation.code,71);
   const held=installation.events.find(e=>e.event==='installed_before_native_handoff');assert.ok(held);
   for(let n=0;n<100&&await processIdentity(held.holderPid);n++)await new Promise(ok=>setTimeout(ok,100));assert.equal(await processIdentity(held.holderPid),null);
@@ -44,7 +45,7 @@ if(action==='run'){
   assert.equal((await invoke('recover',stage)).code,0);
   await rename(txPath,join(evidence,stage+'.restored-transaction.json'));
  }
- const outcome={passed:true,root,evidence,candidate:release.candidate,baselineCommit:'024d5b0920d9ad8f1a2baf2e55640a5666ad4739',results,nativeReadyTreeKilledOnControllerExit:true,independentFreezeAndFullVersionRestore:true,productionExecutionAllowed:false};await writeFile(join(evidence,'outcome.json'),JSON.stringify(outcome,null,2),{flag:'wx'});console.log(JSON.stringify(outcome));
+ const outcome={passed:true,root,evidence,candidate:release.candidate,baselineCommit:'024d5b0920d9ad8f1a2baf2e55640a5666ad4739',results,nativeReadyTreeKilledOnControllerExit:stages.includes('controller-crash'),independentFreezeAndFullVersionRestore:true,productionExecutionAllowed:false};await writeFile(join(evidence,'outcome.json'),JSON.stringify(outcome,null,2),{flag:'wx'});console.log(JSON.stringify(outcome));
 }else{
  const fx=await json(metadata),evidence=argument;assert.equal(fx.root,root);assert.equal(fx.baselineProfile.mode,'production-simulation');
  if(action==='install'){
@@ -70,7 +71,7 @@ if(action==='run'){
    tx.candidateRunId=request.runId;tx.startedRunId=request.runId;tx.requestSha256=sha(bytes);tx.handoffEvidence={sessionId:prior.sessionId,snapshotSha256:observed.proof.snapshotSha256,nativeManagerExitCode:observed.status.exitCode};await writeFile(txPath,JSON.stringify(tx),{flush:true});
   }
   const restored=await resumeMaintenanceTransaction(fx.baselineProfile,{transactionId:tx.transactionId});assert.equal(restored.verified,true);
-  const state=await withMaintenanceFreeze(fx.baselineProfile,{expectedSha256:sha('')},()=>restoreProductionStateBackup(fx.baselineProfile,{backupRoot:tx.backupRoot,restoreRoot:join(root,'024-native-state-restore-'+stage)}));assert.equal(state.encryptedBackup,true);
+  const state=await withMaintenanceFreeze(fx.baselineProfile,{expectedSha256:sha('')},()=>restoreProductionStateBackup(fx.baselineProfile,{backupRoot:tx.backupRoot,restoreRoot:join(root,'024-native-state-restore-'+stage+'-'+tx.transactionId)}));assert.equal(state.encryptedBackup,true);
   console.log(JSON.stringify({event:'actual_independent_handoff_restore',workerPid:process.pid,stage,...restored,nativeDpapiRestore:true,restoredState:state.restoreRoot}));
  }else throw Error('ISOLATION_ACTION_DENIED');
 }

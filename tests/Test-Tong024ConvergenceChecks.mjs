@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {readFile,lstat} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+import {verifyRelease} from '../scripts/TongRuntimeRelease.mjs';
+import {verifyRuntimeCandidate} from '../scripts/TongRuntimeCandidate.mjs';
+import {startupJobsState,processIdentity,sameProcess} from '../scripts/TongRuntimeSecurity.mjs';
+const candidate='24431b263ab1bc6ec17cca48f82245f72f197d4c',parent='90e3bc872989e63a6efe5bcef214e0489d54e052';
+const root=process.env.TONG_024_MONITOR_ROOT;assert.match(root??'',/^D:\\Tong\\state\\b23-login-[a-f0-9]{32}$/);
+const json=async p=>JSON.parse(await readFile(p)),sha=b=>createHash('sha256').update(b).digest('hex');
+const git=(...args)=>{const r=spawnSync('git',args,{encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
+assert.equal(git('rev-list','--parents','-n','1',candidate),candidate+' '+parent);
+assert.deepEqual(git('diff','--name-only',parent,candidate).split(/\r?\n/),['scripts/TongAgentDockRuntime.mjs','scripts/TongRuntimePort.mjs','scripts/TongRuntimePort.ps1']);
+for(const name of ['Tong024Handoff.mjs','Tong024Handoff.ps1','TongStartupProtocol.ps1','TongRuntimeLaunch.ps1'])assert.equal(git('show',candidate+':scripts/'+name),git('show',parent+':scripts/'+name));
+for(const file of ['scripts/TongRuntimePort.mjs','scripts/TongAgentDockRuntime.mjs','scripts/TongMaintenanceTransaction.mjs','tests/Test-Tong024MonitorRuntime.mjs','tests/Test-Tong024HandoffCrashRollback.mjs','tests/Test-Tong024PortProbe.mjs','tests/Test-Tong024HostEngine.mjs'])assert.equal(spawnSync(process.execPath,['--check',file]).status,0,file);
+const parse=spawnSync('C:\\Program Files\\PowerShell\\7\\pwsh.exe',['-NoLogo','-NoProfile','-NonInteractive','-Command',"$ErrorActionPreference='Stop';foreach($file in @('scripts/TongRuntimePort.ps1','tests/Test-Tong024HostPolicy.ps1','tests/Test-Tong024FormalMonitor.ps1','tests/Test-Tong024ZoneReadOnly.ps1')){$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile((Join-Path (Get-Location) $file),[ref]$tokens,[ref]$errors);if($errors.Count){throw ($errors|Out-String)}};if(-not ($true -or ($false -and $false))){throw 'RESTART_ASSERTION_BROKEN'}"],{encoding:'utf8'});assert.equal(parse.status,0,parse.stderr);
+const release=await json(process.argv[2]);assert.equal(release.candidate,candidate);assert.equal((await verifyRelease({releaseRoot:release.releaseRoot})).commit,candidate);assert.equal(sha(await readFile(join(release.releaseRoot,'release-manifest.json'))),release.releaseDigest);
+const profile=await json(join(root,'profile.json'));for(const manager of [false,true])assert.equal((await verifyRuntimeCandidate(profile,{manager,reviewedManagerProfile:{...profile,agentdockEnabled:false}})).commit,candidate);
+const record=await json(join(root,'run/runtime.json')),guardian=await json(join(root,'run/guardian.json'));assert.equal(record.phase,'stopped');assert.ok(Object.values(await startupJobsState(record.runId)).every(n=>n===0));for(const expected of [guardian,record.supervisor,...record.children,...record.descendants])assert.equal(sameProcess(await processIdentity(expected.pid),expected),false);await assert.rejects(lstat(join(root,'run/backup.freeze')),{code:'ENOENT'});
+const productionFiles=['D:\\Tong\\runtime\\profile.json','D:\\Tong\\runtime\\run\\backup.freeze','D:\\Tong\\runtime\\run\\release-pin.json','D:\\Tong\\runtime\\run\\manager-pin.json'];const before=await Promise.all(productionFiles.map(async p=>sha(await readFile(p))));
+for(const action of ['run','rollback']){const r=spawnSync(process.execPath,['scripts/Tong024ProductionMaintenance.mjs',action,'--root','D:\\Tong\\runtime','--error-json'],{encoding:'utf8'});assert.equal(r.status,1);assert.equal(JSON.parse(r.stderr).error,'MAINTENANCE_NOT_READY');}
+assert.deepEqual(await Promise.all(productionFiles.map(async p=>sha(await readFile(p)))),before);
+console.log(JSON.stringify({passed:true,candidate,parent,sourceDigest:release.sourceDigest,releaseDigest:release.releaseDigest,productFilesChanged:3,handoffProtocolUnchanged:true,appAndManagerVerified:true,finalStoppedRunId:record.runId,jobsEmpty:true,recordedIdentitiesGone:true,noResidualFreeze:true,productionRunAndRollbackRefused:true,productionFingerprintsUnchanged:true}));

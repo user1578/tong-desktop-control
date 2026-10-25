@@ -4,7 +4,8 @@ using System.IO;
 using System.Text;
 
 // /target:winexe prevents a console for the host itself. CreateNoWindow with
-// UseShellExecute=false prevents one for the unchanged, pinned PS5.1 runner.
+// UseShellExecute=false prevents one for the pinned runner. Use the installed
+// PowerShell 7 File entry; its normal execution policy and MOTW checks remain.
 internal static class TongLoginHost
 {
     [STAThread]
@@ -15,6 +16,8 @@ internal static class TongLoginHost
         {
             string runner = Path.Combine(directory, "TongLoginRuntime.ps1");
             if (!File.Exists(runner)) throw new FileNotFoundException("Login runner missing");
+            string shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"PowerShell\7\pwsh.exe");
+            if (!File.Exists(shell)) throw new FileNotFoundException("PowerShell 7 missing");
             using (var stdout = new StreamWriter(Path.Combine(directory, "host.stdout.log"), true, new UTF8Encoding(false)))
             using (var stderr = new StreamWriter(Path.Combine(directory, "host.stderr.log"), true, new UTF8Encoding(false)))
             using (var process = new Process())
@@ -23,7 +26,7 @@ internal static class TongLoginHost
                 stderr.AutoFlush = true;
                 process.StartInfo = new ProcessStartInfo
                 {
-                    FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe"),
+                    FileName = shell,
                     Arguments = "-NoLogo -NoProfile -NonInteractive -File \"" + runner + "\" -Mode run",
                     WorkingDirectory = Directory.GetParent(directory.TrimEnd(Path.DirectorySeparatorChar)).FullName,
                     UseShellExecute = false,
@@ -32,6 +35,13 @@ internal static class TongLoginHost
                     RedirectStandardError = true,
                     RedirectStandardInput = true
                 };
+                // Native Windows PowerShell helpers compile P/Invoke probes.
+                // Keep their scratch files in this reviewed deployment, rather
+                // than depending on a user-global Temp directory's permissions.
+                string temporary = Path.Combine(directory, "temp");
+                Directory.CreateDirectory(temporary);
+                process.StartInfo.EnvironmentVariables["TEMP"] = temporary;
+                process.StartInfo.EnvironmentVariables["TMP"] = temporary;
                 process.OutputDataReceived += (sender, e) => { if (e.Data != null) stdout.WriteLine(e.Data); };
                 process.ErrorDataReceived += (sender, e) => { if (e.Data != null) stderr.WriteLine(e.Data); };
                 process.Start();

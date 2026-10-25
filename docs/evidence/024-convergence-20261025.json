@@ -1,0 +1,1039 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-25T07:08:21.219Z",
+  "reviewBase": "a7c1aca74d13fbd8ece801deb9b0adcd237e495d",
+  "branch": "codex/024-maintenance-adapter-20261024",
+  "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "product": {
+    "candidate": "24431b263ab1bc6ec17cca48f82245f72f197d4c",
+    "parent": "90e3bc872989e63a6efe5bcef214e0489d54e052",
+    "releaseRoot": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\port-release-24431b2",
+    "releaseDigest": "1f6df39f5f0cfa3b4efb00c2954c5482058f4741ff511df3f2a8a5d9a7d28e33",
+    "sourceDigest": "edd525ba16f0ec170bdbe88c06cf8b21b439159c79ac5f1a0eb8469c41fb73ec",
+    "sourceFiles": 303,
+    "native": 23
+  },
+  "readiness": "NOT READY",
+  "productionExecutionAllowed": false,
+  "productionMutation": false,
+  "productionFullExecutionAndRollbackAvailable": false,
+  "rejectedCandidate": "34f0acb681f298d4b2e05b856fc83af0c7e6a0eb",
+  "toolFiles": [
+    {
+      "path": "scripts/TongAgentDockRuntime.mjs",
+      "sha256": "d7a91b5151c94a001cdd168a383caaddc823ac3ce52d247d020752eca645168e"
+    },
+    {
+      "path": "scripts/TongRuntimePort.mjs",
+      "sha256": "e8a046c698da0e283145aca1daeeab7e1c3579cc1eaec7f63dce1ebd02027be3"
+    },
+    {
+      "path": "scripts/TongRuntimePort.ps1",
+      "sha256": "770cbc554d076dd132dcec99e1c2b67b1ea2c45c7927b3db0c4ae5a4c07f8990"
+    },
+    {
+      "path": "scripts/TongLoginHost.cs",
+      "sha256": "9f1732d2e60de30d9effee0cf067db51dbaf3d4a3c2af805f176b66b6ae2cbbe"
+    },
+    {
+      "path": "scripts/TongMaintenanceTransaction.mjs",
+      "sha256": "f8aaf3b3bf92746dca40d8d2edb2c8e166580eeb782918aee13d540305e4ac92"
+    },
+    {
+      "path": "tests/Test-Tong024HandoffCrashRollback.mjs",
+      "sha256": "633e0d0f5102994f84bbe94ff149f0c63f9907294c8940361e286561a0ccde36"
+    },
+    {
+      "path": "tests/Test-Tong024ConvergenceChecks.mjs",
+      "sha256": "a6e7db429e7517906bf3b5967b5d511bfdd29fdc6d9ad4764d35050323148021"
+    },
+    {
+      "path": "tests/Test-Tong024FormalMonitor.ps1",
+      "sha256": "f914c06654f52b20023c11c322d1dd25ffc818525beaa76ef5f3c5182e30316e"
+    },
+    {
+      "path": "tests/Test-Tong024MonitorRuntime.mjs",
+      "sha256": "cf6d21b739e1ce927a0c521c7eade73aa21621035e0ee5c863abcf5769e17e3a"
+    },
+    {
+      "path": "tests/Test-Tong024HostPolicy.ps1",
+      "sha256": "ddafcc864d318800c5d7dc7061187f1dfef7a2b2ccf4fb27a059fc361bf28537"
+    },
+    {
+      "path": "tests/Test-Tong024HostEngine.mjs",
+      "sha256": "66770d5ad7a2a447b019628fb95e0edf58d30f387892f201ae8147f78e066707"
+    },
+    {
+      "path": "tests/Test-Tong024PortProbe.mjs",
+      "sha256": "bef8696f8fdd7929b54cb461d42485375d3882b1d322b8b7166355ca948a943c"
+    },
+    {
+      "path": "tests/Test-Tong024ZoneReadOnly.ps1",
+      "sha256": "54f5709ec6a2f997673c159f3e0edcaf49c70dcf0306c3c0b9262236f83ba270"
+    }
+  ],
+  "formalTask": {
+    "passed": true,
+    "deployment": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\monitor-6a3d156b-8850-49d0-8b4c-0dea762370b7",
+    "priorStoppedRunId": "e8b0e1fb-26d0-4eed-a408-ccf5f66f61a1",
+    "runnerSha256": "e4d4f37c85f6c271d2f87d6f0187fcf69fb65163893cf478c617082f22c7cf29",
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+    "hostSha256": "11aff7b3c03d449cc8a2729fd84d273dbdac9323aeb4da2c39cba4db22ebecfb",
+    "pinnedRunnerSha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+    "runs": [
+      {
+        "ignoreNew": true,
+        "runnerPid": 41592,
+        "periodicDoctorPid": 28784,
+        "periodicDoctorExit": 0,
+        "initialHealthy": true,
+        "hostPid": 33764,
+        "runId": "f3589f4f-306f-4188-a37f-b3b15ba3325d",
+        "taskExit": 0,
+        "runnerExe": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+        "concurrentDoctorHealthy": true,
+        "cycle": 1
+      }
+    ],
+    "productionMutation": false,
+    "candidate": "24431b263ab1bc6ec17cca48f82245f72f197d4c",
+    "runnerAdjustments": [
+      "isolated root",
+      "isolated SID mutex name"
+    ],
+    "task": "Tong024Acceptance-6a3d156b-8850-49d0-8b4c-0dea762370b7"
+  },
+  "controllerCrashRollback": {
+    "passed": true,
+    "root": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5",
+    "evidence": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5\\024-handoff-crash-evidence-24431b2-af56be52-da6a-47db-8f7c-27252c0a9ca0",
+    "candidate": "24431b263ab1bc6ec17cca48f82245f72f197d4c",
+    "baselineCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "results": [
+      {
+        "stage": "controller-crash",
+        "action": "install",
+        "code": 71,
+        "stdoutSha256": "b621e2401f2e543e0dbeb73a9f8697322ef37c760c1c756f3046d071b2cbea83",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "stage": "controller-crash",
+        "action": "control",
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      {
+        "stage": "controller-crash",
+        "action": "recover",
+        "code": 0,
+        "stdoutSha256": "f927b2d82658d071ad73c60b568fb121d6a1dc77ae485b9cee21166e1282defc",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "nativeReadyTreeKilledOnControllerExit": true,
+    "independentFreezeAndFullVersionRestore": true,
+    "productionExecutionAllowed": false
+  },
+  "startFailureIndependentFinish": {
+    "passed": true,
+    "workerPid": 38292,
+    "transactionId": "79ad9191-bdb6-4a9f-b676-785457b93a20",
+    "fullBaselineReverified": true,
+    "restoredState": "D:\\Tong\\state\\b23-maint-native-9b317b949460486f92ac4c2002304bf5\\024-native-state-restore-start-failure-79ad9191-bdb6-4a9f-b676-785457b93a20",
+    "nativeDpapiRestore": true,
+    "businessStateStagingOnly": true,
+    "productionMutation": false
+  },
+  "ngrok": {
+    "at": "2026-10-25T07:01:18.7453920Z",
+    "service": "ngrok",
+    "serviceState": 4,
+    "pid": 40452,
+    "scmStable": true,
+    "startMode": "Auto",
+    "account": "LocalSystem",
+    "requestedProcessAccess": "PROCESS_QUERY_LIMITED_INFORMATION",
+    "nativeError": 5,
+    "nativeExe": null,
+    "nativeStartTicks": null,
+    "cimParentPid": 2728,
+    "cimCreationUtc": "2026-10-23T03:27:46.4025660Z",
+    "cimExeReadable": false,
+    "cimCommandLineReadable": false,
+    "processIdentityProven": false,
+    "inventoryStatus": "SECURITY_UNAVAILABLE",
+    "productionMutation": false
+  },
+  "productionReadOnly": {
+    "at": "2026-10-25T07:01:17.5654343Z",
+    "productionBinding": {
+      "ports": [
+        7676,
+        7677,
+        18765
+      ],
+      "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+      "pins": [
+        {
+          "name": "release-pin.json",
+          "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+          "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+        },
+        {
+          "name": "manager-pin.json",
+          "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+          "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+        }
+      ],
+      "root": "D:\\Tong\\runtime",
+      "managerRoot": "D:\\Tong\\runtime\\releases\\manager",
+      "codeRoot": "D:\\Tong\\app",
+      "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+    },
+    "productionTask": {
+      "instances": 0,
+      "xmlSha256": "925671f84b50311377cdb2585eeadf3f87548e7de0124d786729321a0694a4f3",
+      "logonType": 3,
+      "runLevel": 0,
+      "enabled": true,
+      "action": "D:\\Tong\\runtime\\login-management\\TongLoginHost.exe",
+      "lastTaskResult": 1,
+      "multipleInstances": 2,
+      "state": 3,
+      "name": "TongLoginRuntime"
+    },
+    "policy": {
+      "policies": [
+        {
+          "policy": "Undefined",
+          "scope": "MachinePolicy"
+        },
+        {
+          "policy": "Undefined",
+          "scope": "UserPolicy"
+        },
+        {
+          "policy": "Undefined",
+          "scope": "Process"
+        },
+        {
+          "policy": "RemoteSigned",
+          "scope": "CurrentUser"
+        },
+        {
+          "policy": "Undefined",
+          "scope": "LocalMachine"
+        }
+      ],
+      "productionRunnerZone": "Internet"
+    },
+    "productionRunnerSignature": "NotSigned",
+    "productionRunnerStreams": [
+      ":$DATA"
+    ],
+    "currentUserCodeSigningCertCount": 0,
+    "matchingProductionMonitorProcesses": [],
+    "isolatedProbeTasks": [
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-26fa6cba-eb42-4058-9b3b-ec4d29e25c24",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-2a4677a1-d9f0-40bf-abd9-74246cecc582",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 0,
+        "name": "Tong024Acceptance-36edd458-3b4b-4221-88a4-99a45630fa1f",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-4f7c4df1-6203-45ea-8ea0-62eb93553e47",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-59cce095-cce9-42fd-9bcc-a182575eca04",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-63f79c84-c406-4f5d-8aa5-fda606ac9f32",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 0,
+        "name": "Tong024Acceptance-684f4450-884b-4b20-8b57-efd5f3ea12be",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 0,
+        "name": "Tong024Acceptance-6a3d156b-8850-49d0-8b4c-0dea762370b7",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 37,
+        "name": "Tong024Acceptance-6b319410-07b4-46d0-b811-0ffe2a8173d7",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-703596ef-c548-4a69-a7e4-5664549c63e7",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 2,
+        "name": "Tong024Acceptance-827449a1-3609-49a4-a06d-633109304aa0",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 0,
+        "name": "Tong024Acceptance-89b84737-ae64-4fbd-b06f-dc6495101ed6",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 1,
+        "name": "Tong024Acceptance-ca45a917-5ecd-499a-b935-4d6cb7cbe4be",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 0,
+        "name": "Tong024Acceptance-d156b335-674b-4396-b34a-73f99cfb789d",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      },
+      {
+        "lastTaskResult": 2,
+        "name": "Tong024Acceptance-daeee3cc-c99e-4f73-b134-7fb8826f4750",
+        "state": 1,
+        "enabled": false,
+        "instances": 0
+      }
+    ],
+    "productionMutation": false
+  },
+  "captures": [
+    {
+      "label": "converge-zone-readonly-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024ZoneReadOnly.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T05:49:28.799Z",
+      "durationMs": 2039,
+      "stdoutSha256": "abade942163904f262ef752bfa0083d9be400fbd1f2461e5ec58b835e084571f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-zone-readonly-20261025"
+    },
+    {
+      "label": "converge-zone-source-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024ZoneReadOnly.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T05:52:15.572Z",
+      "durationMs": 2120,
+      "stdoutSha256": "8ec823f96a3c385146467a5871da5fab14e0526b88bdd0f99e29a0ee8f7eb5e6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-zone-source-20261025"
+    },
+    {
+      "label": "converge-host-engine-red-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HostEngine.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T05:54:42.813Z",
+      "durationMs": 72,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "6a7e4d43ef33a3a290d40121bd0139409c68e00a4cdc54f0781ba8d5f1185b52",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-host-engine-red-20261025"
+    },
+    {
+      "label": "converge-task-host-pwsh7-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024TaskHost.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T05:54:56.206Z",
+      "durationMs": 2142,
+      "stdoutSha256": "645ce148ae5d1b7d6f74d2f53751b84f3b957ebe9deae87ab81ab88369d9b6db",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-task-host-pwsh7-20261025"
+    },
+    {
+      "label": "converge-formal-monitor-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024FormalMonitor.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T05:58:10.031Z",
+      "durationMs": 58371,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "54493ba52a8a6c134ed936535eefb7ee21e763d6424d9cec06fba506a3b5531f",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-monitor-20261025"
+    },
+    {
+      "label": "converge-host-policy-task-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024HostPolicy.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:02:15.031Z",
+      "durationMs": 1616,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "162a2835c9b9d755d186b55ec70cc73c44b0196f48e6aff1eeb8c656dcf0e3e2",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-host-policy-task-20261025"
+    },
+    {
+      "label": "converge-host-policy-task-r2-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024HostPolicy.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:02:59.364Z",
+      "durationMs": 1476,
+      "stdoutSha256": "64f7135c0c599a438583550405df85d861ea759db09ead66832c400e9558ba4f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-host-policy-task-r2-20261025"
+    },
+    {
+      "label": "converge-candidate-port-boundary-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024CandidatePortBoundary.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:06:11.528Z",
+      "durationMs": 9790,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "15c2d4e8f80be33e1af270f6e0856f827703b674f7f3f3e17476ca9f8c649c37",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-candidate-port-boundary-20261025"
+    },
+    {
+      "label": "converge-host-engine-green-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HostEngine.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:06:21.378Z",
+      "durationMs": 89,
+      "stdoutSha256": "a51b6900a0684f14fa2acdfb751085ec0ebfced9022db2e31ae4139b18db4f7e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-host-engine-green-20261025"
+    },
+    {
+      "label": "converge-port-probe-red-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024PortProbe.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:08:28.514Z",
+      "durationMs": 165,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "5635d3e87606d57591e29a961cb4300863106ba880231c8576b5f03094648622",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-port-probe-red-20261025"
+    },
+    {
+      "label": "converge-port-probe-green-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024PortProbe.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:08:41.921Z",
+      "durationMs": 153,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "f09783e16330e9eba33ba524f6d839cbb4dd5cfb58ca1a744be755b59f4a9e08",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-port-probe-green-20261025"
+    },
+    {
+      "label": "converge-port-probe-native-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024PortProbe.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:10:22.521Z",
+      "durationMs": 4640,
+      "stdoutSha256": "31986f8de97f0a0d2649fb868f53c1f095fa5f3505958c4ec0bda4fa2afe9b11",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-port-probe-native-20261025"
+    },
+    {
+      "label": "converge-candidate-build-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-candidate.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:11:08.756Z",
+      "durationMs": 507,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "21e87d53851bd1ffb50f0b10ae05f5f7b45ab9fb7bcf6ca260f8e889cab298c8",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-candidate-build-20261025"
+    },
+    {
+      "label": "converge-candidate-build-r2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-candidate.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:12:02.807Z",
+      "durationMs": 11196,
+      "stdoutSha256": "59ab0f788e2778c80de4ac979e1974eb6e83556b3e50a8d46b75c7407eaa478a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-candidate-build-r2-20261025"
+    },
+    {
+      "label": "converge-monitor-install-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-install-monitor.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:16:00.179Z",
+      "durationMs": 14240,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "1d92f089eed6ca9a4bfff45e67bcccbd467edf6a5bfc8e9df3efa0bf626a812e",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-monitor-install-20261025"
+    },
+    {
+      "label": "converge-formal-monitor-r2-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024FormalMonitor.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:17:29.548Z",
+      "durationMs": 1857,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "540b081174a234254f671834c917ebd164ac7c50221422fdd2c05eef00274926",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-monitor-r2-20261025"
+    },
+    {
+      "label": "converge-unwritten-holder-recovery-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-recover-unwritten.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:18:06.773Z",
+      "durationMs": 3734,
+      "stdoutSha256": "b494c53d091f19a39495f6374bd1fbd09d798c0c8669086b02c161e20a0751e8",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-unwritten-holder-recovery-20261025"
+    },
+    {
+      "label": "converge-monitor-install-r2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-install-monitor.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:18:10.568Z",
+      "durationMs": 23953,
+      "stdoutSha256": "90b8df03128a469a5b46230ccd6150b650cb4e40083aeca7cc149ece8265eca8",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-monitor-install-r2-20261025"
+    },
+    {
+      "label": "converge-formal-monitor-r3-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024FormalMonitor.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:21:25.454Z",
+      "durationMs": 45579,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "54493ba52a8a6c134ed936535eefb7ee21e763d6424d9cec06fba506a3b5531f",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-monitor-r3-20261025"
+    },
+    {
+      "label": "converge-start-diagnostic-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-start-diagnostic.mjs"
+      ],
+      "code": 2,
+      "signal": null,
+      "startedAt": "2026-10-25T06:25:40.341Z",
+      "durationMs": 15986,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "b9500ef386bf80ad8c624730d39c645e1257e14ac85d4a0114504fa47f9b9078",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-start-diagnostic-20261025"
+    },
+    {
+      "label": "converge-independent-90-restore-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-restore-monitor.mjs"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:28:05.097Z",
+      "durationMs": 462276,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e448161a6a264540f24948481306c22be2152e74c8f6e4dc75550012a6befe48",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-independent-90-restore-20261025"
+    },
+    {
+      "label": "converge-candidate-build-v2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-candidate.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:30:10.581Z",
+      "durationMs": 8005,
+      "stdoutSha256": "f1dabdf20244ccff29e1707a490faaeeeb17a8b0049920768efb3d66af9b6c2d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-candidate-build-v2-20261025"
+    },
+    {
+      "label": "converge-independent-90-auth-finish-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-finish-auth-restore.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:38:56.777Z",
+      "durationMs": 5192,
+      "stdoutSha256": "13a5b8c017a700c5753adb8b239c6d4ecd9de0a4054bc5fd99abcd1f02019858",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-independent-90-auth-finish-20261025"
+    },
+    {
+      "label": "converge-monitor-install-v2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-install-monitor.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:42:35.847Z",
+      "durationMs": 23160,
+      "stdoutSha256": "ec9f1d628f99415976184861cb419e3848f02e64fc30d7dfec3e516fc8ace51d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-monitor-install-v2-20261025"
+    },
+    {
+      "label": "converge-formal-monitor-v2-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024FormalMonitor.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:43:17.978Z",
+      "durationMs": 50048,
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "54493ba52a8a6c134ed936535eefb7ee21e763d6424d9cec06fba506a3b5531f",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-monitor-v2-20261025"
+    },
+    {
+      "label": "converge-cleanup-branch-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-cleanup-branch.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:45:03.646Z",
+      "durationMs": 10105,
+      "stdoutSha256": "9a227494604d6c7c127d446b72e7e193adcc51d68f5c6c065888b5035a52635c",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-cleanup-branch-20261025"
+    },
+    {
+      "label": "converge-task-cleanup-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "artifacts/024-native-review/converge-task-cleanup.ps1"
+      ],
+      "code": 2,
+      "signal": null,
+      "startedAt": "2026-10-25T06:46:06.027Z",
+      "durationMs": 5223,
+      "stdoutSha256": "153a85c8a464aadae94235b28f5e8fd57280ed36218db37ce7f4f471614202ee",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-task-cleanup-20261025"
+    },
+    {
+      "label": "converge-task-cleanup-pid-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "artifacts/024-native-review/converge-task-cleanup.ps1"
+      ],
+      "code": 2,
+      "signal": null,
+      "startedAt": "2026-10-25T06:46:49.203Z",
+      "durationMs": 5095,
+      "stdoutSha256": "c4889a542deacb36eecee5bc1c112917d9136ffb9d486e3fa1d27ecfee7c43a6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-task-cleanup-pid-20261025"
+    },
+    {
+      "label": "converge-task-job-error-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "artifacts/024-native-review/converge-task-cleanup.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:47:55.647Z",
+      "durationMs": 5766,
+      "stdoutSha256": "54b62dea3ea8f31c17a9e9f4c970dcc90e57c0cac5e0da315ea5599096d3a87f",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-task-job-error-20261025"
+    },
+    {
+      "label": "converge-task-ps51-compile-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "artifacts/024-native-review/converge-task-cleanup.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:48:27.361Z",
+      "durationMs": 6057,
+      "stdoutSha256": "fd94f3f067b72de7255bb12933627fed95c93c61e2adbcb1e4d82217793154e9",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-task-ps51-compile-20261025"
+    },
+    {
+      "label": "converge-formal-monitor-temp-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024FormalMonitor.ps1"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:49:56.400Z",
+      "durationMs": 246000,
+      "stdoutSha256": "0cc4982b28f379511d00719fdaaee365fbbc6d5a7c5f3ef51ea5367b6739a408",
+      "stderrSha256": "cf2cd442cc7a2a84ebb39efac39557f015f547eaf2da1a6db6536e560f2b0c31",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-monitor-temp-20261025"
+    },
+    {
+      "label": "converge-24431-install-crash-rollback-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffCrashRollback.mjs",
+        "run",
+        "from-env",
+        "artifacts/024-native-review/converge-candidate-v2.json"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:51:57.720Z",
+      "durationMs": 37676,
+      "stdoutSha256": "10f5c66b5fca8c308e43856d8190b064bb073dc8ec57a378531ef6161b12e629",
+      "stderrSha256": "730735b88e763b2ecb5104089c81c0eb0e4e75ab174cbe0a42493238e28bb3ae",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-24431-install-crash-rollback-20261025"
+    },
+    {
+      "label": "converge-24431-install-crash-rollback-r2-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffCrashRollback.mjs",
+        "run",
+        "from-env",
+        "artifacts/024-native-review/converge-candidate-v2.json"
+      ],
+      "code": 1,
+      "signal": null,
+      "startedAt": "2026-10-25T06:53:33.998Z",
+      "durationMs": 181375,
+      "stdoutSha256": "f28d91c68e7a885118617424d3c1182c38f1fd6d0a22bbbc8c4ccf3969ccb1fd",
+      "stderrSha256": "9ed776c359aefbc0f918a49fd5b166ca7578306b7e99015cc35b57a8119d5edd",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-24431-install-crash-rollback-r2-20261025"
+    },
+    {
+      "label": "converge-formal-cleanup-stop-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024MonitorRuntime.mjs",
+        "stop"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:54:16.025Z",
+      "durationMs": 36847,
+      "stdoutSha256": "d8eed50c7d49b86bbfbf8e07f2f5a22b5c751d714a771bc4583f170841b8703a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-cleanup-stop-20261025"
+    },
+    {
+      "label": "converge-formal-monitor-restart-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024FormalMonitor.ps1",
+        "-Cycles",
+        "1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:55:45.897Z",
+      "durationMs": 230901,
+      "stdoutSha256": "947ebc0d71e16ce441a204a30cfbbe448964a25ceb05afb9ec8e1262cc6aee5a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-formal-monitor-restart-20261025"
+    },
+    {
+      "label": "converge-24431-independent-state-finish-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "artifacts/024-native-review/converge-finish-state-restore.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:57:50.169Z",
+      "durationMs": 79602,
+      "stdoutSha256": "170c4667294f39307da8e5296588b1b9266d34f1224339db3119d80926c6402c",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-24431-independent-state-finish-20261025"
+    },
+    {
+      "label": "converge-24431-controller-crash-rollback-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024HandoffCrashRollback.mjs",
+        "run",
+        "from-env",
+        "artifacts/024-native-review/converge-candidate-v2.json",
+        "controller-crash"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T06:59:46.019Z",
+      "durationMs": 252064,
+      "stdoutSha256": "8b129704dea8534efaf6f2d45fed1674ad455314c0b9b702e1e1c2aa2f4b5532",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-24431-controller-crash-rollback-20261025"
+    },
+    {
+      "label": "converge-host-policy-final-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024HostPolicy.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T07:00:34.728Z",
+      "durationMs": 1759,
+      "stdoutSha256": "044f7f48db841cdb19d33585db1e922672e6e34b85271d7cb67ef640e85ad40e",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-host-policy-final-20261025"
+    },
+    {
+      "label": "converge-port-probe-final-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024PortProbe.mjs"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T07:00:36.546Z",
+      "durationMs": 5026,
+      "stdoutSha256": "d1674bb239b31baba90b4ee3590e98088a0b7431a710a44200d35258680a5b40",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-port-probe-final-20261025"
+    },
+    {
+      "label": "converge-production-monitor-readonly-final-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "tests/Test-Tong024MonitoringAudit.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T07:01:15.560Z",
+      "durationMs": 2562,
+      "stdoutSha256": "b4e1dd61d4b277a11410488bc50b0b63242e0424012ecee16b78d50cfc0ca8b4",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-production-monitor-readonly-final-20261025"
+    },
+    {
+      "label": "converge-ngrok-readonly-final-20261025",
+      "executable": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "scripts/Tong024NgrokIdentity.ps1"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T07:01:15.563Z",
+      "durationMs": 3369,
+      "stdoutSha256": "7b2df3a4d13386a5f62c8903392fd9adb0e07d963b84f9948c063313832be302",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-ngrok-readonly-final-20261025"
+    },
+    {
+      "label": "converge-final-checks-20261025",
+      "executable": "D:\\node\\node.exe",
+      "args": [
+        "tests/Test-Tong024ConvergenceChecks.mjs",
+        "artifacts/024-native-review/converge-candidate-v2.json"
+      ],
+      "code": 0,
+      "signal": null,
+      "startedAt": "2026-10-25T07:02:05.724Z",
+      "durationMs": 13368,
+      "stdoutSha256": "c6dfe95f98c731abb00864934d8a318dea6226a7cfab4070688687dc03189306",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-final-checks-20261025"
+    }
+  ],
+  "incompleteCaptures": [
+    {
+      "label": "converge-host-policy-enforced-20261025",
+      "evidence": "D:\\Tong\\development\\tong-024-startup-recovery\\artifacts\\024-native-review\\converge-host-policy-enforced-20261025",
+      "code": null,
+      "status": "no result.json; no completion or success claim"
+    }
+  ],
+  "limits": [
+    "Periodic runner doctor stdout was not read. Real child execution plus independent same-run healthy doctor verified.",
+    "Final formal task test ran Cycles=1; prior native run and independent controlled stop form the restart evidence.",
+    "DPAPI business restore is a verified separate staging directory, not production business path overlay.",
+    "No new native commit-intent/disarmed cold-stop or completed-boundary interruption acceptance.",
+    "Historical MONITOR_FAILED root remains UNKNOWN.",
+    "Wrong all-Node-samples-over-one-second assertion and adapter drafts withdrawn; failure logs retained.",
+    "Aborted Start-Process probe has no final result and is never counted as passing."
+  ]
+}
