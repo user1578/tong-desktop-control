@@ -1,0 +1,991 @@
+{
+  "observedAt": "2026-10-25T07:58:50.568Z",
+  "status": "NOT_READY",
+  "developmentBase": "8c9b4ff0afd3da57c7a3410abad3b498269a4c39",
+  "versions": {
+    "one": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "two": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "three": "24431b263ab1bc6ec17cca48f82245f72f197d4c"
+  },
+  "release": {
+    "root": "D:\\Tong\\state\\p27-autonomy-candidate-20261017\\quick-trust-release-37dc649",
+    "digest": "164f740171b8094133893dc8f0cc1ca2f60eb82b191d54b3607391b1eca63ed0",
+    "source": {
+      "path": "code/source.tar",
+      "size": 2928640,
+      "sha256": "c6393648f73e188a0194bc7bcaa28c2ca03c1a4f7283f3b46da5864d8a179d9e"
+    },
+    "sourceCount": 270,
+    "native": [
+      {
+        "path": "node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+        "size": 1919488,
+        "sha256": "e75b8c024a85179d8e0e51203a8b8867916e9a51327ce3953db5f8483cc9a91e"
+      },
+      {
+        "path": "node_modules/node-pty/build/Release/conpty/OpenConsole.exe",
+        "size": 1148448,
+        "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+      },
+      {
+        "path": "node_modules/node-pty/build/Release/conpty/conpty.dll",
+        "size": 109600,
+        "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
+        "size": 85496,
+        "sha256": "e6457d66f45af3facd02920a5b212164e80fe0bb758afe6e6eab1eceeba3fc9a"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/darwin-x64/pty.node",
+        "size": 52864,
+        "sha256": "edab585d5c5c7bf35143a7a53b7d72652e90723b5f9635dfd55b2333f7069198"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty/OpenConsole.exe",
+        "size": 1194024,
+        "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty/conpty.dll",
+        "size": 106528,
+        "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty.node",
+        "size": 302592,
+        "sha256": "25a06916c5cb1a3aac7acc401424d8e6a6a9e8eea441a3604cd657a0619555cd"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/conpty_console_list.node",
+        "size": 122368,
+        "sha256": "fda76b16afb3bf9a4de085c943b5fb4138ecbeb08e8254c09d5555ea5426bd4e"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/pty.node",
+        "size": 293376,
+        "sha256": "eae1266e3c34f4c7b67a756a6ff342b699847deaf29c944b7a6bed190ec61982"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/winpty-agent.exe",
+        "size": 286720,
+        "sha256": "9a5f66fbe444728988f51e8099d0d84c515945a1873dbbbec65aec6e07eac50a"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-arm64/winpty.dll",
+        "size": 236032,
+        "sha256": "0247b4d007fcb8059cc2221ec41d736fa548246ce1e10256c15c96d1ef6f2e9c"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/conpty/OpenConsole.exe",
+        "size": 1148448,
+        "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/conpty/conpty.dll",
+        "size": 109600,
+        "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/conpty.node",
+        "size": 312320,
+        "sha256": "ee8f4e6f4dad71939eecfda11de249400e34bfefe4c8b48af13f3b5476f4035b"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/conpty_console_list.node",
+        "size": 134656,
+        "sha256": "879dd94cfc79f1e263a00077597ae9448a5394b7d193381aaa50d992a1f91090"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/pty.node",
+        "size": 303104,
+        "sha256": "ae323edd0835ee7b9e18cc96a7b2bb4b8173ff768317d178af2788406feb71ff"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/winpty-agent.exe",
+        "size": 307712,
+        "sha256": "0c4834a0ab2a4f8c855a2f1db9b21fa6e5fc324ae8e3c82addd53d503d999825"
+      },
+      {
+        "path": "node_modules/node-pty/prebuilds/win32-x64/winpty.dll",
+        "size": 256000,
+        "sha256": "e1cb26d868c954ba26817bedf3e4a5744e4ca2030adf51a7156e5ff2fadb881b"
+      },
+      {
+        "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-arm64/OpenConsole.exe",
+        "size": 1194024,
+        "sha256": "b7763ba27e80d5e84f9e60d1368ec2ddb25dfd10283336c0c9f3f252d35cb2f8"
+      },
+      {
+        "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-arm64/conpty.dll",
+        "size": 106528,
+        "sha256": "b6cca5f1081111f59e5255eec043d924ebd11a86d09986c0d121b680540b3380"
+      },
+      {
+        "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/OpenConsole.exe",
+        "size": 1148448,
+        "sha256": "d1fe7faa62f9e955e2ac2371f95d7e5513df4d496255097158f979c94782c5fc"
+      },
+      {
+        "path": "node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/conpty.dll",
+        "size": 109600,
+        "sha256": "7c7430632052ff703540b68371ec43821820aa1335d8e11dfbcd9ff00e9daaed"
+      }
+    ],
+    "versions": {
+      "@waishnav/devspace": "1.0.8",
+      "@modelcontextprotocol/sdk": "1.32.1",
+      "better-sqlite3": "12.11.1",
+      "node-pty": "1.1.0"
+    },
+    "node": {
+      "executable": "D:\\node\\node.exe",
+      "version": "v24.15.0",
+      "abi": "137",
+      "platform": "win32",
+      "arch": "x64",
+      "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+    },
+    "expectedDevspaceHashes": {
+      "pi-tools.js": "d6f47e98e061217ded7e9df070a8d6db3d252eaafce258ca97e0d08071b5e13e",
+      "server.js": "3728cb946e8dc9f48bdb8d5adf4f878b537023543140df51d1aa2bc49d26f3ef",
+      "workspaces.js": "544ac1ae6bd15f6177ff269c5d5918763d2821e83421de54e435df4233ca418a"
+    },
+    "sourceGitBlobComparison": {
+      "passed": true,
+      "fileCount": 270,
+      "method": "git ls-tree -r exact SHA; git hash-object all archive source paths; arrays equal",
+      "verifiedBeforeIsolation": true
+    }
+  },
+  "prepare": {
+    "preparedAt": "2026-10-25T07:38:24.831Z",
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+    "release": "D:\\Tong\\state\\p27-autonomy-candidate-20261017\\quick-trust-release-37dc649",
+    "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "sourceFiles": 270,
+    "nativeFiles": 23,
+    "bindings": {
+      "app": {
+        "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+        "sourceDigest": "c6393648f73e188a0194bc7bcaa28c2ca03c1a4f7283f3b46da5864d8a179d9e",
+        "releaseDigest": "164f740171b8094133893dc8f0cc1ca2f60eb82b191d54b3607391b1eca63ed0",
+        "node": {
+          "executable": "D:\\node\\node.exe",
+          "version": "v24.15.0",
+          "abi": "137",
+          "platform": "win32",
+          "arch": "x64",
+          "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+        },
+        "verified": true
+      },
+      "manager": {
+        "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+        "sourceDigest": "c6393648f73e188a0194bc7bcaa28c2ca03c1a4f7283f3b46da5864d8a179d9e",
+        "releaseDigest": "164f740171b8094133893dc8f0cc1ca2f60eb82b191d54b3607391b1eca63ed0",
+        "node": {
+          "executable": "D:\\node\\node.exe",
+          "version": "v24.15.0",
+          "abi": "137",
+          "platform": "win32",
+          "arch": "x64",
+          "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+        },
+        "verified": true
+      }
+    },
+    "priorStoppedRunId": "f3589f4f-306f-4188-a37f-b3b15ba3325d",
+    "priorJobs": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    },
+    "sourceUnmodified": true,
+    "productionMutation": false,
+    "dependenciesReused": true,
+    "aclChanged": false
+  },
+  "commands": [
+    {
+      "action": "doctor",
+      "code": 0,
+      "began": "2026-10-25T07:40:30.794Z",
+      "finishedAt": "2026-10-25T07:40:44.611Z",
+      "phase": "ready",
+      "healthy": true,
+      "health": {
+        "agentdock": {
+          "authenticatedMcp": true,
+          "toolCount": 7
+        },
+        "tong": {
+          "discovery": true,
+          "unauthenticatedRejected": true
+        }
+      },
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrBytes": 0
+    },
+    {
+      "action": "start",
+      "code": 0,
+      "began": "2026-10-25T07:38:45.356Z",
+      "finishedAt": "2026-10-25T07:39:58.385Z",
+      "phase": "ready",
+      "runId": "84a19177-7be1-4ee7-8b75-b58aa1b89f0a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrBytes": 0
+    },
+    {
+      "action": "stop",
+      "code": 0,
+      "began": "2026-10-25T07:43:25.408Z",
+      "finishedAt": "2026-10-25T07:43:51.419Z",
+      "phase": "stopped",
+      "runId": "84a19177-7be1-4ee7-8b75-b58aa1b89f0a",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrBytes": 0
+    }
+  ],
+  "gateways": [
+    {
+      "passed": true,
+      "at": "2026-10-25T07:47:41.414Z",
+      "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+      "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+      "runId": "db23672d-7b27-4a0e-b0e4-39d3607432e4",
+      "unauthenticatedRejected": true,
+      "oauthPkce": true,
+      "mcpInitialize": true,
+      "tools": [
+        "edit",
+        "open_workspace",
+        "read",
+        "tong_agent_cancel",
+        "tong_agent_list",
+        "tong_agent_logs",
+        "tong_agent_result",
+        "tong_agent_resume",
+        "tong_agent_sessions",
+        "tong_agent_start",
+        "tong_agent_status",
+        "tong_agentdock_command",
+        "tong_agentdock_file_edit",
+        "tong_agentdock_list_dir",
+        "tong_agentdock_read_file",
+        "tong_agentdock_search_text",
+        "tong_agentdock_session_cancel",
+        "tong_agentdock_session_status",
+        "tong_delete_file",
+        "tong_dev_environment",
+        "tong_list_directory",
+        "tong_list_drives",
+        "tong_list_projects",
+        "tong_move_file",
+        "tong_run_command",
+        "tong_scan_directory",
+        "tong_windows_inspect",
+        "write"
+      ],
+      "toolCount": 28,
+      "upstreamOnlyTool": "tong_project_prepare",
+      "mcpFileWrite": true,
+      "mcpFileRead": true,
+      "retainedTestFile": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\tong\\demo-workspace\\stable1-3b36a294-13c2-4838-a948-67c4dc1eb541.txt",
+      "chatgptUiConnectionTested": false,
+      "codexSessionTested": false
+    },
+    {
+      "passed": true,
+      "at": "2026-10-25T07:42:53.724Z",
+      "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+      "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+      "runId": "84a19177-7be1-4ee7-8b75-b58aa1b89f0a",
+      "unauthenticatedRejected": true,
+      "oauthPkce": true,
+      "mcpInitialize": true,
+      "tools": [
+        "edit",
+        "open_workspace",
+        "read",
+        "tong_agent_cancel",
+        "tong_agent_list",
+        "tong_agent_logs",
+        "tong_agent_result",
+        "tong_agent_resume",
+        "tong_agent_sessions",
+        "tong_agent_start",
+        "tong_agent_status",
+        "tong_agentdock_command",
+        "tong_agentdock_file_edit",
+        "tong_agentdock_list_dir",
+        "tong_agentdock_read_file",
+        "tong_agentdock_search_text",
+        "tong_agentdock_session_cancel",
+        "tong_agentdock_session_status",
+        "tong_delete_file",
+        "tong_dev_environment",
+        "tong_list_directory",
+        "tong_list_drives",
+        "tong_list_projects",
+        "tong_move_file",
+        "tong_run_command",
+        "tong_scan_directory",
+        "tong_windows_inspect",
+        "write"
+      ],
+      "toolCount": 28,
+      "upstreamOnlyTool": "tong_project_prepare",
+      "mcpFileWrite": true,
+      "mcpFileRead": true,
+      "retainedTestFile": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\tong\\demo-workspace\\stable1-44416c76-01db-44f6-9688-405b5459e02e.txt",
+      "chatgptUiConnectionTested": false,
+      "codexSessionTested": false
+    }
+  ],
+  "native": [
+    {
+      "at": "2026-10-25T07:48:01.782Z",
+      "passed": false,
+      "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+      "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+      "executable": "C:\\Users\\Rune\\AppData\\Local\\OpenAI\\Codex\\bin\\a96ca4c1eee0cf35\\codex.exe",
+      "executableSha256": "e757246b4de87359e660647fa9514955a0971ff6a30affdd8c145d1d5ece7b84",
+      "turns": [
+        {
+          "threadId": "01a17206-0dea-7f92-b28c-b0e1fd47483d",
+          "turnId": "01a17206-186a-7162-b787-7892135eff84",
+          "turnStatus": "completed",
+          "summary": "TONG_STABLE1_NATIVE_NEW_OK"
+        }
+      ],
+      "sessionId": "01a17206-0dea-7f92-b28c-b0e1fd47483d",
+      "events": [
+        "stderr",
+        "status",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "stderr",
+        "error",
+        "stderr",
+        "error",
+        "stderr",
+        "error",
+        "stderr",
+        "error",
+        "stderr",
+        "agent",
+        "agent",
+        "agent",
+        "agent",
+        "agent",
+        "agent",
+        "agent",
+        "agent",
+        "stderr",
+        "stderr",
+        "stderr",
+        "status",
+        "stderr",
+        "stderr"
+      ],
+      "error": {
+        "name": "Error",
+        "message": "Codex App Server exited (SIGTERM)"
+      },
+      "throughGatewayBroker": false,
+      "productionMutation": false
+    },
+    {
+      "at": "2026-10-25T07:50:49.294Z",
+      "passed": true,
+      "resumeOnly": true,
+      "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+      "commit": "37dc649c46ad0e267c3471f750b97227cf106310",
+      "executable": "C:\\Users\\Rune\\AppData\\Local\\OpenAI\\Codex\\bin\\a96ca4c1eee0cf35\\codex.exe",
+      "executableSha256": "e757246b4de87359e660647fa9514955a0971ff6a30affdd8c145d1d5ece7b84",
+      "turns": [
+        {
+          "began": "2026-10-25T07:48:49.979Z",
+          "finishedAt": "2026-10-25T07:50:49.075Z",
+          "threadId": "01a17206-0dea-7f92-b28c-b0e1fd47483d",
+          "turnId": "01a17208-a964-7933-8e18-6f695a488920",
+          "turnStatus": "completed",
+          "summary": "TONG_STABLE1_NATIVE_RESUME_OK"
+        }
+      ],
+      "sessionId": "01a17206-0dea-7f92-b28c-b0e1fd47483d",
+      "events": [
+        {
+          "at": "2026-10-25T07:48:50.063Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:50.069Z",
+          "kind": "status"
+        },
+        {
+          "at": "2026-10-25T07:48:50.122Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:50.122Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:50.131Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:52.170Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:52.171Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:52.173Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:52.248Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:52.696Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:52.697Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:58.073Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:48:58.073Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:49:23.439Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:49:38.663Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:49:38.663Z",
+          "kind": "error"
+        },
+        {
+          "at": "2026-10-25T07:49:54.117Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:49:54.118Z",
+          "kind": "error"
+        },
+        {
+          "at": "2026-10-25T07:50:09.897Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:50:09.897Z",
+          "kind": "error"
+        },
+        {
+          "at": "2026-10-25T07:50:26.405Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:50:26.405Z",
+          "kind": "error"
+        },
+        {
+          "at": "2026-10-25T07:50:44.721Z",
+          "kind": "stderr"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:48.259Z",
+          "kind": "agent"
+        },
+        {
+          "at": "2026-10-25T07:50:49.040Z",
+          "kind": "stderr"
+        }
+      ],
+      "throughGatewayBroker": false,
+      "productionMutation": false
+    }
+  ],
+  "formal": {
+    "root": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a",
+    "task": "Tong024Acceptance-88ca27ee-e599-4482-b849-7c96923272fb",
+    "candidate": "37dc649c46ad0e267c3471f750b97227cf106310",
+    "hostSha256": "28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718",
+    "passed": true,
+    "pinnedRunnerSha256": "2a32d46a7307f088a827e06dbe81d85ee35ab2153e19cc85f3f69778c642684b",
+    "deployment": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\monitor-88ca27ee-e599-4482-b849-7c96923272fb",
+    "runnerSha256": "3ec77353194814c3b91f86bee4aca1853d23004d433f62a587ab1a0e87b45ab9",
+    "priorStoppedRunId": "84a19177-7be1-4ee7-8b75-b58aa1b89f0a",
+    "runs": [
+      {
+        "periodicDoctorExit": 0,
+        "initialHealthy": true,
+        "concurrentDoctorHealthy": true,
+        "runId": "db23672d-7b27-4a0e-b0e4-39d3607432e4",
+        "ignoreNew": true,
+        "runnerExe": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+        "taskExit": 0,
+        "runnerPid": 23360,
+        "periodicDoctorPid": 8640,
+        "hostPid": 43096,
+        "cycle": 1
+      },
+      {
+        "periodicDoctorExit": 0,
+        "initialHealthy": true,
+        "concurrentDoctorHealthy": true,
+        "runId": "a29eee9c-fe4f-44e5-8715-c756cc6f7a04",
+        "ignoreNew": true,
+        "runnerExe": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+        "taskExit": 0,
+        "runnerPid": 34080,
+        "periodicDoctorPid": 10740,
+        "hostPid": 18764,
+        "cycle": 2
+      }
+    ],
+    "runnerAdjustments": [
+      "isolated root",
+      "isolated SID mutex name"
+    ],
+    "productionMutation": false,
+    "rawPath": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\monitor-88ca27ee-e599-4482-b849-7c96923272fb\\outcome.json",
+    "rawSha256": "d589aab8abd0d49f361c8a04311b92fbf2d15721d89ade44f77898e8632f9923",
+    "hostSourceSha256": "9f1732d2e60de30d9effee0cf067db51dbaf3d4a3c2af805f176b66b6ae2cbbe",
+    "taskFinal": {
+      "enabled": false,
+      "instances": 0,
+      "lastTaskResult": 0
+    }
+  },
+  "compatibility": {
+    "at": "2026-10-25T07:51:27.533Z",
+    "productionReadOnly": true,
+    "oldProjectRegistryParser": true,
+    "projectCount": 11,
+    "oldTrustedPolicyParser": true,
+    "developmentGrantCount": 3,
+    "taskDocumentPredicateCompatible": true,
+    "taskCount": 29,
+    "activeTasks": 0,
+    "goalCount": 4,
+    "blockedGoals": 2,
+    "goalSupervisorSupportedByVersion1": false,
+    "sqlite": {
+      "readonly": true,
+      "integrity": "ok",
+      "schemaSha256": "f366b603009067af45873bd04567c6e6b764bbd8ec95c35158e22315dcd222b8",
+      "schemaObjects": 27
+    },
+    "businessFilesUnchanged": true,
+    "hashes": {
+      "project-access.json": "d3f7f76a60fd9701f0f7db069b46994dad3122adbdbb545c1214add4710aaf7b",
+      "agent-execution.json": "e25e7c3f1292c44b6cf09b3b907e80a4c4fa62b7879be611e3e3a97fee84372f",
+      "trusted-codex.json": "aab5135798d1b4666e2b6e416afa0f53423dfcd110f8bf7c9a481d2a284f2f00",
+      "agent-tasks.json": "08bc6bfe1960004ee32a40e42c627b4970ddbfdb215934c26735f82fdd6edc18",
+      "goal-supervisor.json": "7ea785375432b196fd944fb4440d78f8269ab8b2e00be7d0efa351e7d085223c"
+    },
+    "dbSha256": "4d5fb43cea6531c688dd7970fc2d6938d783f9f07b987fa96942dcce1b7067da",
+    "restoredStateExecutionTested": false
+  },
+  "final": {
+    "at": "2026-10-25T07:57:51.158Z",
+    "stopped": true,
+    "runId": "a29eee9c-fe4f-44e5-8715-c756cc6f7a04",
+    "jobs": {
+      "owner": 0,
+      "launcher": 0,
+      "guardian": 0,
+      "runtime": 0
+    },
+    "identityProofAt": "2026-10-25T07:57:14.303Z",
+    "recordedIdentitiesGone": true,
+    "inventoryComplete": true,
+    "matchingProcesses": 0,
+    "noFreeze": true,
+    "appManagerStillExact": true,
+    "earlierMetadataCheckRefused": true
+  },
+  "production": {
+    "observedAt": "2026-10-25T07:53:49.354Z",
+    "baseline": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "bindings": {
+      "app": {
+        "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+        "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+        "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+        "node": {
+          "executable": "D:\\node\\node.exe",
+          "version": "v24.15.0",
+          "abi": "137",
+          "platform": "win32",
+          "arch": "x64",
+          "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+        },
+        "verified": true
+      },
+      "manager": {
+        "commit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+        "sourceDigest": "7eb48af9270f92a796ac0c9139ab476b43d1a58304185712bffb941f446b7981",
+        "releaseDigest": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+        "node": {
+          "executable": "D:\\node\\node.exe",
+          "version": "v24.15.0",
+          "abi": "137",
+          "platform": "win32",
+          "arch": "x64",
+          "sha256": "3331e1ffe19874215472217c5e94f5a0c6d8e18c4ac7111d3937aa0ad5e9b4a5"
+        },
+        "verified": true
+      }
+    },
+    "identities": [
+      {
+        "pid": 14116,
+        "state": "GONE"
+      },
+      {
+        "pid": 45836,
+        "state": "GONE"
+      },
+      {
+        "pid": 14176,
+        "state": "GONE"
+      },
+      {
+        "pid": 51128,
+        "state": "GONE"
+      },
+      {
+        "pid": 27824,
+        "state": "GONE"
+      },
+      {
+        "pid": 12832,
+        "state": "GONE"
+      },
+      {
+        "pid": 49300,
+        "state": "GONE"
+      },
+      {
+        "pid": 17768,
+        "state": "GONE"
+      },
+      {
+        "pid": 49724,
+        "state": "GONE"
+      },
+      {
+        "pid": 24772,
+        "state": "GONE"
+      }
+    ],
+    "jobs": {
+      "74cd4ad3-f21b-40ec-96f5-3f9015649e5d": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "bee3d9d4-1dd9-4ed6-80d1-07a2b7e11bdd": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      },
+      "d348ae39-27cf-4167-8e35-58de75421309": {
+        "owner": 0,
+        "launcher": 0,
+        "guardian": 0,
+        "runtime": 0
+      }
+    },
+    "inventory": {
+      "complete": false,
+      "error": "SECURITY_UNAVAILABLE"
+    },
+    "status": {
+      "phase": "abnormal_exit",
+      "supervisorAlive": false,
+      "guardianAlive": false
+    },
+    "native": {
+      "services": [
+        {
+          "Name": "ngrok",
+          "State": "Running",
+          "StartMode": "Auto",
+          "ProcessId": 40452
+        }
+      ],
+      "listeners": [],
+      "monitors": [],
+      "ngrok": [
+        {
+          "pid": 40452,
+          "parentPid": 2728,
+          "createdAt": "2026-10-23T03:27:46.4025660Z",
+          "exeReadable": false,
+          "commandReadable": false,
+          "parentName": "services.exe",
+          "parentCreatedAt": "2026-10-16T16:33:13.6102720Z"
+        }
+      ],
+      "task": {
+        "name": "TongLoginRuntime",
+        "state": "Ready",
+        "lastTaskResult": 1,
+        "lastRunTime": "2026-10-23T10:54:24.0000000Z"
+      }
+    },
+    "legacyGuardianContainmentPresent": false,
+    "legacyFailedRunReceiptPresent": false,
+    "hashes": {
+      "profile.json": {
+        "size": 876,
+        "sha256": "ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35"
+      },
+      "run/release-pin.json": {
+        "size": 110871,
+        "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+      },
+      "run/manager-pin.json": {
+        "size": 110871,
+        "sha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd"
+      },
+      "run/runtime.json": {
+        "size": 6089,
+        "sha256": "4cdd19b4cc6229cd186bf41c1868b1f1da9cdc4c975da5dc198afb97adefc557"
+      },
+      "run/guardian.json": {
+        "size": 614,
+        "sha256": "383f720575c2299927db0b6df8f01faec4f20c408ca26df60d89513488500bd7"
+      },
+      "run/request.json": {
+        "size": 194,
+        "sha256": "b98255a00fe691d9245f80c8118e2c4970baf8bdcb24ea41de183a1f95cbfdff"
+      },
+      "run/abort.json": {
+        "size": 126,
+        "sha256": "3421a255627850c2d6780df1d551782c1f556b5f2f2f193da215531a544f2660"
+      },
+      "run/backup.freeze": {
+        "size": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "logs/maintenance-transaction.json": {
+        "size": 2107,
+        "sha256": "76089ce806f4b12a01fe05cb435ff95e1b792475583dfb4367b84eb7edb15473"
+      }
+    },
+    "hashedFileCount": 88,
+    "controlledFileSetSha256": "ff89b0cba58e6ce1ddffd95ebfbe0a92fb6ca2f6acb753417db3a2c4dabb2642",
+    "controlledFilesUnchangedSinceBefore": true,
+    "credentialsUnsealed": false
+  },
+  "limits": {
+    "fullCurrentProductionSealedBackupCreated": false,
+    "version1InstallInterruptionTested": false,
+    "version1ContinuousGateHandoffTested": false,
+    "independentFullProductionRollbackAvailable": false,
+    "chatgptUiFileReadWriteTested": false,
+    "throughGatewayCodexBrokerTested": false,
+    "windowsRebootTested": false,
+    "productionRecoveryCommandAvailable": false
+  },
+  "failures": [
+    {
+      "name": "existing Gateway test expects upstream project_prepare",
+      "exitCode": 1,
+      "resolution": "new exact version-1 Gateway contract test; original test unchanged"
+    },
+    {
+      "name": "formal monitor prepare sees invoking shell root in command line",
+      "exitCode": 1,
+      "resolution": "fixed wrapper removes root from command line; native inventory remains strict"
+    },
+    {
+      "name": "combined native probe budget expires during resume",
+      "exitCode": 1,
+      "resolution": "new turn already completed; same session targeted resume passed under unchanged 120s bound"
+    },
+    {
+      "name": "first final identity check unknown metadata",
+      "exitCode": 1,
+      "resolution": "no cleanup performed; later dedicated diagnostic returned null for all recorded identities; root cause UNKNOWN"
+    }
+  ],
+  "resources": {
+    "dependenciesCopied": false,
+    "dependencyInstallRun": false,
+    "evidenceBytesIncludingRetainedPreimages": 6571357,
+    "evidenceFileCount": 640,
+    "releaseReused": true,
+    "aclChanged": false
+  },
+  "rawEvidence": [
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\compatibility.json",
+      "sha256": "d6be77be3a19a1b33a0e60e725727eed6b34125b0a11fa225482aa2cd96707d5",
+      "size": 1182
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\doctor-1792914044611.json",
+      "sha256": "716b119a4a934c6364e5f366ce606395a429c02a9f1cbc7e9e191a7f3a739d51",
+      "size": 10087
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\final-identity-diagnostic.json",
+      "sha256": "00c5a0a89d24a3a9e51bf356556f35d848d511803187e5367401c2956554ea23",
+      "size": 1848
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\final.json",
+      "sha256": "65e4f4af33cddba03d19aa396e7490f31cbecd1a1f28fec39235a551fc280f91",
+      "size": 426
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\gateway-1792914461415.json",
+      "sha256": "a02968cb010ad25524c9c308e5a55d0ce50472b549234923fea2d6c5888f17d1",
+      "size": 1392
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\gateway.json",
+      "sha256": "0db7e4d31a31258d76414916538838e4f499656df27b153d06d1ce15254676ea",
+      "size": 1392
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\native-1792914482206.json",
+      "sha256": "dd78f303af44c985681eebd2faf5a26337e6e1b8de8f44afb0eb99bf54cb2711",
+      "size": 1361
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\native-1792914649573.json",
+      "sha256": "8e93c83edaf98341a96d75036b731ef32a63352e4cb800d65ba0c392ee056bcc",
+      "size": 3347
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\prepare.json",
+      "sha256": "110f705c1a1a9fc49cd3a44704b55663ff7c4a0b8d860cc2daa875dde5730bd4",
+      "size": 1691
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\previous-profile.json",
+      "sha256": "55827e3d13625544aa277947fee7a38bfce1ea5292d4ffb3abec99486485e071",
+      "size": 1316
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\production-after.json",
+      "sha256": "1ce84d32b8e7869df85004bde7032602707fc60bcd0914b0a444b0edfeced47d",
+      "size": 8373
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\start-1792913998385.json",
+      "sha256": "11324885ff2f797f2af51ac152896cde1b0b1af93d1637d34a64421142d710fd",
+      "size": 4682
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\stable1-20261025\\stop-1792914231419.json",
+      "sha256": "e6f1bbfe9f5c807d1236bb91af719e860059fa1ef4a4b5b23f26e367a29c18b8",
+      "size": 4789
+    }
+  ],
+  "finalSourceChecks": {
+    "at": "2026-10-25T08:00:38.241Z",
+    "nodeSyntax": true,
+    "powerShellVersion": "7.6.6",
+    "powerShellParse": true,
+    "gitDiffCheck": true,
+    "productionGatewayArgumentRejectedBeforeIo": true,
+    "fullLifecycleRepeatedAfterArgumentOnlyEdits": false
+  },
+  "deliveryFiles": [
+    {
+      "path": "tests/Test-TongStable1Isolation.mjs",
+      "sha256": "d2035a83099b0f774e934c1814a9aba9604f4729e45a466dd7f69f060aff9a11"
+    },
+    {
+      "path": "tests/Test-TongStable1Gateway.mjs",
+      "sha256": "62922fe4ed6120adb463c0a698ef696893c45d59796d822a4c42d4d5934c8d13"
+    },
+    {
+      "path": "tests/Test-TongStable1Native.mjs",
+      "sha256": "dea64c293925dc65441f72114a4d3d76c734f22bf187e9ac7bbbf3e804d2d183"
+    },
+    {
+      "path": "tests/Test-TongStable1FormalMonitor.ps1",
+      "sha256": "140ebc7ee028ef1ea396f370750a4011bc3d38362678cebbd43f82bd7e81e5b7"
+    },
+    {
+      "path": "tests/Test-Tong024FormalMonitor.ps1",
+      "sha256": "1488ad283c898731613b2b7f576e0bbfde9a0f521d061e8621a739d680d6e378"
+    },
+    {
+      "path": "docs/TongStable1RecoveryPreparation.md",
+      "sha256": "065bb075a0c08794d2cda4ef3a386921ced0b4d38b7e83ae6d880fd8808d3db2"
+    }
+  ]
+}

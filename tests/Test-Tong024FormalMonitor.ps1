@@ -55,7 +55,11 @@ try{
   if([Tong024DoctorObserver]::Exit([int]$doctor.ProcessId,$doctor.ExecutablePath,$doctor.CreationDate.ToUniversalTime().Ticks) -ne 0){throw 'PERIODIC_DOCTOR_FAILED'}
   $state=& D:\node\node.exe $worker status;if($LASTEXITCODE -ne 0){throw 'HEALTH_STATUS_UNPROVEN'};$state=$state|ConvertFrom-Json
   if($state.phase -cne 'ready' -or $state.runId -cne $healthy.runId -or -not $state.guardianAlive -or -not $state.healthy){throw 'HEALTHY_RUN_UNPROVEN'}
-  if($cycle -eq 1){& D:\node\node.exe (Join-Path $PSScriptRoot 'Test-Tong024HandoffGateway.mjs') $root $prepared.commit;if($LASTEXITCODE -ne 0){throw 'GATEWAY_MCP_FAILED'}}
+  if($cycle -eq 1){
+   $gatewayTest=if($prepared.commit -ceq '37dc649c46ad0e267c3471f750b97227cf106310'){'Test-TongStable1Gateway.mjs'}else{'Test-Tong024HandoffGateway.mjs'}
+   & D:\node\node.exe (Join-Path $PSScriptRoot $gatewayTest) $root $prepared.commit
+   if($LASTEXITCODE -ne 0){throw 'GATEWAY_MCP_FAILED'}
+  }
   $stopped=& D:\node\node.exe $worker stop;if($LASTEXITCODE -ne 0){throw 'CONTROLLED_STOP_FAILED'};Wait-TaskStopped
   $runs+=@{cycle=$cycle;runId=$state.runId;hostPid=$hostProcess.ProcessId;runnerPid=$runner.ProcessId;runnerExe=$runner.ExecutablePath;periodicDoctorPid=$doctor.ProcessId;periodicDoctorExit=0;concurrentDoctorHealthy=$state.healthy;taskExit=$task.LastTaskResult;initialHealthy=$true;ignoreNew=$true}
  }
