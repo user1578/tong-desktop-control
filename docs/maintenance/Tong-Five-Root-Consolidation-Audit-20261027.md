@@ -1,6 +1,6 @@
 # Tong及D盘四处遗留工程整理：Codex只读盘点交接（2026-10-27）
 
-状态：**等待 Codex Desktop 实际盘点；未授权执行删除、迁移或生产变更。** 本文是扫描任务书与 ChatGPT 初步只读元数据记录，不是 Codex 结果，不能作为删除许可。
+状态更新（2026-10-27）：**Codex实际盘点及ChatGPT第二次独立复核均已完成，清理/迁移仍未执行、未授权。** 本文仍是原始任务书，不是删除许可。结果分别见 [Codex报告](Tong-Five-Root-Consolidation-Codex-Report-20261027.md) 与 [ChatGPT复核](Tong-Five-Root-Consolidation-ChatGPT-Review-20261027.md)。
 
 ## 一、范围与目标
 
