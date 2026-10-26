@@ -1,6 +1,6 @@
 # 通信恢复复核与生产窗口补充（2026-10-26）
 
-生产尚未恢复。本轮没有写入正式 App、Manager、Task、Host、ngrok、真实 DevSpace 状态或生产 gate。此前操作单的“准备完成”不等于最后一次生产故障已经解决；本文件补充其缺失的完整性级别条件。
+**最新状态：已授权生产窗口执行失败并安全回退，真实通信仍未恢复。** 详见文末实际生产结果。以下开发准备记录形成时尚未进行生产写入；其隔离通过不能替代生产验收。
 
 ## 独立还原的实际失败
 
@@ -76,3 +76,34 @@
 既有完整备份三项封存/密文哈希重新匹配，没有解密或重做。旧七文件候选的半安装 App/Manager、错 pin 拒绝及 14 个物理源码原件回退证据仍适用（候选未变）；本轮补充 Host 标签的物理回退验证。
 
 最终生产只读检查：App/Manager 共 612 项源码/原生文件匹配 `024d5b0920d9ad8f1a2baf2e55640a5666ad4739`，正式 Task Disabled/0、LastResult=1，7676/7677/18765 无监听；原 Host hash `0d516bb5b26686b8ab2f0c3b1022beba7f48f8ad23e57a60e690cde9bdfc0c3b` 及 Low 标签未变，旧空 gate 和原三条恢复预算保留。当前生产窗口、Task 启用、精确生产文件/DACL/Host 标签写入均尚未获本轮授权；最坏回退终点仍是安全停机的原版2号事故现场。
+
+## 已授权生产窗口实际结果：失败、安全回退
+
+用户随后明确批准以 `bb51631d073080b6cdb826a5cb074726ab2c88b1`、固定七文件及本复核为依据执行一次 60 分钟生产窗口。窗口为 **2026-10-26 13:29:35Z 至 14:08:30Z**（日本时间 22:29:35 至 23:08:30），在限时内关闭。本段是实际执行结果，取代准备记录中“尚未授权”的状态。
+
+执行前重新核对生产原版2号的 612 项文件、固定发布物、profile 仅双 digest 差异、Node/ABI、现有三项密文备份哈希、原 Host/runner、全部旧控制原件及三条既有预算。管理员只读原生检查确认 ngrok 的完整身份、七组历史运行的 Job/进程停止证明及完整无匹配库存。仅用已验证的非传播步骤修改八处指定 App DACL，再安装精确七文件到两个组件、双 pin/profile 和已验证 PS7 Host；安装核验 614 项文件/原生资产、17 个保留物理原件与版本描述符一致。
+
+最终目标 Host 单文件由 Low 改为 Medium，Apply 与 VerifyOnly 均验证 SHA256、文件身份和 DACL 不变。用户本人在可见 PS7 输入版本绑定原生挑战；当前用户 preflight-login 与放行前管理员复核均通过。旧控制和同一个旧物理 gate 受控封存，预算保留原物理件及等字节工作副本。**正式 Task.Run 仅调用一次**，时间为 13:50:03.721Z；以下后两次均由原生 runner 在既有三次预算内自动进行，没有手动重跑、清空预算或放宽 120 秒期限。
+
+| 本轮真实运行 | Launcher / Guardian 预检（均退出 0） | 实际失败 |
+|---|---|---|
+| `97158a7a-a328-454c-a443-c14da799c0b9` | 17285 / 17109ms | 总预算 120044ms，DevSpace `server_import_begin`，START_TIMEOUT |
+| `e5b69347-6b26-46e6-bef1-61aadf865163` | 17029 / 16830ms | 总预算 120039ms；已到 Gateway `spawned`，该子阶段运行 4728ms 后耗尽全局预算 |
+| `a5108ab9-f57c-4673-950a-087f09f8cca8` | 17683 / 17750ms | 总预算 120023ms；已到 Gateway `spawned`，该子阶段运行 9839ms 后耗尽全局预算 |
+
+后两轮 Supervisor 已越过 DevSpace 初始化并创建 Gateway，stderr 未观察到先前的 chmod EPERM；但这不等于生产已修复。主记录的 `startupProgress` 最后值仍可能为 DevSpace `server_import_complete`，应与 Supervisor 的 Gateway 超时信息一起读取。表中的 120xxxms 来自 Manager 的全局预算事件，不能与 4728/9839ms 的子阶段耗时混淆。生产子进程令牌未取得可引用的存活快照，不把隔离令牌记录写成生产实测。真实启动链额外耗时的最早原因尚未闭环，不能仅凭这些耗时就归因于磁盘、Defender 或 OAuth。
+
+三轮均无 READY。首次失败时观察器记录异常并禁用后续调度，已有同一原生 runner 仍按固有预算完成余下两次，最后退出 1；Task 最终 Disabled/0。未运行生产定期 doctor、完整 Gateway 认证 MCP 文件验收或 ChatGPT 网页文件读取，未创建生产验收文件。不把 AgentDock 启动期认证/list-tools 的局部成功算作全链通信成功。
+
+### 实际失败回退与数据边界
+
+14:01:06Z 的新鲜管理员原生证明覆盖历史七组和本轮三组，共十组运行：各四类 Job 均为 0，所有记录的原身份已消失（PID 重用独立比对），完整库存无匹配，生产端口空闲，Task Disabled/0，ngrok 身份仍成立。持有原 SID 生命周期 mutex 后，才执行物理回退：
+
+- 原 17 个源码/绑定/Host/恢复授权物理原件、八处原 DACL、旧控制记录及原物理 gate 均恢复；新增 Protocol 与本轮失败控制移入本窗口事故证据，未删除原事故。
+- 再核对原版2号 612 项文件、旧双 pin/profile、Host/runner 哈希、物理身份、原 Host Low 标签与真实状态目录原 DACL/标签。旧版本原生 preflight-login 退出 0、授权匹配。维护 gate 句柄和 mutex 随后释放。
+- 本轮三条新增预算由原生 runner 正常产生并继续保留，旧预算物理原件也保留；不回写旧预算。ngrok 未进行服务控制或配置修改；未重启 Windows。
+- 没有手工修改、清空或回写真实 DevSpace 数据库/OAuth。主 `devspace.sqlite` 文件仍为 122880 字节且哈希与窗口前相同；正常服务启动后 WAL 为 16512 字节，SHM 也发生变化，均保留。**主文件哈希相同不能证明包含 WAL 的逻辑 OAuth 数据全量一致，本轮没有作此保证，也没有把真实数据复制为可写测试夹具。**
+
+本机审计目录：`D:\Tong\state\b23-login-68009b23f4794f16a6a9e03b1510f65a\offline-9850e1a\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0`。关键证据为 `formal-task.started.json`、`production.operation.failure.json`、`failed-attempt/run/`、`new-runs.stopped.admin.json`、`rollback.physical.completed.json`、`rollback.final-files.verified.json`、`rollback.preflight.original.json` 和 `maintenance.closed.failure.json`；完整原日志及私有元数据留在本机，不上传。
+
+窗口最终状态为 `FAILED_STARTUP_TOTAL_TIMEOUT_SAFE_ROLLBACK_COMPLETED`。生产通信仍不可用，READY/doctor/定期监控、正式认证文件读写/重连/越界拒绝和 ChatGPT 网页实际读取均未达成。下一项阻塞是定位并修复真实生产启动链在原 120 秒边界内无法完成的问题；当前精确候选不能因为隔离通过而原样再次上线。本窗口已经关闭，没有追加生产重试或扩大代码安装范围。
