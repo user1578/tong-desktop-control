@@ -72,7 +72,7 @@ verifiedBy=ChatGPT_web_Tong_MCP
 3. **Windows 真正重启后的恢复**：选择有明确授权和回退准备的维护时段，观察计划任务、授权、自动恢复、超时和真实网页重连。**本次未测试真实重启，不能据此承诺开机自恢复。**
 4. **开发目录整理**：先只读盘点 D:\Tong 中生产目录、正式源码、实验仓库、历史归档、完整备份、测试状态、日志与大文件；去重、迁移或删除需另行明确授权。不得删除事故原件、物理备份、运行配置或仍被版本绑定引用的材料。
 
-   2026-10-27 首轮只读元数据扫描：D:\Tong 根下主要为 `app`（正式应用）、`runtime`（正式运行/授权/状态）、`development`（开发仓库）、`state`（历史及合成事故/测试状态）、`tools`（ngrok）。`development` 一级有 `tong-024-startup-recovery`、`tong-desktop-control`、`tong-launcher-startup-recovery`、`tong-startup-hotfix`、`test-temp` 五个目录；`runtime` 一级包含 `run`、`secrets`、`login-management`、`releases`、`logs`、`state-backups`、`state-restores` 等，不作清理候选。对 `D:\Tong\state` 的 depth=0 工具摘要为 1609 个目录、13 个文件，但本次结果有分页，尚未逐一核查用途、引用关系及子目录体积；不能把其直接认作可删除缓存。**暂未移动或删除任何 Tong 文件**。
+   2026-10-27 首轮只读元数据扫描：D:\Tong 根下主要为 `app`（正式应用）、`runtime`（正式运行/授权/状态）、`development`（开发仓库）、`state`（历史及合成事故/测试状态）、`tools`（ngrok）。`development` 一级有 `tong-024-startup-recovery`、`tong-desktop-control`、`tong-launcher-startup-recovery`、`tong-startup-hotfix`、`test-temp` 五个目录；`runtime` 一级包含 `run`、`secrets`、`login-management`、`releases`、`logs`、`state-backups`、`state-restores` 等，不作清理候选。对 `D:\Tong\state` 的 depth=0 工具摘要为 1609 个目录、13 个文件，但本次结果有分页，尚未逐一核查用途、引用关系及子目录体积；不能把其直接认作可删除缓存。**暂未移动或删除任何 Tong 文件**。关于四处 D 盘遗留工程及 Tong 全域统一整理的下一轮 Codex 只读盘点，请先参阅 [五处根目录盘点任务书](maintenance/Tong-Five-Root-Consolidation-Audit-20261027.md)，Codex 实际报告未完成前不执行迁移与清理。
 5. **后续功能**：在通信稳定后，按用户优先级继续 Windows 本地操作、Codex Desktop **真实可见并可续聊的原生会话**、既有桌面端会话关联、多 Agent 调度等。用户未指定 Agent 时优先由 ChatGPT 通过 Tong 本地工具直接执行；明确指定 Codex 才调用 Codex 原生会话。开发/合成能力不能冒充已部署生产。
 
 ## 5. 后续变更边界与交接方式
