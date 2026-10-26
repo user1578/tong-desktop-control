@@ -4,7 +4,7 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 
 ## Production communication restored (2026-10-27)
 
-The production runtime reached READY, doctor passed and the authenticated MCP path was verified. A live ChatGPT web session also opened the authorized Windows demo workspace and read its acceptance file; the returned nonce matched the local check. This is a **successful production communication recovery**, not merely an isolated test. Long-term stability, web-side writes and Windows-reboot recovery remain unverified. Do not redeploy or reset runtime state just to repeat this acceptance.
+The production runtime reached READY, doctor passed and the authenticated MCP path was verified. A live ChatGPT web session also opened the authorized Windows demo workspace and read its acceptance file; the returned nonce matched the local check. This is a **successful production communication recovery**, not merely an isolated test. A follow-up real ChatGPT web session also created a directory and wrote, edited, and reread a file in the previously authorized D:\\作业\\111 workspace. Long-term stability and Windows-reboot recovery remain unverified. Do not redeploy or reset runtime state just to repeat this acceptance.
 
 **Start here for current state, exact pinned candidate, evidence paths, verification boundaries, and next steps:** [Production recovery and handoff — 2026-10-27](docs/Tong-Production-Communication-Handoff-20261027.md). Older reports below document historical development and must not override the newer production acceptance.
 
