@@ -28,7 +28,8 @@ try{
  assert.equal(policy.schemaVersion,1);assert.equal(policy.backendWorkspaceRoot,join(root,'workspace'));assert.deepEqual(policy.approvals,[]);
  if(policy.projects.length===0){policy.projects=[readGrant];await writeFile(policyPath,JSON.stringify(policy));}
  else assert.deepEqual(policy.projects,[readGrant]);
- const preservationPath=join(root,'communication-preservation.json');
+ const fixture=await json(join(root,'seven-file-preparation.json'));
+ const preservationPath=fixture.startupRecovery?join(fixture.startupRecovery.trial,'communication-preservation.json'):join(root,'communication-preservation.json');
  const protectedFiles=[join(profile.configDir,'config.json'),join(profile.configDir,'auth.json'),join(root,'profile.json'),join(root,'run/release-pin.json'),join(root,'run/manager-pin.json'),join(root,'secrets/agentdock.dpapi'),join(root,'secrets/oauth-owner.dpapi')];
  const currentHashes=Object.fromEntries(await Promise.all(protectedFiles.map(async p=>[p,createHash('sha256').update(await readFile(p)).digest('hex')])));
  let priorHashes;

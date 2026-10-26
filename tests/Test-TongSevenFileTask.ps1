@@ -24,7 +24,7 @@ function Identity($Process){return @{pid=[int]$Process.ProcessId;exe=[string]$Pr
 $scheduler=New-Object -ComObject Schedule.Service;$scheduler.Connect()
 $defaultTaskName='Tong024StateRepair-5dc9bd7a-3318-43dd-800c-ff0fab62f8ac'
 if($SyntheticTaskName){
- Check ($ExerciseCrash -and $SyntheticTaskName -cmatch '^TongCommRecovery-[a-f0-9]{32}$') 'SYNTHETIC_RECOVERY_TASK_REQUIRED'
+ Check ($Communication -and $SyntheticTaskName -cmatch '^TongCommRecovery-[a-f0-9]{32}$') 'SYNTHETIC_RECOVERY_TASK_REQUIRED'
  $originalTask=$scheduler.GetFolder('\').GetTask($defaultTaskName)
  Check (-not $originalTask.Enabled -and @($originalTask.GetInstances(0)).Count -eq 0) 'OTHER_SYNTHETIC_TASK_RUNNING'
 }
@@ -67,7 +67,7 @@ try{
  [IO.File]::WriteAllText($runnerPath,$source,[Text.UTF8Encoding]::new($false))
  $mutex.ReleaseMutex();$held=$false
  $began=[DateTime]::UtcNow;$task.Enabled=$true;$started=$true;$instance=$task.Run($null)
- $chain=@{};$healthy=$null;$deadline=$began.AddSeconds(180)
+ $chain=@{};$healthy=$null;$deadline=$began.AddSeconds(260)
  while([DateTime]::UtcNow -lt $deadline){
   $instances=@($task.GetInstances(0));Check ($instances.Count -le 1) 'MULTIPLE_TASK_INSTANCES'
   if($instances.Count -eq 1){
@@ -124,6 +124,9 @@ try{
  }
  $crashResult=$null
  if($ExerciseCrash){
+  $initialRequest=[IO.File]::ReadAllText((Join-Path $root 'run\request.json'))|ConvertFrom-Json -DateKind String
+  Check ($initialRequest.runId -ceq $ready.runId) 'INITIAL_REQUEST_CHANGED'
+  [IO.File]::WriteAllText((Join-Path $saved 'initial-request.json'),($initialRequest|ConvertTo-Json -Depth 4))
   [IO.File]::WriteAllText((Join-Path $saved 'crash-origin.json'),(@{runner=$chain.runner;initialHealthyEvent=$healthy}|ConvertTo-Json -Depth 5))
   $raw=& D:\node\node.exe (Join-Path $PSScriptRoot 'Test-TongCommunicationCrash.mjs') $root $ready.runId $saved
   Check ($LASTEXITCODE -eq 0) 'CONTROLLED_CRASH_RECOVERY_FAILED'
@@ -138,7 +141,7 @@ try{
  if($Communication){
   $outcome.communication=$communicationResult;$outcome.crashRecovery=$crashResult;$outcome.taskStartedAt=$began.ToString('o')
   $outcome.taskToHealthyMs=(([datetime]$healthy.at).ToUniversalTime()-$began).TotalMilliseconds
-  Check ($outcome.taskToHealthyMs -ge 0 -and $outcome.taskToHealthyMs -le 180000) 'TASK_HEALTHY_TIME_INVALID'
+  Check ($outcome.taskToHealthyMs -ge 0 -and $outcome.taskToHealthyMs -le 260000) 'TASK_HEALTHY_TIME_INVALID'
   $request=[IO.File]::ReadAllText((Join-Path $root 'run\request.json'))|ConvertFrom-Json -DateKind String
   # A crash replaces the active request. Bind this metric to that recovered
   # run explicitly rather than presenting it as the initial cold-start time.
@@ -146,7 +149,9 @@ try{
   Check ($request.runId -ceq $(if($ExerciseCrash){$crashResult.recoveredRunId}else{$ready.runId})) 'STARTUP_METRICS_RUN_MISMATCH'
   $readyEvent=@([IO.File]::ReadAllLines((Join-Path $root 'logs\lifecycle.jsonl'))|ForEach-Object {$_|ConvertFrom-Json -DateKind String}|Where-Object {$_.PSObject.Properties['runId'] -and $_.runId -eq $request.runId -and $_.event -eq 'ready'})[-1]
   $outcome.requestToReadyMs=([DateTimeOffset]::Parse($readyEvent.at)-[DateTimeOffset]::Parse($request.createdAt)).TotalMilliseconds
-  Check ($outcome.requestToReadyMs -ge 0 -and $outcome.requestToReadyMs -le 120000) 'STARTUP_BUDGET_EXCEEDED'
+  $outcome.startupBudgetMs=$request.startupDeadline-[DateTimeOffset]::Parse($request.createdAt).ToUnixTimeMilliseconds()
+  Check ($outcome.startupBudgetMs -gt 0 -and $outcome.startupBudgetMs -le 180000) 'STARTUP_BUDGET_INVALID'
+  Check ($outcome.requestToReadyMs -ge 0 -and $outcome.requestToReadyMs -lt $outcome.startupBudgetMs) 'STARTUP_BUDGET_EXCEEDED'
  }
  $readyPath=if($Communication){Join-Path $saved 'task-ready.json'}else{Join-Path $root 'task-ready.json'}
  [IO.File]::WriteAllText($readyPath,($ready|ConvertTo-Json -Depth 12))

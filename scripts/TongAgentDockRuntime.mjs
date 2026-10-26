@@ -27,6 +27,14 @@ const hasTong=profile=>preserved(profile)||profile.withTong;
 const guardedRoot=root=>root===PRODUCTION_ROOT||/^b23-[a-zA-Z0-9_-]+$/.test(relative(resolve('D:\\Tong\\state'),resolve(root)));
 const dirs=['backend-state','workspace','workspace/demo','tong-state','tong-state/config','tong-policy','tong-policy/agentdock-operations','secrets','run','logs','temp','home'];
 const fail=code=>new Error(code), delay=ms=>new Promise(ok=>setTimeout(ok,ms));
+// Production request->DevSpace consumed 78-80s before the first child stage.
+// One redundant Guardian preflight is removed, but 75s + 35s child budgets
+// still need room for two 17s native checks, handoff and final health checks.
+export const startupBudgetMs=production=>production?180000:30000;
+export function startupProgress(previous,value,now=Date.now()){
+  const stage=value.event==='readiness_begin'?'spawned':value.event==='readiness_complete'?'ready':value.event==='child_stage'?value.stage:null;
+  return stage?{role:value.role,stage,stageStartedAt:now}:previous;
+}
 export function readinessPolicy(role,production){
   // Observed cold starts: DevSpace 23.6/38.3/44.3s, import up to 18.9s,
   // Gateway up to 24.6s. Progress buys a stage budget, never a new total.
@@ -246,10 +254,10 @@ async function guardianComplete(root,runId) {
 }
 export async function startRuntime(root,{startupTimeoutMs,onRequest,handoffId}={}) {
   if(onRequest!==undefined&&typeof onRequest!=='function')throw fail('INVALID_REQUEST_OBSERVER');
-  if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>120000))throw fail('INVALID_TIMEOUT');
+  if(startupTimeoutMs!==undefined&&(!Number.isInteger(startupTimeoutMs)||startupTimeoutMs<1||startupTimeoutMs>startupBudgetMs(true)))throw fail('INVALID_TIMEOUT');
   root=absoluteRoot(root);const approved=guardedRoot(root)?await loadApprovedProfile(root,'start'):null;
   const profile=await layout(root);if(approved&&JSON.stringify(profile)!==JSON.stringify(approved))throw fail('APPROVAL_DENIED');
-  const maxStartupMs=preserved(profile)?120000:30000;
+  const maxStartupMs=startupBudgetMs(preserved(profile));
   startupTimeoutMs??=maxStartupMs;if(startupTimeoutMs>maxStartupMs)throw fail('INVALID_TIMEOUT');
   if(preserved(profile)){await verifyRuntimeApproval(profile,'start');if(profile.agentdockEnabled)await readApprovedEnabledState(profile);await verifyRuntimeCandidate(profile);await verifyRuntimeCandidate(profile,{manager:true});}
   const held=await freeze(root,{handoffId,profile,action:'start'});
@@ -455,18 +463,18 @@ async function supervise(root,runId){root=absoluteRoot(root);const request=await
   async function capture(){if(capturing)return;capturing=true;try{record.descendants=await processDescendants(process.pid);record.pids=[...new Set([process.pid,...record.children.map(c=>c.pid),...record.descendants.map(c=>c.pid)])];await persist();}finally{capturing=false;}}
   async function attach(role,child){children.set(role,child);const out=join(root,'logs',runId+'-'+role+'.stdout.log'),err=join(root,'logs',runId+'-'+role+'.stderr.log');for(const [source,path] of [[child.stdout,out],[child.stderr,err]]){const stream=createWriteStream(path,{flags:'wx'});streams.push(stream);source.pipe(redactedStream(secrets)).pipe(stream);}child.once('error',()=>{void shutdown('abnormal_exit','CHILD_SPAWN_FAILED');});child.once('exit',(code,signal)=>{const entry={at:new Date().toISOString(),role,pid:child.pid,...exitDiagnostic(code,signal)};record.exits.push(entry);void event({event:'process_exit',...entry});if(!closing)void shutdown('abnormal_exit','CHILD_EXIT');});const identity=await processIdentity(child.pid);if(!identity)throw fail('CHILD_EXIT');record.children.push({role,...identity,stdoutLog:out,stderrLog:err,tokenInArgv:false});await persist();return child;}
   async function managed(role,settings){
-    const began=Date.now();await event({event:'readiness_begin',role});
+    const diagnostic=value=>{record.startupProgress=startupProgress(record.startupProgress,value);return Promise.all([event(value),persist()]);};
+    const began=Date.now();await diagnostic({event:'readiness_begin',role});
     const child=fork(childScript,[],{cwd:codeRoot(profile),env:safeEnvironment(root),windowsHide:true,execArgv:['--trace-uncaught','--trace-warnings'],stdio:['ignore','pipe','pipe','ipc']});
     const cancelled=new AbortController();
-    const diagnostic=value=>{if(value.event==='child_stage')record.startupProgress={role,stage:value.stage,stageStartedAt:Date.now()};return Promise.all([event(value),persist()]);};
-    const ready=waitForChildReadiness(child,{role,preserved:preserved(profile),began,startupDeadline:request.startupDeadline??Date.parse(record.startedAt)+(preserved(profile)?120000:30000),onEvent:diagnostic,signal:cancelled.signal});
+    const ready=waitForChildReadiness(child,{role,preserved:preserved(profile),began,startupDeadline:request.startupDeadline??Date.parse(record.startedAt)+startupBudgetMs(preserved(profile)),onEvent:diagnostic,signal:cancelled.signal});
     void ready.catch(()=>{}); // Attach can fail while readiness is already pending.
     const logging=message=>{if(message?.event!=='logging_secret'||role!=='devspace'||!preserved(profile))return;if(typeof message.ownerToken!=='string'||message.ownerToken.length<16||message.ownerToken.length>4096||/[\x00-\x20\x7f]/.test(message.ownerToken)){child.emit('message',{event:'readiness_failed'});return;}if(!secrets.includes(message.ownerToken))secrets.push(message.ownerToken);child.send({event:'logging_ready'});};
     child.on('message',logging);
     try{
       await attach(role,child);
       child.send({schemaVersion:1,role,root,...settings,tongRoot:codeRoot(profile),...(preserved(profile)?{profile}:{}),...(loginRecoveryGrantId()?{recoveryGrantId:loginRecoveryGrantId()}:{}),gatewayPort:profile.gatewayPort,upstreamPort:profile.upstreamPort});
-      await ready;await event({event:'readiness_complete',role,durationMs:Date.now()-began});
+      await ready;await diagnostic({event:'readiness_complete',role,durationMs:Date.now()-began});
     }finally{cancelled.abort();child.off('message',logging);}
   }
   async function shutdown(phase='stopped',reason='REQUESTED'){return shutdownPromise??=(async()=>{closing=true;clearInterval(timer);record.phase='stopping';await persist();await event({event:'shutdown',reason});await capture().catch(()=>{});for(const role of ['gateway','devspace']){const child=children.get(role);if(child?.connected){child.send({event:'stop'});await Promise.race([once(child,'exit'),delay(role==='devspace'?11000:2000)]);}}await capture().catch(()=>{});// Descendant snapshots are diagnostic only. The guardian owns the private Job.

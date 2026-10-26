@@ -1,0 +1,82 @@
+{
+  "productionInstalled": false,
+  "productionStartupLimitMs": 180000,
+  "childStartupLimitMs": {
+    "devspace": 75000,
+    "gateway": 35000
+  },
+  "previousCandidate": "3740082b3c11ca4403d1abdceed75d539878a161",
+  "candidate": "b9fe80150f9cdea47130e8952e85e39503187677",
+  "sourceDigest": "c1bc5c18e5a91193a8d634c14a82cc2e56675c5db28e28de252e70c0d6593888",
+  "sourceFiles": 284,
+  "releaseDigest": "1f3cfcfd6f12212e1c9eb82e5de93c889dd52d82a16bbeba26cde1f365551015",
+  "original2": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+  "schemaVersion": 1,
+  "developmentBase": "7dc4cb6fe50cbafb03048ff1a1050eaa6fdf336f",
+  "nativeFiles": 23,
+  "files": [
+    {
+      "changedSincePrevious": true,
+      "candidateSha256": "880cb43bc89c4c77daa86368f3940a94bf1162eac42219b0751f7b6be0b2c41d",
+      "packagedSha256": "514ca9f1b9fd0dd1f6b00cfcd45d4994822ac63a2913d8b3de2dd5579eaeaba9",
+      "originalSha256": "f609d906e7025ab64be872b94398c4a57f04dceefb2a25c8b4d0b8cee3f7924e",
+      "packagedBytes": 57542,
+      "path": "scripts/TongAgentDockRuntime.mjs",
+      "previousCandidateSha256": "fb4d26f75a4083b7c24890e7cf5ea1f29a5af0034380a85a84ac73469301cc41"
+    },
+    {
+      "changedSincePrevious": false,
+      "candidateSha256": "954d807bc5120f91a8e3932dc3759031a15feff1d15467c8e24076a3589f4ad3",
+      "packagedSha256": "fb61000f28c4b95ee5929765e7ce57e41cb3355db968dd6dd45d2eebfb6e9394",
+      "originalSha256": "0b245454b29c552be9c0869e2cd16c2ca159ffebfb324bacc1204671ad849f21",
+      "packagedBytes": 4998,
+      "path": "scripts/TongRuntimeLaunch.ps1",
+      "previousCandidateSha256": "954d807bc5120f91a8e3932dc3759031a15feff1d15467c8e24076a3589f4ad3"
+    },
+    {
+      "changedSincePrevious": true,
+      "candidateSha256": "20c97e3dbeb0887aa745357e8701ed7ced42d2c8f33aaa2f2ff39b97178284f8",
+      "packagedSha256": "03b42832aeb3abaed108cfe4e9e0ef18582d55f62080165b99891c0a5e38e729",
+      "originalSha256": "528abbd00bcfcc4a89492e2ee0de130196b71f63d8956f6636c27afd2117c910",
+      "packagedBytes": 13321,
+      "path": "scripts/TongRuntimeGuardian.ps1",
+      "previousCandidateSha256": "b5ebf2b786f958fdbafca9a53afead412544fc4e06f3ebdefc084362c711a033"
+    },
+    {
+      "changedSincePrevious": false,
+      "candidateSha256": "8716bff6c3546bbd273c609aa46a5b30d297f16d4e9fd7d662256b3648b1ac7a",
+      "packagedSha256": "80b63372080cef47fcb1c98d6635a0b23a3423e04eb98190b61b5bbb42170b38",
+      "originalSha256": null,
+      "packagedBytes": 19525,
+      "path": "scripts/TongStartupProtocol.ps1",
+      "previousCandidateSha256": "8716bff6c3546bbd273c609aa46a5b30d297f16d4e9fd7d662256b3648b1ac7a"
+    },
+    {
+      "changedSincePrevious": false,
+      "candidateSha256": "fc4ab94f28dd57bd0afb45da5cd8fc872b67a69536067910d8135772295fdfaf",
+      "packagedSha256": "4f5036a6f4b2a631a4d9ed96e961511ffec8abaa1c7f03e0b89cf9fd7f545aa1",
+      "originalSha256": "d2762f51aabaadf9a35095a8e4dfd0c10b4a042568b461a186e714edc666edca",
+      "packagedBytes": 6844,
+      "path": "scripts/TongRuntimeSecurity.mjs",
+      "previousCandidateSha256": "fc4ab94f28dd57bd0afb45da5cd8fc872b67a69536067910d8135772295fdfaf"
+    },
+    {
+      "changedSincePrevious": false,
+      "candidateSha256": "34355cac45e5a06a2778f545b5070c2d170fcd58d6b9df0694be3827217245f0",
+      "packagedSha256": "c9662fd7ae065d29e8ed8b5e2a316c1b49c613ee9fec5001d94cbc80d2421160",
+      "originalSha256": "9d895570d5ba0943b0c58d86ebb1ec17c287e95635625ff71e89e66236036835",
+      "packagedBytes": 10177,
+      "path": "scripts/TongRuntimeSecurity.ps1",
+      "previousCandidateSha256": "34355cac45e5a06a2778f545b5070c2d170fcd58d6b9df0694be3827217245f0"
+    },
+    {
+      "changedSincePrevious": false,
+      "candidateSha256": "fe107fa566ca85e2f2fd7cc9ee13e0c68b9c58da48deca1b434d5fc2cece659d",
+      "packagedSha256": "5bc9f5fa3d71c24862193b7a398fa61b38903e14aee1f1faee156116688b9097",
+      "originalSha256": "2d9ba2e7d32038b64eeef3561184060443510cf5f8178feb9933724872419ae7",
+      "packagedBytes": 9552,
+      "path": "scripts/TongLoginRecovery.mjs",
+      "previousCandidateSha256": "fe107fa566ca85e2f2fd7cc9ee13e0c68b9c58da48deca1b434d5fc2cece659d"
+    }
+  ]
+}

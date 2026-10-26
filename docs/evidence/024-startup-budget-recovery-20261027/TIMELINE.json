@@ -1,0 +1,1165 @@
+{
+  "readOnly": true,
+  "window": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0",
+  "sources": [
+    {
+      "path": "D:\\Tong\\runtime\\logs\\lifecycle.jsonl",
+      "bytes": 155546,
+      "sha256": "e2f23906ecfe1a4857bdb13cbd67ea04ad3528f087752ad797c07bd91678f4d0"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\guardian.jsonl",
+      "bytes": 1453965,
+      "sha256": "8ba460c35822b66731619e3805e574eb1f82c7ba7b08d04ee95fa503e45a1c91"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\login-management.jsonl",
+      "bytes": 21597,
+      "sha256": "59522f0a2f2938f83b6a9701170cf79e1fee568934e4ffe702eab59aaf98e4bf"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\supervisor.jsonl",
+      "bytes": 5657,
+      "sha256": "0e7324b446beab29cc814752e95901164fa7dfaadf182c13e02fcd55d3d5ab38"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\login-management\\host.stdout.log",
+      "bytes": 1653,
+      "sha256": "d42499f7573f8048d2c6e9489c499a00d84feb8159d30a009e2fb389551412a7"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\login-management\\host.stderr.log",
+      "bytes": 598,
+      "sha256": "e2f6096c6b5deacd6ac8902621c4e9bda5d128d82a296bab4ed17e1c300092d2"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\login-management\\host.failure.log",
+      "bytes": 170,
+      "sha256": "e8e34523214f8cfb1626eff00796d035bd02219be5373c0be45cbd98be4d3385"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\login-management.log",
+      "bytes": 1404,
+      "sha256": "f58f3bee539280d0f102655fe0ce2a08fbff09b6e488c9700cb04525ed2bee7d"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\production.operation.failure.json",
+      "bytes": 6503,
+      "sha256": "03d53799366711740253f54b8067c1e6c6df5925ac0eb6bcabbc0b8ae8dcd071"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\new-runs.stopped.admin.json",
+      "bytes": 37737,
+      "sha256": "3fd0ad8ba4175a7dbb39786498ad3f19678dd756c4c524bf8f6bc7678f3884cc"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\maintenance.closed.failure.json",
+      "bytes": 1325,
+      "sha256": "da9e0e9b94beba1161fa1eca8a67292bf49b21e72b3e6099ec92df210b1df71b"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\rollback.final-files.verified.json",
+      "bytes": 783,
+      "sha256": "a9765b0b276e2978470f35fa8a549d4eff2a832c0939476478240bef1958f673"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\formal-task.started.json",
+      "bytes": 172,
+      "sha256": "55120c6236e45e904caef9f30adc9ae037fd90bc265ab27be3365d6162c2aedb"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\request.json",
+      "bytes": 194,
+      "sha256": "df82d3f319a3a13bb244df88d8000ebfe9fd9c383c46c3ee55e0144dbf62ac5d"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\runtime.json",
+      "bytes": 3975,
+      "sha256": "f991bc4110748ccb7f7aef28db34586b446e45a6e04ebbe5f218288fa92ad9c4"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\guardian.json",
+      "bytes": 662,
+      "sha256": "096b2080e347faa34d0620d7ab325bb23aa08e55ff810d1621942eb48c2993e7"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\abort.json",
+      "bytes": 126,
+      "sha256": "e9dc3e1db3fef25f4a696e98554741e34dc7c7be3e8f0a41fb17a0e07838bdde"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\launcher.97158a7a-a328-454c-a443-c14da799c0b9.json",
+      "bytes": 1122,
+      "sha256": "d5dde29bbf5051062859940d8b44f35332ba412180587ed4512f9049323e42b6"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\guardian.97158a7a-a328-454c-a443-c14da799c0b9.json",
+      "bytes": 961,
+      "sha256": "3116644e7a61c937f00c717bb4145c1ee133c7b6aba28471062cc4f72dbc7970"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\97158a7a-a328-454c-a443-c14da799c0b9-agentdock.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\97158a7a-a328-454c-a443-c14da799c0b9-agentdock.stderr.log",
+      "bytes": 2146,
+      "sha256": "ce59660322880f4f27c848e541622e39f3baa6852f0f519915ea445958e989d5"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\97158a7a-a328-454c-a443-c14da799c0b9-devspace.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\97158a7a-a328-454c-a443-c14da799c0b9-devspace.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\97158a7a-a328-454c-a443-c14da799c0b9-gateway.stdout.log",
+      "absent": true
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\97158a7a-a328-454c-a443-c14da799c0b9-gateway.stderr.log",
+      "absent": true
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\launcher.e5b69347-6b26-46e6-bef1-61aadf865163.json",
+      "bytes": 1122,
+      "sha256": "7209ea451a6d233faa6cfa6b60ced312aed5d27cbd123b230c3e44bd3179515c"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\guardian.e5b69347-6b26-46e6-bef1-61aadf865163.json",
+      "bytes": 963,
+      "sha256": "03885b260b25c80f205d5048f679162bb16a5c42a64a58be8f6c8c77dde4fab2"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\e5b69347-6b26-46e6-bef1-61aadf865163-agentdock.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\e5b69347-6b26-46e6-bef1-61aadf865163-agentdock.stderr.log",
+      "bytes": 2134,
+      "sha256": "bfc564350be2539b2e79ee65a0978d1bdf34c017a4a71e45cb9d432c3e8aa2c2"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\e5b69347-6b26-46e6-bef1-61aadf865163-devspace.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\e5b69347-6b26-46e6-bef1-61aadf865163-devspace.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\e5b69347-6b26-46e6-bef1-61aadf865163-gateway.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\e5b69347-6b26-46e6-bef1-61aadf865163-gateway.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\launcher.a5108ab9-f57c-4673-950a-087f09f8cca8.json",
+      "bytes": 1122,
+      "sha256": "0288ae5e707f91c29dc62e086687fea3d045795ff28def48949806ecb63abfac"
+    },
+    {
+      "path": "D:\\Tong\\state\\b23-login-68009b23f4794f16a6a9e03b1510f65a\\offline-9850e1a\\production-comm-402b8fd5-d82d-47eb-a0eb-8987b769f0a0\\failed-attempt\\run\\guardian.a5108ab9-f57c-4673-950a-087f09f8cca8.json",
+      "bytes": 963,
+      "sha256": "3c8608e47d0daa85d55ec83f70e29573e0ec526556bb0711754e551670916bdc"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\a5108ab9-f57c-4673-950a-087f09f8cca8-agentdock.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\a5108ab9-f57c-4673-950a-087f09f8cca8-agentdock.stderr.log",
+      "bytes": 2139,
+      "sha256": "ff6d76794ff1ef8449b5ab92610728b99f40343b750d19b22fb2aa304d8b6100"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\a5108ab9-f57c-4673-950a-087f09f8cca8-devspace.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\a5108ab9-f57c-4673-950a-087f09f8cca8-devspace.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\a5108ab9-f57c-4673-950a-087f09f8cca8-gateway.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "D:\\Tong\\runtime\\logs\\a5108ab9-f57c-4673-950a-087f09f8cca8-gateway.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "results": [
+    {
+      "runId": "97158a7a-a328-454c-a443-c14da799c0b9",
+      "requestAt": "2026-10-26T13:50:37.219Z",
+      "requestTimestampEvidence": "derived from Manager failure.at minus durationMs; earlier request overwritten",
+      "deadline": "2026-10-26T13:52:37.219Z",
+      "totalWallMs": 120044,
+      "ready": false,
+      "supervisorLogRecords": 0,
+      "managerEvents": [
+        {
+          "at": "2026-10-26T13:50:04.2267139Z",
+          "event": "runner_started",
+          "reason": ""
+        },
+        {
+          "at": "2026-10-26T13:50:12.9280182Z",
+          "event": "recovery_attempt",
+          "reason": "login_start"
+        }
+      ],
+      "timeline": [
+        {
+          "phase": "manager_previous_status",
+          "startAt": "2026-10-26T13:50:34.796Z",
+          "endAt": "2026-10-26T13:50:36.114Z",
+          "wallMs": 1318,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_binary_hash",
+          "startAt": "2026-10-26T13:50:36.114Z",
+          "endAt": "2026-10-26T13:50:36.187Z",
+          "wallMs": 73,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_ports",
+          "startAt": "2026-10-26T13:50:36.187Z",
+          "endAt": "2026-10-26T13:50:36.191Z",
+          "wallMs": 4,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_secrets",
+          "startAt": "2026-10-26T13:50:36.191Z",
+          "endAt": "2026-10-26T13:50:37.218Z",
+          "wallMs": 1027,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "request_to_launcher",
+          "startAt": "2026-10-26T13:50:37.219Z",
+          "endAt": "2026-10-26T13:50:37.229Z",
+          "wallMs": 10,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_initialization",
+          "startAt": "2026-10-26T13:50:37.229Z",
+          "endAt": "2026-10-26T13:50:38.728Z",
+          "wallMs": 1499,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_preflight",
+          "startAt": "2026-10-26T13:50:38.728Z",
+          "endAt": "2026-10-26T13:50:56.013Z",
+          "wallMs": 17285,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_to_guardian_creation",
+          "startAt": "2026-10-26T13:50:56.013Z",
+          "endAt": "2026-10-26T13:50:56.035Z",
+          "wallMs": 22,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_initialization_and_first_preflight",
+          "startAt": "2026-10-26T13:50:56.035Z",
+          "endAt": "2026-10-26T13:51:14.472Z",
+          "wallMs": 18437,
+          "cpuMs": null,
+          "waitingMs": null,
+          "splitUnknown": true,
+          "reason": "first preflight has no separate timing receipt"
+        },
+        {
+          "phase": "guardian_compile_request_validation",
+          "startAt": "2026-10-26T13:51:14.472Z",
+          "endAt": "2026-10-26T13:51:14.680Z",
+          "wallMs": 208,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_second_preflight",
+          "startAt": "2026-10-26T13:51:14.680Z",
+          "endAt": "2026-10-26T13:51:31.789Z",
+          "wallMs": 17109,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_job_and_node_creation",
+          "startAt": "2026-10-26T13:51:31.789Z",
+          "endAt": "2026-10-26T13:51:31.870Z",
+          "wallMs": 81,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "node_to_job_receipt",
+          "startAt": "2026-10-26T13:51:31.870Z",
+          "endAt": "2026-10-26T13:51:32.157Z",
+          "wallMs": 287,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "supervisor_bootstrap_security_and_state",
+          "startAt": "2026-10-26T13:51:31.860Z",
+          "endAt": "2026-10-26T13:51:52.302Z",
+          "wallMs": 20442,
+          "cpuMs": null,
+          "waitingMs": null,
+          "overlaps": "node_to_job_receipt"
+        },
+        {
+          "phase": "agentdock_creation_and_authenticated_health",
+          "startAt": "2026-10-26T13:51:52.302Z",
+          "endAt": "2026-10-26T13:51:55.987Z",
+          "wallMs": 3685,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_spawned",
+          "startAt": "2026-10-26T13:51:55.987Z",
+          "endAt": "2026-10-26T13:52:08.151Z",
+          "wallMs": 12164,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_settings_received",
+          "startAt": "2026-10-26T13:52:08.151Z",
+          "endAt": "2026-10-26T13:52:15.447Z",
+          "wallMs": 7296,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_approval_verified",
+          "startAt": "2026-10-26T13:52:15.447Z",
+          "endAt": "2026-10-26T13:52:23.938Z",
+          "wallMs": 8491,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_candidate_verified",
+          "startAt": "2026-10-26T13:52:23.938Z",
+          "endAt": "2026-10-26T13:52:25.601Z",
+          "wallMs": 1663,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_config_loaded",
+          "startAt": "2026-10-26T13:52:25.601Z",
+          "endAt": "2026-10-26T13:52:25.603Z",
+          "wallMs": 2,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_log_protection_ready",
+          "startAt": "2026-10-26T13:52:25.603Z",
+          "endAt": "2026-10-26T13:52:26.425Z",
+          "wallMs": 822,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_server_import_begin",
+          "startAt": "2026-10-26T13:52:26.425Z",
+          "endAt": "2026-10-26T13:52:37.231Z",
+          "wallMs": 10806,
+          "cpuMs": null,
+          "waitingMs": null,
+          "terminal": "startup_failure",
+          "includesOAuthAndListen": false
+        }
+      ],
+      "streamMetadata": [
+        {
+          "role": "agentdock",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0,
+          "events": []
+        },
+        {
+          "role": "agentdock",
+          "stream": "stderr",
+          "bytes": 2146,
+          "completeJsonRecords": 11,
+          "nonJsonOrPartialRecords": 1,
+          "events": [
+            {
+              "at": "2026-10-26T22:51:52.6056876+09:00",
+              "event": "server_config",
+              "durationMs": 3
+            },
+            {
+              "at": "2026-10-26T22:51:52.7046357+09:00",
+              "event": "desktop_runtime_repair",
+              "durationMs": 1
+            },
+            {
+              "at": "2026-10-26T22:51:52.7496331+09:00",
+              "event": "runtime_init",
+              "durationMs": 43
+            },
+            {
+              "at": "2026-10-26T22:51:52.7819879+09:00",
+              "event": "http_listen",
+              "durationMs": 24
+            },
+            {
+              "at": "2026-10-26T22:51:55.8539761+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 401
+            },
+            {
+              "at": "2026-10-26T22:51:55.907745+09:00",
+              "event": "http_request",
+              "durationMs": 31,
+              "status": 200
+            },
+            {
+              "at": "2026-10-26T22:51:55.9166383+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 202
+            },
+            {
+              "at": "2026-10-26T22:51:55.9193094+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 405
+            }
+          ]
+        },
+        {
+          "role": "devspace",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "devspace",
+          "stream": "stderr",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "gateway",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "gateway",
+          "stream": "stderr",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        }
+      ],
+      "cleanup": {
+        "manager": {
+          "proven": true,
+          "proof": "launcher_terminal"
+        },
+        "guardianRuntimeClean": true,
+        "guardianJobActiveAfterCleanup": 0,
+        "supervisorExit": 1
+      }
+    },
+    {
+      "runId": "e5b69347-6b26-46e6-bef1-61aadf865163",
+      "requestAt": "2026-10-26T13:53:25.100Z",
+      "requestTimestampEvidence": "derived from Manager failure.at minus durationMs; earlier request overwritten",
+      "deadline": "2026-10-26T13:55:25.100Z",
+      "totalWallMs": 120039,
+      "ready": false,
+      "supervisorLogRecords": 0,
+      "managerEvents": [
+        {
+          "at": "2026-10-26T13:52:53.4776468Z",
+          "event": "recovery_attempt",
+          "reason": "startup_retry"
+        }
+      ],
+      "timeline": [
+        {
+          "phase": "manager_previous_status",
+          "startAt": "2026-10-26T13:53:15.481Z",
+          "endAt": "2026-10-26T13:53:24.013Z",
+          "wallMs": 8532,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_binary_hash",
+          "startAt": "2026-10-26T13:53:24.013Z",
+          "endAt": "2026-10-26T13:53:24.079Z",
+          "wallMs": 66,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_ports",
+          "startAt": "2026-10-26T13:53:24.079Z",
+          "endAt": "2026-10-26T13:53:24.082Z",
+          "wallMs": 3,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_secrets",
+          "startAt": "2026-10-26T13:53:24.082Z",
+          "endAt": "2026-10-26T13:53:25.099Z",
+          "wallMs": 1017,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "request_to_launcher",
+          "startAt": "2026-10-26T13:53:25.100Z",
+          "endAt": "2026-10-26T13:53:25.103Z",
+          "wallMs": 3,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_initialization",
+          "startAt": "2026-10-26T13:53:25.103Z",
+          "endAt": "2026-10-26T13:53:26.489Z",
+          "wallMs": 1386,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_preflight",
+          "startAt": "2026-10-26T13:53:26.489Z",
+          "endAt": "2026-10-26T13:53:43.518Z",
+          "wallMs": 17029,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_to_guardian_creation",
+          "startAt": "2026-10-26T13:53:43.518Z",
+          "endAt": "2026-10-26T13:53:43.539Z",
+          "wallMs": 21,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_initialization_and_first_preflight",
+          "startAt": "2026-10-26T13:53:43.539Z",
+          "endAt": "2026-10-26T13:54:01.593Z",
+          "wallMs": 18054,
+          "cpuMs": null,
+          "waitingMs": null,
+          "splitUnknown": true,
+          "reason": "first preflight has no separate timing receipt"
+        },
+        {
+          "phase": "guardian_compile_request_validation",
+          "startAt": "2026-10-26T13:54:01.593Z",
+          "endAt": "2026-10-26T13:54:01.817Z",
+          "wallMs": 224,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_second_preflight",
+          "startAt": "2026-10-26T13:54:01.817Z",
+          "endAt": "2026-10-26T13:54:18.647Z",
+          "wallMs": 16830,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_job_and_node_creation",
+          "startAt": "2026-10-26T13:54:18.647Z",
+          "endAt": "2026-10-26T13:54:18.757Z",
+          "wallMs": 110,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "node_to_job_receipt",
+          "startAt": "2026-10-26T13:54:18.757Z",
+          "endAt": "2026-10-26T13:54:19.019Z",
+          "wallMs": 262,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "supervisor_bootstrap_security_and_state",
+          "startAt": "2026-10-26T13:54:18.747Z",
+          "endAt": "2026-10-26T13:54:38.710Z",
+          "wallMs": 19963,
+          "cpuMs": null,
+          "waitingMs": null,
+          "overlaps": "node_to_job_receipt"
+        },
+        {
+          "phase": "agentdock_creation_and_authenticated_health",
+          "startAt": "2026-10-26T13:54:38.710Z",
+          "endAt": "2026-10-26T13:54:42.759Z",
+          "wallMs": 4049,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_spawned",
+          "startAt": "2026-10-26T13:54:42.759Z",
+          "endAt": "2026-10-26T13:54:55.155Z",
+          "wallMs": 12396,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_settings_received",
+          "startAt": "2026-10-26T13:54:55.155Z",
+          "endAt": "2026-10-26T13:55:02.113Z",
+          "wallMs": 6958,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_approval_verified",
+          "startAt": "2026-10-26T13:55:02.113Z",
+          "endAt": "2026-10-26T13:55:09.656Z",
+          "wallMs": 7543,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_candidate_verified",
+          "startAt": "2026-10-26T13:55:09.656Z",
+          "endAt": "2026-10-26T13:55:09.845Z",
+          "wallMs": 189,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_config_loaded",
+          "startAt": "2026-10-26T13:55:09.845Z",
+          "endAt": "2026-10-26T13:55:09.847Z",
+          "wallMs": 2,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_log_protection_ready",
+          "startAt": "2026-10-26T13:55:09.847Z",
+          "endAt": "2026-10-26T13:55:10.008Z",
+          "wallMs": 161,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_server_import_begin",
+          "startAt": "2026-10-26T13:55:10.008Z",
+          "endAt": "2026-10-26T13:55:20.246Z",
+          "wallMs": 10238,
+          "cpuMs": null,
+          "waitingMs": null,
+          "importWallMs": 10231,
+          "cpuUserMs": 1719,
+          "cpuSystemMs": 484,
+          "nonCpuRemainderMs": 8028
+        },
+        {
+          "phase": "devspace_server_import_complete",
+          "startAt": "2026-10-26T13:55:20.246Z",
+          "endAt": "2026-10-26T13:55:20.378Z",
+          "wallMs": 132,
+          "cpuMs": null,
+          "waitingMs": null,
+          "terminal": "readiness_complete",
+          "includesOAuthAndListen": true
+        },
+        {
+          "phase": "gateway_spawned",
+          "startAt": "2026-10-26T13:55:20.379Z",
+          "endAt": "2026-10-26T13:55:25.107Z",
+          "wallMs": 4728,
+          "cpuMs": null,
+          "waitingMs": null,
+          "terminal": "startup_failure",
+          "includesOAuthAndListen": false
+        }
+      ],
+      "streamMetadata": [
+        {
+          "role": "agentdock",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0,
+          "events": []
+        },
+        {
+          "role": "agentdock",
+          "stream": "stderr",
+          "bytes": 2134,
+          "completeJsonRecords": 11,
+          "nonJsonOrPartialRecords": 1,
+          "events": [
+            {
+              "at": "2026-10-26T22:54:39.7405485+09:00",
+              "event": "server_config",
+              "durationMs": 2
+            },
+            {
+              "at": "2026-10-26T22:54:39.8306928+09:00",
+              "event": "desktop_runtime_repair",
+              "durationMs": 0
+            },
+            {
+              "at": "2026-10-26T22:54:39.8397728+09:00",
+              "event": "runtime_init",
+              "durationMs": 9
+            },
+            {
+              "at": "2026-10-26T22:54:39.8445614+09:00",
+              "event": "http_listen",
+              "durationMs": 1
+            },
+            {
+              "at": "2026-10-26T22:54:42.6435116+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 401
+            },
+            {
+              "at": "2026-10-26T22:54:42.667968+09:00",
+              "event": "http_request",
+              "durationMs": 10,
+              "status": 200
+            },
+            {
+              "at": "2026-10-26T22:54:42.6786595+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 202
+            },
+            {
+              "at": "2026-10-26T22:54:42.680836+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 405
+            }
+          ]
+        },
+        {
+          "role": "devspace",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "devspace",
+          "stream": "stderr",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "gateway",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "gateway",
+          "stream": "stderr",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        }
+      ],
+      "cleanup": {
+        "manager": {
+          "proven": true,
+          "proof": "launcher_terminal"
+        },
+        "guardianRuntimeClean": true,
+        "guardianJobActiveAfterCleanup": 0,
+        "supervisorExit": 1
+      }
+    },
+    {
+      "runId": "a5108ab9-f57c-4673-950a-087f09f8cca8",
+      "requestAt": "2026-10-26T13:56:13.499Z",
+      "requestTimestampEvidence": "original request.json",
+      "deadline": "2026-10-26T13:58:13.499Z",
+      "totalWallMs": 120023,
+      "ready": false,
+      "supervisorLogRecords": 0,
+      "managerEvents": [
+        {
+          "at": "2026-10-26T13:55:40.6764675Z",
+          "event": "recovery_attempt",
+          "reason": "startup_retry"
+        }
+      ],
+      "timeline": [
+        {
+          "phase": "manager_previous_status",
+          "startAt": "2026-10-26T13:56:02.495Z",
+          "endAt": "2026-10-26T13:56:12.394Z",
+          "wallMs": 9899,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_binary_hash",
+          "startAt": "2026-10-26T13:56:12.394Z",
+          "endAt": "2026-10-26T13:56:12.456Z",
+          "wallMs": 62,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_ports",
+          "startAt": "2026-10-26T13:56:12.456Z",
+          "endAt": "2026-10-26T13:56:12.459Z",
+          "wallMs": 3,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "manager_secrets",
+          "startAt": "2026-10-26T13:56:12.459Z",
+          "endAt": "2026-10-26T13:56:13.498Z",
+          "wallMs": 1039,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "request_to_launcher",
+          "startAt": "2026-10-26T13:56:13.499Z",
+          "endAt": "2026-10-26T13:56:13.502Z",
+          "wallMs": 3,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_initialization",
+          "startAt": "2026-10-26T13:56:13.502Z",
+          "endAt": "2026-10-26T13:56:14.870Z",
+          "wallMs": 1368,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_preflight",
+          "startAt": "2026-10-26T13:56:14.870Z",
+          "endAt": "2026-10-26T13:56:32.553Z",
+          "wallMs": 17683,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "launcher_to_guardian_creation",
+          "startAt": "2026-10-26T13:56:32.553Z",
+          "endAt": "2026-10-26T13:56:32.570Z",
+          "wallMs": 17,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_initialization_and_first_preflight",
+          "startAt": "2026-10-26T13:56:32.570Z",
+          "endAt": "2026-10-26T13:56:51.503Z",
+          "wallMs": 18933,
+          "cpuMs": null,
+          "waitingMs": null,
+          "splitUnknown": true,
+          "reason": "first preflight has no separate timing receipt"
+        },
+        {
+          "phase": "guardian_compile_request_validation",
+          "startAt": "2026-10-26T13:56:51.503Z",
+          "endAt": "2026-10-26T13:56:51.726Z",
+          "wallMs": 223,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_second_preflight",
+          "startAt": "2026-10-26T13:56:51.726Z",
+          "endAt": "2026-10-26T13:57:09.476Z",
+          "wallMs": 17750,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "guardian_job_and_node_creation",
+          "startAt": "2026-10-26T13:57:09.476Z",
+          "endAt": "2026-10-26T13:57:09.618Z",
+          "wallMs": 142,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "node_to_job_receipt",
+          "startAt": "2026-10-26T13:57:09.618Z",
+          "endAt": "2026-10-26T13:57:09.963Z",
+          "wallMs": 345,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "supervisor_bootstrap_security_and_state",
+          "startAt": "2026-10-26T13:57:09.608Z",
+          "endAt": "2026-10-26T13:57:30.186Z",
+          "wallMs": 20578,
+          "cpuMs": null,
+          "waitingMs": null,
+          "overlaps": "node_to_job_receipt"
+        },
+        {
+          "phase": "agentdock_creation_and_authenticated_health",
+          "startAt": "2026-10-26T13:57:30.186Z",
+          "endAt": "2026-10-26T13:57:33.545Z",
+          "wallMs": 3359,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_spawned",
+          "startAt": "2026-10-26T13:57:33.545Z",
+          "endAt": "2026-10-26T13:57:46.119Z",
+          "wallMs": 12574,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_settings_received",
+          "startAt": "2026-10-26T13:57:46.119Z",
+          "endAt": "2026-10-26T13:57:53.438Z",
+          "wallMs": 7319,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_approval_verified",
+          "startAt": "2026-10-26T13:57:53.438Z",
+          "endAt": "2026-10-26T13:58:01.043Z",
+          "wallMs": 7605,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_candidate_verified",
+          "startAt": "2026-10-26T13:58:01.043Z",
+          "endAt": "2026-10-26T13:58:01.229Z",
+          "wallMs": 186,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_config_loaded",
+          "startAt": "2026-10-26T13:58:01.229Z",
+          "endAt": "2026-10-26T13:58:01.230Z",
+          "wallMs": 1,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_log_protection_ready",
+          "startAt": "2026-10-26T13:58:01.230Z",
+          "endAt": "2026-10-26T13:58:01.418Z",
+          "wallMs": 188,
+          "cpuMs": null,
+          "waitingMs": null
+        },
+        {
+          "phase": "devspace_server_import_begin",
+          "startAt": "2026-10-26T13:58:01.418Z",
+          "endAt": "2026-10-26T13:58:03.560Z",
+          "wallMs": 2142,
+          "cpuMs": null,
+          "waitingMs": null,
+          "importWallMs": 2141,
+          "cpuUserMs": 1515,
+          "cpuSystemMs": 531,
+          "nonCpuRemainderMs": 95
+        },
+        {
+          "phase": "devspace_server_import_complete",
+          "startAt": "2026-10-26T13:58:03.560Z",
+          "endAt": "2026-10-26T13:58:03.666Z",
+          "wallMs": 106,
+          "cpuMs": null,
+          "waitingMs": null,
+          "terminal": "readiness_complete",
+          "includesOAuthAndListen": true
+        },
+        {
+          "phase": "gateway_spawned",
+          "startAt": "2026-10-26T13:58:03.667Z",
+          "endAt": "2026-10-26T13:58:13.506Z",
+          "wallMs": 9839,
+          "cpuMs": null,
+          "waitingMs": null,
+          "terminal": "startup_failure",
+          "includesOAuthAndListen": false
+        }
+      ],
+      "streamMetadata": [
+        {
+          "role": "agentdock",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0,
+          "events": []
+        },
+        {
+          "role": "agentdock",
+          "stream": "stderr",
+          "bytes": 2139,
+          "completeJsonRecords": 11,
+          "nonJsonOrPartialRecords": 1,
+          "events": [
+            {
+              "at": "2026-10-26T22:57:30.3440134+09:00",
+              "event": "server_config",
+              "durationMs": 2
+            },
+            {
+              "at": "2026-10-26T22:57:30.4416185+09:00",
+              "event": "desktop_runtime_repair",
+              "durationMs": 0
+            },
+            {
+              "at": "2026-10-26T22:57:30.4514415+09:00",
+              "event": "runtime_init",
+              "durationMs": 9
+            },
+            {
+              "at": "2026-10-26T22:57:30.4555537+09:00",
+              "event": "http_listen",
+              "durationMs": 0
+            },
+            {
+              "at": "2026-10-26T22:57:33.4452011+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 401
+            },
+            {
+              "at": "2026-10-26T22:57:33.4598863+09:00",
+              "event": "http_request",
+              "durationMs": 1,
+              "status": 200
+            },
+            {
+              "at": "2026-10-26T22:57:33.4706296+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 202
+            },
+            {
+              "at": "2026-10-26T22:57:33.4732659+09:00",
+              "event": "http_request",
+              "durationMs": 0,
+              "status": 405
+            }
+          ]
+        },
+        {
+          "role": "devspace",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "devspace",
+          "stream": "stderr",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "gateway",
+          "stream": "stdout",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        },
+        {
+          "role": "gateway",
+          "stream": "stderr",
+          "bytes": 0,
+          "completeJsonRecords": 0,
+          "nonJsonOrPartialRecords": 0
+        }
+      ],
+      "cleanup": {
+        "manager": {
+          "proven": true,
+          "proof": "launcher_terminal"
+        },
+        "guardianRuntimeClean": true,
+        "guardianJobActiveAfterCleanup": 0,
+        "supervisorExit": 1
+      }
+    }
+  ],
+  "limits": [
+    "CPU and exact waiting time unknown except reported DevSpace import CPU",
+    "wall minus CPU is unclassified time, not proof of disk/Defender/OAuth wait",
+    "Guardian first preflight is combined with initialization; no per-call timestamp",
+    "OAuth initialization only bounded by server_import_complete to readiness_complete",
+    "No Gateway settings receipt before global timeout",
+    "No Supervisor-specific fatal/exit log records for these three runs"
+  ]
+}

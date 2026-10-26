@@ -29,6 +29,15 @@ export async function minimalStartupSources(){
   start=replace(start,'    // Maintenance persists this identity before the launcher can create a tree.\n    if(onRequest)await onRequest({runId});\n','');
   const original=result['scripts/TongAgentDockRuntime.mjs'];
   result['scripts/TongAgentDockRuntime.mjs']=replace(original,section(original,'export async function startRuntime(','export async function stopRuntime('),start);
+  const budget=section(runtime,'// Production request->DevSpace','export function readinessPolicy(');
+  result['scripts/TongAgentDockRuntime.mjs']=replace(result['scripts/TongAgentDockRuntime.mjs'],'export function readinessPolicy(',budget+'export function readinessPolicy(');
+  result['scripts/TongAgentDockRuntime.mjs']=replace(result['scripts/TongAgentDockRuntime.mjs'],section(original,'  async function managed(','  async function shutdown('),section(runtime,'  async function managed(','  async function shutdown('));
+  const guardian=(await readFile(new URL('../../scripts/TongRuntimeGuardian.ps1',import.meta.url),'utf8')).replaceAll('\r\n','\n');
+  const oldGuardian=result['scripts/TongRuntimeGuardian.ps1'];
+  const preflight="    Assert-TongStartupActive\n    $stage='preflight'\n",approved='    $approvedRoot=$true';
+  result['scripts/TongRuntimeGuardian.ps1']=replace(oldGuardian,section(oldGuardian,preflight,approved),section(guardian,preflight,approved));
+  const request="    $stage='read-request'\n    $request=",createJob="    $stage='create-job'\n";
+  result['scripts/TongRuntimeGuardian.ps1']=replace(result['scripts/TongRuntimeGuardian.ps1'],section(oldGuardian,request,createJob),section(guardian,request,createJob));
   let protocol=result['scripts/TongStartupProtocol.ps1'];
   protocol=replace(protocol,' public TongStartupPreflight(string name,string exe,string args,string cwd) {',' public int Pid {get;private set;}\n public string StartTicks {get;private set;}\n public TongStartupPreflight(string name,string exe,string args,string cwd) {');
   protocol=replace(protocol,'   process=info.process;','   process=info.process;\n   Pid=(int)info.pid;long a,b,c,d;Check(GetProcessTimes(process,out a,out b,out c,out d),"PREFLIGHT_IDENTITY_FAILED");StartTicks=(DateTime.FromFileTimeUtc(a).Ticks/10*10).ToString();');

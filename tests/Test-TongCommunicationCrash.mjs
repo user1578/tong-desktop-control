@@ -24,7 +24,7 @@ const evidence={syntheticOnly:true,oldRunId:runId,beganAt:new Date().toISOString
 try{
  assert.equal((await security.terminateOwnedProcess(previous.supervisor)).matched,true);
  let recovered,healthy;
- const deadline=Date.now()+180000;
+ const deadline=Date.now()+240000;
  while(Date.now()<deadline){
   const r=await json(join(root,'run/runtime.json'));
   if(r.runId!==runId&&r.phase==='ready'){
@@ -60,7 +60,9 @@ try{
  const events=(await readFile(join(root,'logs/lifecycle.jsonl'),'utf8')).trim().split(/\r?\n/).map(JSON.parse);
  const ready=events.find(e=>e.runId===recovered.runId&&e.event==='ready');
  evidence.requestToReadyMs=Date.parse(ready.at)-Date.parse(request.createdAt);
- assert.ok(evidence.requestToReadyMs>=0&&evidence.requestToReadyMs<=120000);
+ evidence.startupBudgetMs=request.startupDeadline-Date.parse(request.createdAt);
+ assert.ok(evidence.startupBudgetMs>0&&evidence.startupBudgetMs<=180000);
+ assert.ok(evidence.requestToReadyMs>=0&&evidence.requestToReadyMs<evidence.startupBudgetMs);
  const test=fileURLToPath(new URL('Test-TongCommunicationFiles.mjs',import.meta.url));
  const child=spawn(process.execPath,[test,root,recovered.runId,evidenceDir,'recovered'],{windowsHide:true,stdio:['ignore','pipe','pipe']});
  let stdout='',stderr='';child.stdout.on('data',b=>stdout+=b);child.stderr.on('data',b=>stderr+=b);

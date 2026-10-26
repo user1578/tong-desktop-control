@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
-import {waitForChildReadiness,readinessPolicy} from '../scripts/TongAgentDockRuntime.mjs';
+import {readFile} from 'node:fs/promises';
+import {waitForChildReadiness,readinessPolicy,startupBudgetMs,startupProgress} from '../scripts/TongAgentDockRuntime.mjs';
+import {minimalStartupSources} from './fixtures/TongMinimalStartupCandidate.mjs';
+const candidate=(await minimalStartupSources())['scripts/TongAgentDockRuntime.mjs'];
+const working=await readFile(new URL('../scripts/TongAgentDockRuntime.mjs',import.meta.url),'utf8');
+const readinessSource=text=>text.replaceAll('\r\n','\n').slice(text.replaceAll('\r\n','\n').indexOf('// Production request->DevSpace'),text.replaceAll('\r\n','\n').indexOf('const hash='));
+assert.equal(readinessSource(candidate),readinessSource(working),'the exact minimal candidate uses the same tested budget, progress and readiness implementation');
 
 // A deterministic clock exercises real IPC handlers and deadlines without
 // spending minutes sleeping or creating another dependency tree.
@@ -35,4 +41,10 @@ t=fixture();t.child.emit('message',null);t.child.emit('message',{event:'logging_
 const cancelled=new AbortController();t=fixture('devspace',{signal:cancelled.signal});cancelled.abort();assert.equal((await t.settled).error.message,'START_ABORTED');assert.equal(t.timers.size,0);
 t=fixture('devspace',{onEvent:()=>Promise.reject(new Error('diagnostic write failed'))});t.stage('settings_received');assert.equal((await t.settled).error.message,'diagnostic write failed');assert.equal(t.timers.size,0);
 assert.equal(readinessPolicy('devspace',true).totalMs,75000);assert.equal(readinessPolicy('gateway',true).totalMs,35000);assert.equal(readinessPolicy('devspace',false).totalMs,20000);
+assert.equal(startupBudgetMs(true),180000);assert.equal(startupBudgetMs(false),30000);
+const oldProgress={role:'devspace',stage:'server_import_complete',stageStartedAt:100};
+assert.deepEqual(startupProgress(oldProgress,{event:'readiness_begin',role:'gateway'},200),{role:'gateway',stage:'spawned',stageStartedAt:200});
+assert.deepEqual(startupProgress(oldProgress,{event:'readiness_complete',role:'devspace'},200),{role:'devspace',stage:'ready',stageStartedAt:200});
+assert.equal(startupProgress(oldProgress,{event:'readiness_slow',role:'devspace'},200),oldProgress,'slow observations do not renew a stage');
+t=fixture('gateway',{began:140000,startupDeadline:180000});t.advance(140000);t.stage('settings_received');t.advance(6000);t.stage('approval_verified');t.advance(7000);t.stage('candidate_verified');t.advance(1000);t.child.emit('message',{event:'ready'});assert.equal((await t.settled).ready,true,'late sequential Gateway still has its bounded 35 second budget');
 console.log(JSON.stringify({passed:true,normal:true,slowAbove45s:true,stageStall:true,duplicatesDoNotRenew:true,exit:true,spawnFailure:true,childTotal:true,startupTotal:true,lateReadyRejected:true,handlersCleaned:true}));

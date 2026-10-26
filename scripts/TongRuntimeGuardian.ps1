@@ -26,8 +26,15 @@ try {
     Initialize-TongStartup 'guardian'
     Assert-TongStartupActive
     $stage='preflight'
-    if($Root -ceq 'D:\Tong\runtime') {
-        if($NodeExe -cne 'D:\node\node.exe' -or $Supervisor -cne 'D:\Tong\runtime\releases\manager\scripts\TongAgentDockRuntime.mjs'){throw 'Fixed production entry required'}
+    # Bind the request before the one native authorization check. The former
+    # production branch and recovery branch both ran preflight-login (~17s
+    # each), while the receipt silently retained only the second invocation.
+    $request=Get-Content -LiteralPath (Join-Path $Root 'run\request.json') -Raw | ConvertFrom-Json
+    if($request.runId -cne $RunId){throw 'Run identity mismatch'}
+    if($RecoveryGrantId){
+        if($request.recoveryGrantId -cne $RecoveryGrantId){throw 'Recovery grant identity mismatch'}
+    }elseif($request.PSObject.Properties['recoveryGrantId']){throw 'Recovery request requires explicit guardian authorization'}
+    if($Root -ceq 'D:\Tong\runtime' -or $RecoveryGrantId) {
         if($RecoveryGrantId){Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)}else{Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-production')}
     }elseif(-not $Root.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'Root outside approved scope'}
     $approvedRoot=$true
@@ -57,9 +64,6 @@ public static class TongRuntimeJob {
     if ($request.runId -ne $RunId) { throw 'Run identity mismatch' }
     if($RecoveryGrantId){
         if($RecoveryGrantId -notmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$' -or $request.recoveryGrantId -cne $RecoveryGrantId){throw 'Recovery grant identity mismatch'}
-        $stage='preflight'
-        Invoke-TongStartupPreflight ('"'+$Supervisor+'" preflight-login --root "'+$Root+'" --grant-id '+$RecoveryGrantId)
-        $stage='read-request'
     }elseif($request.PSObject.Properties['recoveryGrantId']){throw 'Recovery request requires explicit guardian authorization'}
     $stage='create-job'
     Assert-TongStartupActive

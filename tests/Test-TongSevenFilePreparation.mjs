@@ -22,9 +22,9 @@ async function privateCommit(root,parent,files,label){
   for(const [path,bytes] of Object.entries(files)){const blob=git(['hash-object','-w','--stdin'],{input:bytes});git(['update-index','--add','--cacheinfo','100644,'+blob+','+path],{env});}
   const tree=git(['write-tree'],{env});return git(['commit-tree',tree,'-p',parent,'-m',label]);
 }
-async function checkRoot(root){assert.match(root??'',/^D:\\Tong\\state\\b23-login-[a-f0-9]{32}$/);const marker=await json(join(root,'seven-file-preparation.json'));assert.equal(marker.scope,'seven-file-preparation-isolation');assert.equal(marker.root,root);if(marker.communicationFixture){assert.equal(marker.releaseRoot,'D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\seven-file-release');assert.notEqual(action,'seal-exact-release');}else assert.equal(marker.releaseRoot,join(root,'seven-file-release'));return marker;}
+async function checkRoot(root){assert.match(root??'',/^D:\\Tong\\state\\b23-login-[a-f0-9]{32}$/);const marker=await json(join(root,'seven-file-preparation.json'));assert.equal(marker.scope,'seven-file-preparation-isolation');assert.equal(marker.root,root);if(marker.startupRecovery)assert.notEqual(action,'seal-exact-release','Preserve the previous release; startup recovery has a separate exact package');if(marker.communicationFixture){assert.equal(marker.releaseRoot,'D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\seven-file-release');assert.notEqual(action,'seal-exact-release');}else assert.equal(marker.releaseRoot,join(root,'seven-file-release'));return marker;}
 if(action==='prepare'){
-  const seven=await minimalStartupSources(),review=await json(join(project,'docs/evidence/024-startup-minimal-fix-20261026/CANDIDATE-MANIFEST.json'));
+  const seven=await minimalStartupSources(),review=await json(join(project,'docs/evidence/024-startup-budget-recovery-20261027/CANDIDATE-MANIFEST.json'));
   for(const item of review.files)assert.equal(sha(seven[item.path]),item.candidateSha256);
   const oldProfile=await json(join(existing,'profile.json')),oldPin=await json(join(existing,'run/release-pin.json'));
   assert.equal(oldProfile.mode,'production-simulation');assert.equal(oldPin.commit,startupBase);assert.equal(oldPin.sourceFiles.length,283);assert.equal(oldPin.native.length,23);
@@ -82,7 +82,7 @@ if(action==='prepare'){
     console.log(JSON.stringify({phase:state.phase,runId:state.runId,healthy:doctor?.healthy??null,health:doctor?.health??null,supervisor:state.supervisor,children:state.children,guardian:await json(join(root,'run/guardian.json')),launcher,guardianReceipt:guardian}));
   }else if(action==='stop'||action==='verify-stopped'){
     const state=await runtime.runtimeStatus(root);
-    if(action==='verify-stopped'){assert.equal(state.phase,'stopped');assert.equal(state.supervisorAlive,false);}
+    if(action==='verify-stopped'){assert.ok(['stopped','abnormal_exit'].includes(state.phase));assert.equal(state.supervisorAlive,false);}
     if(state.supervisorAlive)await login.withLoginRecovery(root,'stop-run',()=>runtime.stopRuntime(root,{expectedRunId:state.runId}));
     const after=await runtime.runtimeStatus(root),g=await json(join(root,'run/guardian.json'));
     assert.equal(after.supervisorAlive,false);assert.equal(g.jobActiveAfterCleanup,0);assert.ok(g.finishedAt);

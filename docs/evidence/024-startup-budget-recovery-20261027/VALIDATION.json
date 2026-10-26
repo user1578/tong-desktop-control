@@ -1,0 +1,390 @@
+{
+  "productionOriginalDaclsCompared": 17,
+  "failurePathsBudgetUnchanged": true,
+  "nativeReadiness": {
+    "result": {
+      "passed": true,
+      "results": [
+        {
+          "fault": "stage-stall",
+          "wallMs": 30229,
+          "code": "CHILD_STAGE_TIMEOUT",
+          "readiness": {
+            "role": "devspace",
+            "stage": "server_import_begin",
+            "durationMs": 30222,
+            "stageDurationMs": 30013,
+            "timeoutKind": "stage"
+          },
+          "childClosed": true,
+          "ipcHandlersRemoved": true
+        },
+        {
+          "fault": "early-exit",
+          "wallMs": 195,
+          "code": "CHILD_EXIT",
+          "readiness": {
+            "role": "devspace",
+            "stage": "spawned",
+            "durationMs": 195,
+            "stageDurationMs": 195,
+            "exitCode": 7,
+            "signal": null
+          },
+          "childClosed": true,
+          "ipcHandlersRemoved": true
+        },
+        {
+          "fault": "cancel",
+          "wallMs": 1023,
+          "code": "START_ABORTED",
+          "readiness": {
+            "role": "devspace",
+            "stage": "spawned",
+            "durationMs": 1016,
+            "stageDurationMs": 1016
+          },
+          "childClosed": true,
+          "ipcHandlersRemoved": true
+        }
+      ],
+      "productionChanged": false
+    },
+    "parentExit": 0,
+    "jobActiveAfterCleanup": 0
+  },
+  "productionRecoveryClaimed": false,
+  "rounds": [
+    {
+      "launcherPreflightMs": 17027,
+      "passed": true,
+      "taskToHealthyMs": 130572.7566,
+      "communication": {
+        "syntheticOnly": true,
+        "runId": "10badad6-1d86-414d-979d-d42e9c72ba98",
+        "startedAt": "2026-10-26T15:22:25.185Z",
+        "productionChanged": false,
+        "configPinsAndSecretsPreserved": true,
+        "unauthenticatedRejected": true,
+        "existingOAuthClientLoaded": true,
+        "invalidOwnerRejected": true,
+        "existingOAuthClientStillAuthorized": true,
+        "toolCount": 38,
+        "projectMetadata": true,
+        "windowsMetadata": true,
+        "realFileRead": true,
+        "agentDockRead": true,
+        "createEditRead": true,
+        "directoryListed": true,
+        "traversalAndJunctionDenied": true,
+        "reconnectedRead": true,
+        "reconnectedAgentDockRead": true,
+        "refreshSucceeded": true,
+        "passed": true,
+        "finishedAt": "2026-10-26T15:22:32.916Z"
+      },
+      "controlledPreflightWaitMs": [
+        8244,
+        8297
+      ],
+      "normalStop": {
+        "stopped": true,
+        "runId": "10badad6-1d86-414d-979d-d42e9c72ba98",
+        "phase": "stopped",
+        "allExactIdentitiesGone": true,
+        "fourJobsEmpty": true,
+        "inventoryEmpty": true,
+        "excludedKnownObserverCount": 3
+      },
+      "taskDisabled": true,
+      "evidence": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\task-originals-764e133745724ce8a96d62fc5f27a538",
+      "exactCandidate": "b9fe80150f9cdea47130e8952e85e39503187677",
+      "guardianPreflightMs": 17062,
+      "requestToReadyRunId": "10badad6-1d86-414d-979d-d42e9c72ba98",
+      "root": "D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f",
+      "requestToReadyMs": 78292.0,
+      "testCommit": "4f817fe18afe6dc8f30bf095f37430a193868744",
+      "taskDefinitionChanged": false,
+      "atomicContainment": "create_process_job_list",
+      "taskExit": 0,
+      "originalHostRestored": true,
+      "doctorHealthy": true,
+      "runId": "10badad6-1d86-414d-979d-d42e9c72ba98",
+      "recovery": null,
+      "periodicDoctorExit": 0,
+      "startupBudgetMs": 180000,
+      "validationPreflightMs": [
+        8765,
+        8751
+      ]
+    },
+    {
+      "launcherPreflightMs": 17048,
+      "passed": true,
+      "taskToHealthyMs": 174303.1685,
+      "communication": null,
+      "controlledPreflightWaitMs": [
+        8452,
+        8407
+      ],
+      "normalStop": {
+        "stopped": true,
+        "runId": "44e7a85e-5004-435c-a5ab-3b248560734d",
+        "phase": "stopped",
+        "allExactIdentitiesGone": true,
+        "fourJobsEmpty": true,
+        "inventoryEmpty": true,
+        "excludedKnownObserverCount": 3
+      },
+      "taskDisabled": true,
+      "evidence": "D:\\Tong\\state\\b23-login-c2db39cf150c44d584691538559dce3d\\task-originals-e1437313add449f199740eb871c2e232",
+      "exactCandidate": "b9fe80150f9cdea47130e8952e85e39503187677",
+      "guardianPreflightMs": 17107,
+      "requestToReadyRunId": "44e7a85e-5004-435c-a5ab-3b248560734d",
+      "root": "D:\\Tong\\state\\b23-login-c2db39cf150c44d584691538559dce3d",
+      "requestToReadyMs": 130098.0,
+      "testCommit": "842b06db345420083f2505ecf18dbca097a8d814",
+      "taskDefinitionChanged": false,
+      "atomicContainment": "create_process_job_list",
+      "taskExit": 0,
+      "originalHostRestored": true,
+      "doctorHealthy": true,
+      "runId": "78cacdc6-36a6-4c4d-845d-2a7bb76819a4",
+      "recovery": {
+        "syntheticOnly": true,
+        "oldRunId": "78cacdc6-36a6-4c4d-845d-2a7bb76819a4",
+        "beganAt": "2026-10-26T15:13:56.559Z",
+        "productionChanged": false,
+        "sameRunnerPreserved": true,
+        "budgetConsumedOnce": true,
+        "naturallyExpiredAttempts": 0,
+        "doctorHealthy": true,
+        "recoveredRunId": "44e7a85e-5004-435c-a5ab-3b248560734d",
+        "requestToReadyMs": 130098,
+        "startupBudgetMs": 180000,
+        "communication": {
+          "syntheticOnly": true,
+          "runId": "44e7a85e-5004-435c-a5ab-3b248560734d",
+          "startedAt": "2026-10-26T15:17:19.451Z",
+          "productionChanged": false,
+          "configPinsAndSecretsPreserved": true,
+          "unauthenticatedRejected": true,
+          "existingOAuthClientLoaded": true,
+          "invalidOwnerRejected": true,
+          "existingOAuthClientStillAuthorized": true,
+          "toolCount": 38,
+          "projectMetadata": true,
+          "windowsMetadata": true,
+          "realFileRead": true,
+          "agentDockRead": true,
+          "createEditRead": true,
+          "directoryListed": true,
+          "traversalAndJunctionDenied": true,
+          "reconnectedRead": true,
+          "reconnectedAgentDockRead": true,
+          "refreshSucceeded": true,
+          "passed": true,
+          "finishedAt": "2026-10-26T15:17:27.591Z"
+        },
+        "oldJobsEmpty": true,
+        "oldSupervisorGone": true,
+        "passed": true,
+        "finishedAt": "2026-10-26T15:17:27.607Z"
+      },
+      "periodicDoctorExit": null,
+      "startupBudgetMs": 180000,
+      "validationPreflightMs": [
+        8578,
+        8678
+      ]
+    }
+  ],
+  "candidate": "b9fe80150f9cdea47130e8952e85e39503187677",
+  "productionOriginalDaclsMatched": true,
+  "nativeFailurePaths": {
+    "results": [
+      {
+        "mode": "startup-total-timeout",
+        "runId": "a3db1ff4-5c1c-4d91-bc9c-7d54077d4869",
+        "elapsedMs": 37789,
+        "failure": {
+          "runId": "a3db1ff4-5c1c-4d91-bc9c-7d54077d4869",
+          "diagnosticId": "0415f92e-d3c9-4b38-9973-aae6c288b792",
+          "code": "START_TIMEOUT",
+          "stage": "preflight",
+          "managerFailure": {
+            "role": "manager",
+            "stage": "preflight",
+            "code": "START_TIMEOUT",
+            "diagnosticId": "0415f92e-d3c9-4b38-9973-aae6c288b792"
+          },
+          "launcher": {
+            "pid": 34976,
+            "elapsedMs": 4129,
+            "closed": true,
+            "exitCode": 2,
+            "signal": null,
+            "stderr": {
+              "bytes": 24,
+              "capturedBytes": 24,
+              "truncated": false,
+              "redacted": true,
+              "text": "Runtime launch refused"
+            }
+          },
+          "origin": {
+            "role": "launcher",
+            "stage": "preflight",
+            "code": "START_ABORT"
+          },
+          "launcherCode": "START_ABORT",
+          "cleanup": {
+            "proven": true,
+            "proof": "launcher_terminal"
+          }
+        },
+        "cleanup": {
+          "fourJobsEmpty": true,
+          "exactOriginalIdentitiesGone": true,
+          "completeInventoryEmpty": true,
+          "launcherFailure": {
+            "role": "launcher",
+            "stage": "preflight",
+            "code": "START_ABORT",
+            "exceptionType": "System.Management.Automation.RuntimeException",
+            "errorId": "START_ABORT",
+            "hresult": -2146233087,
+            "win32Error": null,
+            "exitCode": 2,
+            "diagnosticId": "a3db1ff4-5c1c-4d91-bc9c-7d54077d4869/launcher"
+          }
+        }
+      },
+      {
+        "mode": "native-cancel",
+        "runId": "c321082d-587b-466a-8467-5297b17850e6",
+        "elapsedMs": 34908,
+        "failure": {
+          "runId": "c321082d-587b-466a-8467-5297b17850e6",
+          "diagnosticId": "191a3763-973e-4d19-bb93-0f14c2232334",
+          "code": "SUPERVISOR_START_FAILED",
+          "stage": "preflight",
+          "managerFailure": {
+            "role": "manager",
+            "stage": "preflight",
+            "code": "SUPERVISOR_START_FAILED",
+            "diagnosticId": "191a3763-973e-4d19-bb93-0f14c2232334"
+          },
+          "launcher": {
+            "pid": 32184,
+            "elapsedMs": 1432,
+            "closed": true,
+            "exitCode": 2,
+            "signal": null,
+            "stderr": {
+              "bytes": 24,
+              "capturedBytes": 24,
+              "truncated": false,
+              "redacted": true,
+              "text": "Runtime launch refused"
+            }
+          },
+          "origin": {
+            "role": "launcher",
+            "stage": "preflight",
+            "code": "START_ABORT"
+          },
+          "launcherCode": "START_ABORT",
+          "cleanup": {
+            "proven": true,
+            "proof": "launcher_terminal"
+          }
+        },
+        "cleanup": {
+          "fourJobsEmpty": true,
+          "exactOriginalIdentitiesGone": true,
+          "completeInventoryEmpty": true,
+          "launcherFailure": {
+            "role": "launcher",
+            "stage": "preflight",
+            "code": "START_ABORT",
+            "exceptionType": "System.Management.Automation.RuntimeException",
+            "errorId": "START_ABORT",
+            "hresult": -2146233087,
+            "win32Error": null,
+            "exitCode": 2,
+            "diagnosticId": "c321082d-587b-466a-8467-5297b17850e6/launcher"
+          }
+        }
+      }
+    ],
+    "productionChanged": false
+  },
+  "productionBoundary": {
+    "at": "2026-10-26T15:33:04.1375534Z",
+    "stateDaclMatchesBefore": true,
+    "managerPinSha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+    "pinSha256": "482906d969ad9576b3de59e68df4d988898dc10f461d673231ac650d3dd892dd",
+    "readOnly": true,
+    "gateBytes": 0,
+    "stateLabel": "",
+    "hostLabel": "S:AI(ML;ID;NW;;;LW)",
+    "original2FilesVerified": 612,
+    "profileSha256": "ab96bbad1d41db71451bb86f4e55f67f21dbdc1a935f4ede7d80f98bac81ca35",
+    "productionListeners": [],
+    "taskLastResult": 1,
+    "hostSha256": "0d516bb5b26686b8ab2f0c3b1022beba7f48f8ad23e57a60e690cde9bdfc0c3b",
+    "sourceCommit": "024d5b0920d9ad8f1a2baf2e55640a5666ad4739",
+    "taskDefinitionMatchesBefore": true,
+    "taskInstances": 0,
+    "taskEnabled": false,
+    "ngrok": {
+      "state": "Running",
+      "processId": 40764,
+      "startName": "LocalSystem"
+    },
+    "databaseFiles": [
+      {
+        "bytes": 122880,
+        "modifiedAt": "2026-10-23T01:51:05.1010622Z",
+        "name": "devspace.sqlite",
+        "sha256": "4d5fb43cea6531c688dd7970fc2d6938d783f9f07b987fa96942dcce1b7067da"
+      },
+      {
+        "bytes": 16512,
+        "modifiedAt": "2026-10-26T13:55:20.2788218Z",
+        "name": "devspace.sqlite-wal",
+        "sha256": "1e8751a1f332d7470d4f55e4c80bd21f54483a5b2dd38f898b7e3efa67ef9a8b"
+      },
+      {
+        "bytes": 32768,
+        "modifiedAt": "2026-10-26T13:58:03.5764328Z",
+        "name": "devspace.sqlite-shm",
+        "sha256": "1ad423578f9121578631e16308c28e843a4d38db24bd91fad43f6ebf4fc12233"
+      }
+    ]
+  },
+  "targetedTests": [
+    "Test-TongGuardianPreflight.ps1",
+    "Test-TongRuntimeReadiness.mjs",
+    "Test-TongLauncherBudget.mjs",
+    "Test-TongLauncherBudget.mjs --minimal-candidate",
+    "Test-TongReadinessNative.ps1",
+    "Test-TongStartupFailurePaths.mjs",
+    "Test-TongSevenFileTask.ps1 normal",
+    "Test-TongSevenFileTask.ps1 slow+crash recovery",
+    "Test-TongMcpGateway.mjs",
+    "Test-TongToolBoundaries.mjs"
+  ],
+  "skips": [
+    "Windows file symlink unavailable; junction path rejection passed"
+  ],
+  "limits": [
+    "Two cold launches use persistent synthetic OAuth state and new processes; OS disk caches not flushed",
+    "Slow initial request file replaced; checkpoint-to-READY approximately130.3s",
+    "Supervisor may write late internal READY after final health; Manager rejects deadline-exceeded success",
+    "No production start, doctor or ChatGPT web access performed"
+  ],
+  "productionWritesAllowed": false,
+  "schemaVersion": 1
+}

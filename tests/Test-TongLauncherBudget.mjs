@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {EventEmitter,once} from 'node:events';
 import {join,isAbsolute} from 'node:path';
+import {startupBudgetMs} from '../scripts/TongAgentDockRuntime.mjs';
 
 // Execute the actual Manager orchestration with a virtual clock and an owned
 // launcher. No production files, permissions, processes or ports are accessed.
 const source=process.argv.includes('--minimal-candidate')?(await (await import('./fixtures/TongMinimalStartupCandidate.mjs')).minimalStartupSources())['scripts/TongAgentDockRuntime.mjs']:await readFile(new URL('../scripts/TongAgentDockRuntime.mjs',import.meta.url),'utf8');
 const body=source.slice(source.indexOf('export async function startRuntime('),source.indexOf('export async function stopRuntime(')).replace('export ','');
-async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=false,guardianAlive=false,guardianReused=false,guardianReceipt=true,confirmedFailureStage,guardianPreflightFailure=false,receiptRun,completeReceipt=false,nodeAlive=false,receiptPatch={},launcherStage,preflightFailure=false,previous=false,failObservation=false,failStateRead=false,creatorCleanup=false,budget=30000,failAbort=false,failLog=false,jobs={owner:0,launcher:0,guardian:0,runtime:0}}={}){
+async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=false,guardianAlive=false,guardianReused=false,guardianReceipt=true,confirmedFailureStage,guardianPreflightFailure=false,receiptRun,completeReceipt=false,nodeAlive=false,receiptPatch={},launcherStage,preflightFailure=false,previous=false,failObservation=false,failStateRead=false,creatorCleanup=false,production=false,budget=30000,failAbort=false,failLog=false,jobs={owner:0,launcher:0,guardian:0,runtime:0}}={}){
   let now=0,seq=0,result,done=false,request,aborted=false,released=false;
   const timers=new Map(),files=new Map(),events=[];
   class Clock extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}
@@ -31,7 +32,7 @@ async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=fa
     if(guardianPreflightFailure)Object.assign(files.get(join('root','run',`guardian.${request.runId}.json`)),{preflight:{failure:{role:'guardian',stage:'preflight',code:'APPROVAL_DENIED'}},preflightExitCode:1,failure:{role:'guardian',stage:'preflight',code:'PREFLIGHT_JOB_FAILED'}});
     child.exitCode=confirmedFailureStage?0:2;child.emit('close',child.exitCode);
   },launchAt);return child;};
-  const names={absoluteRoot:x=>x,guardedRoot:()=>false,loadApprovedProfile:async()=>null,layout:async()=>({}),preserved:()=>false,
+  const names={absoluteRoot:x=>x,guardedRoot:()=>false,loadApprovedProfile:async()=>null,layout:async()=>({managerRoot:'D:\\manager'}),preserved:()=>production,
     freeze:async()=>({close:async()=>{}}),runtimeStatus:async()=>{if(failObservation)throw Error('SECURITY_UNAVAILABLE');return previous?old:{phase:'not_started'};},guardianComplete:async(_r,id)=>id==='old-run',
     hash:async()=> 'hash',AGENTDOCK_SHA256:'hash',AGENTDOCK_EXE:'binary',dockEnabled:()=>false,hasTong:()=>false,
     readSecret:async()=>'',randomUUID:()=> '01234567-89ab-4cde-9012-0123456789ab',loginRecoveryGrantId:()=>null,
@@ -40,6 +41,7 @@ async function scenario({launchAt=16000,receipt=true,stdoutOnly=false,created=fa
     json,delay,writeFile:async(_p,text)=>{if(failLog&&JSON.parse(text).event!=='startup_checkpoint')throw Error('STATE_UNAVAILABLE');events.push(JSON.parse(text));},releaseFreeze:async()=>{released=true;},fail:code=>Error(code),
     validRunId:id=>typeof id==='string'&&/^[a-f0-9-]{36}$/.test(id),Date:Clock,setTimeout:timeout,clearTimeout:clear,verifyRuntimeApproval:async()=>{},readApprovedEnabledState:async()=>{},verifyRuntimeCandidate:async()=>{},
     startupJobsState:async()=>jobs,assertProtectedPaths:async()=>{if(receiptPatch.slowProofObservation)await delay(31000);}};
+  names.startupBudgetMs=startupBudgetMs;
   const start=new Function(...Object.keys(names),body+'\nreturn startRuntime;')(...Object.values(names));
   start('root',{startupTimeoutMs:budget}).then(value=>{result=value;done=true;},error=>{result=error;done=true;});
   for(let step=0;step<5000&&!done;step++){
@@ -76,6 +78,10 @@ assert.equal(missing.error.startupFailure.cleanup.proven,false);
 const timedOut=await scenario({launchAt:100000,receipt:false,budget:1000});
 assert.equal(timedOut.error.message,'CLEANUP_REQUIRED');assert.equal(timedOut.released,false);
 assert.equal(timedOut.error.startupFailure.code,'START_TIMEOUT');
+const productionSlow=await scenario({production:true,budget:180000,launchAt:150000});
+assert.equal(productionSlow.error.startupFailure.code,'SUPERVISOR_START_FAILED','production observes the actual delayed launch result above 120s');
+assert.equal([...productionSlow.files].find(([p])=>p.endsWith('request.json'))[1].startupDeadline,180000,'one absolute deadline starts at request creation');
+for(const input of [{production:true,budget:180001},{production:false,budget:30001},{budget:0}])assert.equal((await scenario(input)).error.message,'INVALID_TIMEOUT');
 for(const options of [{created:true,guardianAlive:true},{created:true,guardianReceipt:false},{jobs:{launcher:1,guardian:0,runtime:0}},{receiptRun:'old-run',previous:true},{receipt:false,failAbort:true},{receipt:false,failLog:true},{receipt:false,stdoutOnly:true}]){
   const unknown=await scenario({...options,launchAt:10});assert.equal(unknown.error.message,'CLEANUP_REQUIRED');assert.equal(unknown.released,false);
 }
