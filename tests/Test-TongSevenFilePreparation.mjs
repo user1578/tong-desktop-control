@@ -22,7 +22,7 @@ async function privateCommit(root,parent,files,label){
   for(const [path,bytes] of Object.entries(files)){const blob=git(['hash-object','-w','--stdin'],{input:bytes});git(['update-index','--add','--cacheinfo','100644,'+blob+','+path],{env});}
   const tree=git(['write-tree'],{env});return git(['commit-tree',tree,'-p',parent,'-m',label]);
 }
-async function checkRoot(root){assert.match(root??'',/^D:\\Tong\\state\\b23-login-[a-f0-9]{32}$/);const marker=await json(join(root,'seven-file-preparation.json'));assert.equal(marker.scope,'seven-file-preparation-isolation');assert.equal(marker.root,root);assert.equal(marker.releaseRoot,join(root,'seven-file-release'));return marker;}
+async function checkRoot(root){assert.match(root??'',/^D:\\Tong\\state\\b23-login-[a-f0-9]{32}$/);const marker=await json(join(root,'seven-file-preparation.json'));assert.equal(marker.scope,'seven-file-preparation-isolation');assert.equal(marker.root,root);if(marker.communicationFixture){assert.equal(marker.releaseRoot,'D:\\Tong\\state\\b23-login-70f1b7d66215458c8ffa0d822348de0f\\seven-file-release');assert.notEqual(action,'seal-exact-release');}else assert.equal(marker.releaseRoot,join(root,'seven-file-release'));return marker;}
 if(action==='prepare'){
   const seven=await minimalStartupSources(),review=await json(join(project,'docs/evidence/024-startup-minimal-fix-20261026/CANDIDATE-MANIFEST.json'));
   for(const item of review.files)assert.equal(sha(seven[item.path]),item.candidateSha256);
@@ -71,12 +71,15 @@ if(action==='prepare'){
   assert.equal(profile.mode,'production-simulation');assert.equal(profile.root,root);assert.equal(profile.codeRoot,join(root,'tong'));assert.equal(profile.managerRoot,join(root,'releases/manager'));
   process.env.TEMP=process.env.TMP=join(root,'temp');
   const runtime=await import(pathToFileURL(join(profile.managerRoot,'scripts/TongAgentDockRuntime.mjs'))),login=await import(pathToFileURL(join(profile.managerRoot,'scripts/TongLoginRecovery.mjs')));
-  if(action==='status'){
-    const state=await runtime.runtimeStatus(root),doctor=await login.withLoginRecovery(root,'doctor',()=>runtime.runtimeDoctor(root));
+  if(action==='status'||action==='ready-receipts'){
+    // Crash coverage follows the runner's observed runtime_healthy event. Avoid
+    // repeating its expensive doctor here; require a fresh doctor after recovery.
+    const state=action==='ready-receipts'?await json(join(root,'run/runtime.json')):await runtime.runtimeStatus(root);
+    const doctor=action==='ready-receipts'?null:await login.withLoginRecovery(root,'doctor',()=>runtime.runtimeDoctor(root));
     const launcher=await json(join(root,'run',`launcher.${state.runId}.json`)),guardian=await json(join(root,'run',`guardian.${state.runId}.json`));
-    assert.equal(state.phase,'ready');assert.equal(doctor.healthy,true);assert.equal(state.sourceCommit,marker.testCommit);assert.equal(state.managerCommit,marker.testCommit);
+    assert.equal(state.phase,'ready');if(doctor)assert.equal(doctor.healthy,true);assert.equal(state.sourceCommit,marker.testCommit);assert.equal(state.managerCommit,marker.testCommit);
     for(const r of [launcher,guardian]){assert.equal(r.preflight.exitCode,0);assert.equal(r.preflightClean,true);assert.ok(r.preflight.child.startTicks);}
-    console.log(JSON.stringify({phase:state.phase,runId:state.runId,healthy:doctor.healthy,health:doctor.health,supervisor:state.supervisor,children:state.children,guardian:await json(join(root,'run/guardian.json')),launcher,guardianReceipt:guardian}));
+    console.log(JSON.stringify({phase:state.phase,runId:state.runId,healthy:doctor?.healthy??null,health:doctor?.health??null,supervisor:state.supervisor,children:state.children,guardian:await json(join(root,'run/guardian.json')),launcher,guardianReceipt:guardian}));
   }else if(action==='stop'||action==='verify-stopped'){
     const state=await runtime.runtimeStatus(root);
     if(action==='verify-stopped'){assert.equal(state.phase,'stopped');assert.equal(state.supervisorAlive,false);}
@@ -85,8 +88,16 @@ if(action==='prepare'){
     assert.equal(after.supervisorAlive,false);assert.equal(g.jobActiveAfterCleanup,0);assert.ok(g.finishedAt);
     for(const p of [g,after.supervisor,...after.children,...after.descendants])assert.equal(sameProcess(await processIdentity(p.pid),p),false);
     assert.deepEqual(await startupJobsState(after.runId),{owner:0,launcher:0,guardian:0,runtime:0});
-    const inventory=await runtimeProcessInventory({roots:[root],runIds:[after.runId],mode:profile.mode});assert.equal(inventory.complete,true);assert.equal(inventory.matchingProcesses.length,0);
-    console.log(JSON.stringify({stopped:true,runId:after.runId,phase:after.phase,allExactIdentitiesGone:true,fourJobsEmpty:true,inventoryEmpty:true}));
+    const inventory=await runtimeProcessInventory({roots:[root],runIds:[after.runId],mode:profile.mode});assert.equal(inventory.complete,true);
+    const observers=[await processIdentity(process.pid)];
+    if(process.env.TONG_TEST_CONTROLLER){
+      const path=process.env.TONG_TEST_CONTROLLER;assert.ok(path.startsWith(root+'\\task-originals-')&&path.endsWith('\\controller.json'));
+      const c=await json(path);assert.equal(c.mutex,'Local\\TongSevenFilePrep');
+      for(const expected of [c.identity,c.parentObserver]){const actual=await processIdentity(expected.pid);if(sameProcess(actual,expected)){assert.match(actual.exe,/\\pwsh\.exe$/i);observers.push(expected);}}
+    }
+    const unexpected=inventory.matchingProcesses.filter(p=>!observers.some(o=>sameProcess(p,o)));
+    assert.equal(unexpected.length,0);
+    console.log(JSON.stringify({stopped:true,runId:after.runId,phase:after.phase,allExactIdentitiesGone:true,fourJobsEmpty:true,inventoryEmpty:true,excludedKnownObserverCount:inventory.matchingProcesses.length}));
   }else if(action==='grant'){await login.issueSimulationLoginRecovery(profile);console.log(JSON.stringify({syntheticGrantEnabled:true}));}
   else if(action==='revoke'){await login.revokeSimulationLoginRecovery(root);console.log(JSON.stringify({revoked:true}));}
   else if(action==='seal-exact-release'){
