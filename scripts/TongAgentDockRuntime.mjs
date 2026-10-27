@@ -16,6 +16,12 @@ import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.m
 import {withLoginRecovery,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
 import {acquireRuntimeFreeze,releaseRuntimeFreeze} from './TongLifecycleFreeze.mjs';
 import {borrow024Handoff,is024Borrowed} from './Tong024Handoff.mjs';
+const monitorStages=new Set(['stop_read','descendant_capture','requested_shutdown']);
+const monitorKinds=new Set(['ENOENT','EACCES','EPERM','ETIMEDOUT','EIO','EBUSY']);
+export function diagnoseMonitorFailure(stage,error){
+  return {stage:monitorStages.has(stage)?stage:'unspecified',
+    kind:monitorKinds.has(error?.code)?error.code:error?.name==='SyntaxError'?'PARSE_ERROR':'UNKNOWN'};
+}
 export const AGENTDOCK_EXE='D:\\Tong\\runtime\\agentdock\\agentdock.exe';
 export const AGENTDOCK_SHA256='bc1a7a35f1985e9f7827142577fc31bd4ca536e27252b08fc28c5ed636cf5e8d';
 const self=fileURLToPath(import.meta.url), guardianScript=fileURLToPath(new URL('TongRuntimeLaunch.ps1',import.meta.url)), childScript=fileURLToPath(new URL('TongRuntimeServer.mjs',import.meta.url));
@@ -480,7 +486,25 @@ async function supervise(root,runId){root=absoluteRoot(root);const request=await
   async function shutdown(phase='stopped',reason='REQUESTED'){return shutdownPromise??=(async()=>{closing=true;clearInterval(timer);record.phase='stopping';await persist();await event({event:'shutdown',reason});await capture().catch(()=>{});for(const role of ['gateway','devspace']){const child=children.get(role);if(child?.connected){child.send({event:'stop'});await Promise.race([once(child,'exit'),delay(role==='devspace'?11000:2000)]);}}await capture().catch(()=>{});// Descendant snapshots are diagnostic only. The guardian owns the private Job.
 for(const identity of [...record.children].reverse()){if(sameProcess(await processIdentity(identity.pid),identity))await terminateOwnedProcess(identity);}const alive=[];for(const identity of record.children)if(sameProcess(await processIdentity(identity.pid),identity))alive.push(identity.pid);record.phase=alive.length?'cleanup_required':phase;record.remainingPids=alive;record.finishedAt=new Date().toISOString();await persist();await event({event:'shutdown_complete',phase:record.phase,remainingPids:alive});await Promise.race([Promise.all(streams.map(stream=>stream.closed?Promise.resolve():new Promise(ok=>stream.once('close',ok)))),delay(2000)]);for(const child of children.values()){child.stdout?.destroy();child.stderr?.destroy();if(child.connected)child.disconnect();child.unref();}for(const stream of streams)if(!stream.closed)stream.destroy();process.exitCode=record.phase==='stopped'?0:1;})();}
   await persist();await event({event:'start',supervisorPid:process.pid});
-  try{if(await hash(AGENTDOCK_EXE)!==AGENTDOCK_SHA256)throw fail('BINARY_CHANGED');if(dockEnabled(profile)){await unused(profile.agentdockPort);const dock=spawn(AGENTDOCK_EXE,['--host','127.0.0.1','--port',String(profile.agentdockPort),'--mcp-apps-mode','off'],{cwd:root,windowsHide:true,env:{...safeEnvironment(root),AGENTDOCK_HOME:join(root,'backend-state'),AGENTDOCK_DEFAULT_DIR:join(root,'workspace'),AGENTDOCK_AUTH_TOKEN:token,AGENTDOCK_BROWSER_ENABLED:'false',AGENTDOCK_ACP_ENABLED:'false',AGENTDOCK_MCP_APPS_MODE:'off'},stdio:['ignore','pipe','pipe']});await attach('agentdock',dock);for(let n=0;n<60;n++){if(dock.exitCode!==null)throw fail('BACKEND_EXIT');try{await dockHealth(root);break;}catch{if(n===59)throw fail('BACKEND_HEALTH_FAILED');await delay(100);}}}if(hasTong(profile)){await managed('devspace',{agentdockToken:token,ownerToken:owner});await managed('gateway',{});await tongHealth(profile);}await capture();if(closing)return;record.phase='ready';await persist();await event({event:'ready'});timer=setInterval(()=>{void (async()=>{const stop=await json(join(root,'run','stop.json'));if(stop?.runId===runId)await shutdown();else await capture();})().catch(()=>shutdown('abnormal_exit','MONITOR_FAILED'));},1000);process.on('SIGTERM',()=>{void shutdown();});}
+  try{if(await hash(AGENTDOCK_EXE)!==AGENTDOCK_SHA256)throw fail('BINARY_CHANGED');if(dockEnabled(profile)){await unused(profile.agentdockPort);const dock=spawn(AGENTDOCK_EXE,['--host','127.0.0.1','--port',String(profile.agentdockPort),'--mcp-apps-mode','off'],{cwd:root,windowsHide:true,env:{...safeEnvironment(root),AGENTDOCK_HOME:join(root,'backend-state'),AGENTDOCK_DEFAULT_DIR:join(root,'workspace'),AGENTDOCK_AUTH_TOKEN:token,AGENTDOCK_BROWSER_ENABLED:'false',AGENTDOCK_ACP_ENABLED:'false',AGENTDOCK_MCP_APPS_MODE:'off'},stdio:['ignore','pipe','pipe']});await attach('agentdock',dock);for(let n=0;n<60;n++){if(dock.exitCode!==null)throw fail('BACKEND_EXIT');try{await dockHealth(root);break;}catch{if(n===59)throw fail('BACKEND_HEALTH_FAILED');await delay(100);}}}if(hasTong(profile)){await managed('devspace',{agentdockToken:token,ownerToken:owner});await managed('gateway',{});await tongHealth(profile);}await capture();if(closing)return;record.phase='ready';await persist();await event({event:'ready'});timer=setInterval(()=>{
+    if(closing)return;
+    let stage='stop_read';
+    void (async()=>{
+      const stop=await json(join(root,'run','stop.json'));
+      if(stop?.runId===runId){stage='requested_shutdown';await shutdown();}
+      else {stage='descendant_capture';await capture();}
+    })().catch(error=>{
+      // Keep the existing fail-closed shutdown: never treat a failed monitor
+      // as a healthy service. Log only bounded, non-sensitive error labels.
+      const diagnostic=diagnoseMonitorFailure(stage,error);
+      // Keep a second bounded local breadcrumb if the lifecycle event file
+      // itself becomes unwritable. Never persist error.message or stack.
+      try{appendFileSync(join(root,'logs','supervisor.jsonl'),JSON.stringify({at:new Date().toISOString(),runId,event:'monitor_failure',...diagnostic})+'\n');}catch{}
+      void event({event:'monitor_failure',...diagnostic}).catch(()=>{}).finally(()=>{
+        void shutdown('abnormal_exit','MONITOR_FAILED');
+      });
+    });
+  },1000);process.on('SIGTERM',()=>{void shutdown();});}
   catch(error){record.startupFailure={code:['START_TIMEOUT','CHILD_STAGE_TIMEOUT','CHILD_READINESS_TIMEOUT','CHILD_READINESS_FAILED','CHILD_SPAWN_FAILED','CHILD_EXIT','BACKEND_EXIT','BACKEND_HEALTH_FAILED','TONG_HEALTH_FAILED','TONG_AUTH_BOUNDARY_FAILED','BINARY_CHANGED','PORT_OCCUPIED'].includes(error.message)?error.message:'START_FAILED',...error.readiness};await event({event:'startup_failure',...record.startupFailure});await shutdown('abnormal_exit',record.startupFailure.code);}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
@@ -532,7 +556,8 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     if(result!==undefined)console.log(JSON.stringify(result));
   }catch(error){
     const code=['ACL_DENIED','PORT_OCCUPIED','ALREADY_RUNNING','STALE_RECORD','IDENTITY_MISMATCH','INIT_EXISTS','SECRET_UNAVAILABLE','RUNTIME_BUSY','CLEANUP_REQUIRED','STOP_TIMEOUT','START_TIMEOUT','START_FAILED','SUPERVISOR_START_FAILED','BINARY_CHANGED','INVALID_COMMAND','INVALID_ROOT','INVALID_RUN','APPROVAL_DENIED','CANDIDATE_DENIED','RECONCILIATION_DENIED','INVALID_STATE'].includes(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
-    if(args.includes('--error-json'))console.log(JSON.stringify({error:code,...(error.startupFailure?{startupFailure:error.startupFailure}:{})}));else console.error(code);
+    if(args.includes('--error-json'))console.log(JSON.stringify({error:code,...(error.startupFailure?{startupFailure:error.startupFailure}:{}),
+      ...(code==='APPROVAL_DENIED'&&error.diagnostic?.stage&&error.diagnostic?.kind?{diagnostic:error.diagnostic}:{})}));else console.error(code);
     process.exitCode=1;
   }
 }

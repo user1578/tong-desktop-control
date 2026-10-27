@@ -9,7 +9,10 @@
 - 用户最终需求已确认：见[22项需求定稿](Tong-GrillMe-Final-Decisions-20261027.md)、[跨新对话修复指南](Tong-New-Chat-Repair-Guide.md)。当前最高优先级是**生产长时间稳定与诊断**，磁盘第二批清理和新功能暂缓。
 - 正式run `2b871eeb-ea5c-4690-b4ec-d46454f3a9ed`运行约2小时后，Runner在2026-10-27 12:59:03Z的doctor遇`APPROVAL_DENIED`（原始native退出码1），12:59:16Z记录runner_failed；同run后续Supervisor发生`MONITOR_FAILED`并完整关闭。**现有证据不能证明二者由同一个底层错误触发**。
 - 用户在正式预检`Approved=True`且预算0/3、旧Guardian清理完成后，**手动启动一次**正式Task；最新run `d90f5e72-dd41-4ee4-9e2a-9eb3b0f490dd`于14:14:36Z进入READY，14:14:59Z记录runtime_healthy。23:18 JST网页ChatGPT通过Tong实际再查Task Running、唯一Host、12个项目、授权工作区和生命周期日志成功。新run在当时未出现shutdown；**这不是长期稳定性或故障根治证明**。
-- 源码疑点：`TongLoginRecovery.mjs`的loadGrant会将底层失败压成统一`APPROVAL_DENIED`，Supervisor定期监控将任意失败压成`MONITOR_FAILED`，丢失精确阶段。优先在开发分支添加只含固定阶段/错误类别的诊断并进行小范围测试；在取得故障根因和受控升级批准前，不改生产pin、授权、预算或Task。
+- 源码疑点：`TongLoginRecovery.mjs`的loadGrant会将底层失败压成统一`APPROVAL_DENIED`，Supervisor定期监控将任意失败压成`MONITOR_FAILED`，丢失精确阶段。**底层具体错误仍未查明**；在取得故障根因和受控升级批准前，不改生产pin、授权、预算或Task。
+- **开发稳定性诊断补丁（未部署生产）**：在`TongLoginRecovery.mjs`、`TongAgentDockRuntime.mjs`和`TongLoginRuntime.ps1`增加固定枚举的`stage/kind`错误标签；授权失效仍拒绝操作，监控异常仍安全关闭；保留现有重试预算、进程所有权和主程序拓扑。Supervisor遇监控错误时尝试写入两处脱敏元数据记录，不能泄露凭据或源错误文本。
+- **实测验证**：新`Test-TongRuntimeFailureDiagnostics.mjs`覆盖错误标签白名单和敏感字符串消隐；`Test-TongRuntimeReadiness.mjs`启动时序测试通过；`Test-TongLoginRecoveryAuthorization.mjs`在独立生产模拟环境验证旧授权被拒、篡改被拒、撤销后不可恢复、正常授信可恢复，全部通过；PowerShell/Node语法检查通过。一次模拟测试留下约2.57MB可识别的新夹具`D:\Tong\state\b23-login-0b609051c3bd41b393094b3ce4bf81bf`（非生产pin）；后续只按授权的精确清理流程处理，不把它当正式发布资产。
+- **接下来必须做的事**：评审这些仅诊断的源码差异，并制定受控的生产候选、版本/审批/回退/真实可用性验证。只有新版明确记录了下一次实际失败阶段，或通过有界模拟稳定复现，才针对已定位根因提出真正修复；**不能把这次记录增强宣称为长期稳定性已经修好**。
 
 
 ## 1. 目标与分工

@@ -19,10 +19,22 @@ function Runtime([string]$Action,[string]$ExpectedRunId) {
     $nativeExitCode=$LASTEXITCODE
     if($nativeExitCode -ne 0){
         $reason='REFUSED';$outputKind=if([string]::IsNullOrWhiteSpace(($raw -join "`n"))){'empty'}else{'unstructured'}
+        $failure=$null
         try{$failure=$raw|ConvertFrom-Json;if($failure.error -cmatch '^[A-Z_]{1,64}$'){$reason=$failure.error;$outputKind='error_json'}}catch{}
         # REFUSED alone cannot distinguish authorization denial from a native
         # Node exit. Retain bounded metadata, never arbitrary stdout/stderr.
-        Write-RuntimeEvent 'manager_command_failed' $null $reason @{managerAction=$Action;nativeExitCode=$nativeExitCode;exitHex=('0x{0:X8}' -f ([long]$nativeExitCode -band 0xffffffffL));outputKind=$outputKind}
+        $details=@{managerAction=$Action;nativeExitCode=$nativeExitCode;exitHex=('0x{0:X8}' -f ([long]$nativeExitCode -band 0xffffffffL));outputKind=$outputKind}
+        if($reason -ceq 'APPROVAL_DENIED' -and $null -ne $failure -and $failure.PSObject.Properties['diagnostic']){
+            $stage=[string]$failure.diagnostic.stage
+            $kind=[string]$failure.diagnostic.kind
+            if($stage -cmatch '^(grant_load|envelope_paths|envelope_unseal|descriptor_validate|audit_paths|audit_load|audit_validate|release_verify|operation_audit|handler|unspecified)$'){
+                $details['diagnosticStage']=$stage
+            }
+            if($kind -cmatch '^(ENOENT|EACCES|EPERM|ETIMEDOUT|EIO|EBUSY|PARSE_ERROR|AUTH_REJECTED|UNKNOWN)$'){
+                $details['diagnosticKind']=$kind
+            }
+        }
+        Write-RuntimeEvent 'manager_command_failed' $null $reason $details
         $failureException=[InvalidOperationException]::new(('Tong manager refused '+$Action+': '+$reason))
         $failureException.Data['managerAction']=$Action;$failureException.Data['managerCode']=$reason
         throw $failureException

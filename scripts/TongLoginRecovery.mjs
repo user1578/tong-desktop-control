@@ -16,6 +16,12 @@ function prefix(root){
   if(typeof root!=='string'||win32.dirname(root)!=='D:\\Tong\\state'||!/^b23-[a-zA-Z0-9_-]{1,100}$/.test(win32.basename(root)))throw fail('APPROVAL_DENIED');
   return 'simulation-'+sha(root);
 }
+const recoveryStages=new Set(['grant_load','envelope_paths','envelope_unseal','descriptor_validate','audit_paths','audit_load','audit_validate','release_verify','operation_audit','handler']);
+const safeRuntimeKinds=new Set(['ENOENT','EACCES','EPERM','ETIMEDOUT','EIO','EBUSY']);
+export function diagnoseRecoveryFailure(stage,error){
+  return {stage:recoveryStages.has(stage)?stage:'unspecified',
+    kind:safeRuntimeKinds.has(error?.code)?error.code:error?.name==='SyntaxError'?'PARSE_ERROR':error?.message==='APPROVAL_DENIED'?'AUTH_REJECTED':'UNKNOWN'};
+}
 function formalOnly(root){
   prefix(root);
   if(root===PRODUCTION_ROOT&&(self.toLowerCase()!==join(root,'releases','manager','scripts','TongLoginRecovery.mjs').toLowerCase()||process.execPath.toLowerCase()!=='d:\\node\\node.exe'))throw fail('APPROVAL_DENIED');
@@ -48,21 +54,33 @@ export async function loginRecoveryDescriptor(root){
 }
 async function loadGrant(root,expectedId){
   formalOnly(root);
+  let stage='envelope_paths';
   try{
     const path=loginRecoveryPath(root);await assertRuntimeApprovalPaths(root,[path]);
+    stage='envelope_unseal';
     const grant=await runLoginRecoveryHelper('login-recovery-unseal',{path});
+    stage='descriptor_validate';
     const descriptor=validateLoginRecoveryDescriptor(grant.descriptor);
     if(grant.schemaVersion!==1||grant.purpose!==purpose||grant.enabled!==true||descriptor.root!==root
       ||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(grant.grantId??'')||expectedId!==undefined&&grant.grantId!==expectedId
       ||!Number.isFinite(Date.parse(grant.issuedAt))||Date.parse(grant.issuedAt)>Date.now()+5000||grant.expiresAt!==undefined
       ||Object.keys(grant).sort().join(',')!=='descriptor,enabled,grantId,issuedAt,purpose,schemaVersion')throw fail('APPROVAL_DENIED');
+    stage='audit_paths';
     const auditPath=loginRecoveryAuditPath(root);await assertRuntimeApprovalPaths(root,[auditPath]);
+    stage='audit_load';
     const events=(await readFile(auditPath,'utf8')).trim().split(/\r?\n/).filter(Boolean).map(JSON.parse).filter(event=>event.root===root&&event.grantId===grant.grantId);
+    stage='audit_validate';
     // A retained revocation also rejects an accidentally restored old envelope.
     // An interrupted enable without a committed audit cannot grant capability.
     if(!events.some(event=>event.event==='enabled'&&event.phase==='committed')||events.some(event=>event.event==='revoked'))throw fail('APPROVAL_DENIED');
     return Object.freeze({...grant,descriptor});
-  }catch{throw fail('APPROVAL_DENIED');}
+  }catch(error){
+    // Fail closed as before; attach only fixed labels for the login runner's
+    // local structured diagnostics. Never include paths, messages or ciphertext.
+    const refused=fail('APPROVAL_DENIED');
+    refused.diagnostic=diagnoseRecoveryFailure(stage,error);
+    throw refused;
+  }
 }
 async function audit(root,event,action,grant){
   const path=loginRecoveryAuditPath(root);await assertRuntimeApprovalPaths(root);
@@ -74,17 +92,23 @@ async function audit(root,event,action,grant){
 // enter it with the CurrentUser sealed grant, then verify both pinned releases.
 export async function withLoginRecovery(root,action,fn,{grantId}={}){
   formalOnly(root);if(!entryActions.has(action))throw fail('APPROVAL_DENIED');
-  let grant;
+  let grant,stage='grant_load';
   try{
     grant=await loadGrant(root,grantId);
     return await scope.run(grant,async()=>{
+      stage='release_verify';
       await verifyRuntimeCandidate(grant.descriptor.runtimeProfile);await verifyRuntimeCandidate(grant.descriptor.runtimeProfile,{manager:true});
+      stage='operation_audit';
       if(operations.includes(action))await audit(root,'authorized',action,grant);
+      stage='handler';
       return fn(grant);
     });
   }catch(error){
-    // Missing/invalid grants cannot be used to create production state. Existing
-    // protected stores retain denial evidence for actual recovery operations.
+    // Missing/invalid grants cannot create production state. A classified
+    // denial is still denied; diagnostic labels never grant privileges.
+    if(error instanceof Error&&error.message==='APPROVAL_DENIED'&&!error.diagnostic){
+      error.diagnostic=diagnoseRecoveryFailure(stage,error);
+    }
     if(operations.includes(action))await audit(root,'denied',action,grant);
     throw error;
   }
