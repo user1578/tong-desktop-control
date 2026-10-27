@@ -65,6 +65,18 @@
 
 **网页端边界**：这里验证的是Codex侧真实认证连接器调用和本机正式doctor/端口/ngrok，不冒充用户ChatGPT网页会话的读写验收。请ChatGPT网页端重新调用tong_list_projects，并通过获准开发工作区读取本记录，核对新runId 2b871eeb-ea5c-4690-b4ec-d46454f3a9ed和本次时间线，即可确认其网页会话已重新连通；无须重启生产或使用旧nonce声称新一轮验收。真实Windows重启后恢复、长时间稳定性、本次未重做网页端新建/编辑文件均未验证。
 
+### ChatGPT网页端独立复验（2026-10-27，本轮恢复后补充）
+
+本记录原作者Codex完成验收后，ChatGPT网页会话通过**真实Tong MCP**再次执行以下只读操作，不依赖Codex聊天的口头回传：
+
+- `tong_list_projects` 成功返回12个已登记项目。
+- `tong_windows_inspect(processes, TongLoginHost)` 检测到恰好一个正式Host（PID49740），与恢复时记录匹配。
+- `open_workspace(D:\\作业\\111)` 成功；`read` 真正读到此前网页端创建编辑的验收文件 `Tong-Web-Write-Test-20261027\\web-write-acceptance.txt`，内容含 `marker=TONG-WEB-20261027-111-7F4C9A` 和 `state=EDITED_AND_REREAD`。该旧marker只用于验证文件可读，不作为新一轮随机写入验收。
+- `open_workspace(D:\\Tong\\development)` 成功后，`read` 实际读取本故障恢复记录和新runId。
+- 使用该已授权开发工作区的PowerShell 7只读核验正式 `runtime/run/runtime.json`、TongLoginRuntime Task、Host进程和本地端口：`runId=2b871eeb-ea5c-4690-b4ec-d46454f3a9ed`、`phase=ready`、Task Running、Host数量1，127.0.0.1上7676、7677、18765均LISTEN，对应PID分别为21752、25860、5484。
+
+**结论：ChatGPT网页端认证MCP真实连接和当前READY/核心进程、端口已独立复验通过。** 此次未再次运行原生doctor（避免为重复验证触发历史fast-fail），所以 `doctor.healthy=true` 仍以Codex恢复时实际正式doctor回执为证据；也没有执行新一轮write/edit、重启或长期稳定性验收。底层native/monitor故障原因未根治。
+
 ## 仍需处理的原因与风险
 
 本轮恢复了当前运行与MCP通信，未复现或消除导致native_fast_fail/MONITOR_FAILED的底层缺陷。后续若再次出现，应在同一run的监控错误处保留最小脱敏阶段/原错误码，并获取native故障证据，再评估Runner是否应对native doctor异常采用既有预算下的有限处理；任何源码修复及部署都需独立评审/正式授权，不在本轮偷偷修改打包文件或扩大重试预算。调度器为何没有留下后续runner_started，也需有可用任务历史才能确认，不能根据当前任务配置推断历史已正确重试。
