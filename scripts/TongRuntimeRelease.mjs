@@ -65,8 +65,9 @@ function command(executable,args,cwd,timeout=30000) {
     child.once('close',code=>{clearTimeout(timer);if(code!==0||size>8*1024*1024)reject(fail('LOCAL_TOOL_FAILED'));else ok(out);});
   });
 }
-const extractScript = `import tarfile,sys,pathlib,re,json,hashlib
+const extractScript = `import tarfile,sys,pathlib,re,json,hashlib,os
 root=pathlib.Path(sys.argv[2]).resolve(); seen=set()
+if os.name=='nt': root=pathlib.Path(chr(92)*2+'?'+chr(92)+str(root))
 with tarfile.open(sys.argv[1]) as archive:
  if archive.pax_headers.get('comment')!=sys.argv[3]: raise RuntimeError('commit')
  members=archive.getmembers()
