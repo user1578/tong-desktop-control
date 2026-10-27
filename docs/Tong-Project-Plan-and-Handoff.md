@@ -15,13 +15,13 @@
 - **接下来必须做的事**：评审这些仅诊断的源码差异，并制定受控的生产候选、版本/审批/回退/真实可用性验证。只有新版明确记录了下一次实际失败阶段，或通过有界模拟稳定复现，才针对已定位根因提出真正修复；**不能把这次记录增强宣称为长期稳定性已经修好**。
 
 
-### 第二批清理：历史B2.3候选（只读预检通过，实际删除待执行）
+### 第二批清理：历史B2.3候选（2026-10-28，已成功删除并复核）
 
 依照[第一批报告下一批候选](maintenance/Tong-Disk-Cleanup-Batch1-20261027.md)的已核验清单，仅针对 `D:\Tong\state\b23-release-fgKPTn\candidate-58786f6`和`candidate-9589698`补齐归档/引用验证，不再扫描五根目录。对应保留的release（58786f6 / 9589698）均含源码、原生文件归档以及各自不同的package-lock.json；默认B2.3测试依赖的 `npm-cache` 原位保留。
 
-精确预检脚本 `scripts/Clean-TongB23Candidates.ps1 -Mode Check`已通过：正式run仍ready，双pin仍绑定b9fe801版本与另一个releaseRoot；无计划任务、服务或其他进程引用两个candidate；保留release的source.tar、lock、native归档SHA核验通过；候选顶层无意外项目、递归无reparse。两候选分别603,120,383和603,448,013字节，总计**1,206,568,396字节（约1.12GiB）**；共77,571个普通文件。候选根未被实际删除。
+精确预检脚本 `scripts/Clean-TongB23Candidates.ps1 -Mode Check`已通过：正式run仍ready，双pin仍绑定b9fe801版本与另一个releaseRoot；无计划任务、服务或其他进程引用两个candidate；保留release的source.tar、lock、native归档SHA核验通过；候选顶层无意外项目、递归无reparse。两候选分别603,120,383和603,448,013字节，总计**1,206,568,396字节（约1.12GiB）**；共77,571个普通文件。用户通过本人Windows PowerShell 7按精确脚本实际执行，两项均返回`deleted`。ChatGPT后续用Tong再次核对：两个候选目录均不存在；两个保留release和npm-cache均存在；生产run仍`ready`，独立监测器仍采样`healthy=true`。详见[第二批实际删除回执](maintenance/Tong-Disk-Cleanup-Batch2-20261028.md)。不把文件逻辑长度误称为NTFS实际释放空间。
 
-由于`D:\Tong\state`不属于Tong开发工作区的直接删除授权，**不能从开发工具绕过权限执行清理**。如用户在自己的PowerShell 7以原权限执行`pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\Tong\development\tong-024-startup-recovery\scripts\Clean-TongB23Candidates.ps1" -Mode Clean`，脚本会在实际删除前重复必要的精确pin/恢复/引用校验，仅删除固定的两个candidate，不删保留release、npm-cache或正式运行态；结果写入用户本地`%LOCALAPPDATA%\Tong\CleanupHistory\batch2-exact-candidates.jsonl`。成功后按实际回执更新项目记录，不能提前称清理成功。
+操作边界：`D:\Tong\state`当前并不是获得直接递归删除权限的Tong开发工作区；因此本批由用户本机Shell执行固定脚本，而不是从开发项目的受管命令中越权删除。下一步应为Tong增加**用户一次性本机信任＋精确allowlist＋审计记录**的受管文件清理能力，避免以后每批都要用户手工执行命令；尚未开发/部署，不能假称现有接口已允许任意目录递归删除。
 
 ### 独立只读监控（开发脚本已实现，需从本机启动）
 
