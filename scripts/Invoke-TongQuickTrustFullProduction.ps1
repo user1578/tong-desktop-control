@@ -18,7 +18,7 @@ if($ExpectedOldCommit -and $ExpectedOldCommit -cnotmatch '^[a-f0-9]{40}$'){throw
 $helper=Join-Path $PSScriptRoot 'TongQuickTrustFullCutover.mjs'
 $cleanupProbe=Join-Path $PSScriptRoot 'TongCutoverStoppedRunProbe.mjs'
 $helperSha256='267ad9dcc55e500f9cfb9643a550b32598e7e834d07691e102bf16d25869aceb'
-$cleanupProbeSha256='4835f8665760baa12eaf1699d793654d06fa92d12fa74000ea4aa1705171d91a'
+$cleanupProbeSha256='544a545ce87c50a2e06c1dae5ad4329a69b2c28e71c1f0cd0265dd93d65367ac'
 $release=if($ReleaseRoot){$ReleaseRoot}else{Join-Path $base 'quick-trust-release-d9983bb'}
 $candidate=if($CandidateRoot){$CandidateRoot}else{Join-Path $base 'quick-trust-candidate-d9983bb'}
 $reviewedSnapshot=if($SnapshotRoot){$SnapshotRoot}else{Join-Path $base 'quick-trust-full-cutover-20261020084000551-ffdcdbb2'}
