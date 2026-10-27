@@ -15,6 +15,14 @@
 - **接下来必须做的事**：评审这些仅诊断的源码差异，并制定受控的生产候选、版本/审批/回退/真实可用性验证。只有新版明确记录了下一次实际失败阶段，或通过有界模拟稳定复现，才针对已定位根因提出真正修复；**不能把这次记录增强宣称为长期稳定性已经修好**。
 
 
+### 第三批正式清理部署检查（2026-10-28，明确阻塞）
+
+用户已明确授权“先部署清理工具，测试成功后清理审查通过的重复候选”。本轮未重新扫描全盘，沿用第三批10套Quick Trust候选约5.636GiB的已保存哈希和引用审查结果。**再次实测：**在开发分支调用`tests/Test-TongMcpMetadataTools.mjs`，受管MCP合成缓存Plan/Execute通过；`tests/Test-TongQuickTrustCleanup.mjs`验证唯一源码防误删、归档篡改拒删、正常合成候选清理及release保留，通过。现役run仍`d90f5e72-dd41-4ee4-9e2a-9eb3b0f490dd`且`ready`，独立健康监视记录为`healthy=true`，第三批10套实物仍在。
+
+**正式部署与实际清理尚未实施的确切阻塞：**当前固定生产版的`preflight-login` exit=0、approved=true，只表示旧版登录恢复预检有效；使用开发版正式`getApprovedProductionProfile('manager')`执行**只读**授权验证，得到`APPROVAL_DENIED`，故不具备新Manager发布确认。现有`Tong024ProductionMaintenance.mjs`显式阻止未完成生产交接租约的正式切换（`MAINTENANCE_NOT_READY`）；当前正式Tong MCP工具目录未暴露新的`tong_disk_cleanup_plan/execute`。同时 `D:\Tong\state` 未注册为可写的受管清理根。聊天里的用户授权不能替代本机审批门禁。**本轮未重启Tong、没有更换pin/Manager、未增加600MB环境副本、未绕过路径权限，第三批实际删除为0字节。**
+
+下一步应优先实现并验收不中断正式Tong的升级/回退交接及本机一次性限定目录授权，通过真实正式MCP验证后才执行10个明确候选的Plan→Execute；绝不能在未经审批时借开发工作区Shell跨界批量删除。若产线升级仍不可行，保持稳定生产原版，并将本项维持为“已审查可退役、待有效受管清理通道”，而不是要求用户逐个运行新PowerShell删除脚本。
+
 ### 第三批候选：10套Quick Trust重复环境（审查通过，未执行删除）
 
 在之前五根容量报告基础上，仅针对前三个最大的历史state根进行定向元数据分类，不重扫全盘。`p27-autonomy-candidate-20261017`下10套约605MB Quick Trust候选合计6,051,846,951字节（5.636GiB）：现役pin指向其他root；任务/服务/活动进程未直接引用这些历史根；10套release归档与候选提交一一对应，逐文件核验2,765个候选源码文件和250个保留归档文件内容哈希均匹配，另外仅发现每套候选自身的恢复验证JSON（需要在审计中保留关键证据）。对应10套release均保留，另外两套staged环境继续保留。详见[第三批候选审查](maintenance/Tong-Disk-Cleanup-Batch3-QuickTrust-Review-20261028.md)。开发清理器已支持此严格类别并通过专门合成测试；**但因正式部署/独立state清理授权未完成，没有删除这6GB，也没有绕过Tong现有写入边界。**
