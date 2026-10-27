@@ -2,6 +2,10 @@
 
 Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a loopback-only restricted gateway.
 
+## Current project plan and Codex supervision (2026-10-27)
+
+Read [AGENTS.md](AGENTS.md), [current project overview / disk cleanup / next steps / conversation handoff](docs/Tong-Project-Plan-and-Handoff.md), then [ChatGPT→Codex native-session goal supervision and live progress taskbook](docs/Tong-Codex-Goal-Supervision-Taskbook.md). Evidence for the 2026-10-27 production recovery and precise cache deletion is linked from the plan. This development branch does not mean those proposed Desktop/UI features are deployed or verified.
+
 ## Tong · one-time trusted folders and automatic Codex project onboarding (development only)
 
 User-friendly folder onboarding is prepared: the user can double-click `scripts/Connect-TongFolder.cmd`, pick a project parent folder such as `D:\\作业`, and confirm **once locally**. Later ChatGPT calls `tong_project_prepare` with a specific project folder; under the already approved root, Tong automatically registers the project and creates/reuses the persistent native-Codex development grant. Folders outside approved roots are rejected until locally confirmed, and high-impact work still requires separate approval. Trusted-root revocation invalidates inherited grants. **This feature is not yet deployed to production Tong and has not yet authorized `D:\\作业` there.** See [quick-folder onboarding](docs/Tong-Quick-Folder-Trust.md) and `node --test tests/Test-TongQuickProject.mjs`.
