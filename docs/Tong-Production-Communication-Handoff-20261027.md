@@ -1,5 +1,7 @@
 # Tong Desktop Control：正式生产通信恢复成功及后续交接（2026-10-27）
 
+> **后续任务优先入口**：[项目总说明与路线图](Tong-Project-Plan-and-Handoff.md) · [Codex多轮监督/桌面可见/ChatGPT进度专项任务书](Tong-Codex-Goal-Supervision-Taskbook.md) · [2026-10-27生产异常退出最小恢复及网页独立验收](maintenance/Tong-Production-Abnormal-Exit-Recovery-20261027.md) · [磁盘第一批真实删除结果](maintenance/Tong-Disk-Cleanup-Batch1-20261027.md)。本页以下为历史时点的恢复证据，后续开发与清理按新入口排序，勿把旧“仍待验证”的状态覆盖新实测。
+
 > **当前结论：正式生产通信和 ChatGPT 网页端本地文件读取、写入及编辑均已通过实测；长期稳定性、真实 Windows 重启后的自动恢复仍未验收。** 这是恢复成功后的交接入口，不取代原始日志、生产收尾回执或此前失败证据。文中“生产回报”与“ChatGPT 实测”分开记录；后续任何复查应先阅读本页，再按需打开对应原件，不必重做已通过的全套测试。
 
 ## 1. 当前版本、生产状态和证据

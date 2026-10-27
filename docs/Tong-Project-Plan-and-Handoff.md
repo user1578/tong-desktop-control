@@ -1,0 +1,81 @@
+# Tong Desktop Control — 项目总说明、路线图与跨对话交接
+
+更新：2026-10-27。**本文件是未来对话与Codex接手时优先阅读的当前导航，不把历史已验收和未来目标混为一谈。**
+
+## 1. 目标与分工
+
+Tong是连接ChatGPT网页端与用户Windows本机的统一入口。用户用自然语言提出一个**完整目标**；ChatGPT负责识别目标、限定范围、安排执行Agent、监督进度、核验证据、必要时追加修复回合，并在**整个目标**完成后统一反馈。
+
+- 没指定Agent：ChatGPT优先通过Tong的本机工具直接执行已授权操作，不自动创建Codex会话。
+- 明确指定Codex或要求Codex完成开发：必须通过Tong调用真实Codex原生任务/会话，不得以ChatGPT自己操作后“冒充Codex”、CLI假会话、虚构消息代替。
+- 用户可在Codex Desktop中看到并继续原生对话；默认同一项目优先关联最新可用的原生会话，若用户点名某一会话则沿用指定ID。Writer已被桌面端占用时按受支持的恢复/交接流程处理，不删除锁、强杀桌面App、不换新会话假冒续接。
+- 典型任务分2–4个必要回合；具体由验收需要决定，不强制凑轮数，也不“一个回合成功就提前汇报”。只有完整目标通过业务验收或确需用户处理的实质阻塞才作正式结论。
+- 长期目标：不同Agent（Codex、Claude CLI、DSH及以后其他提供者）在Tong统一任务接口下运行；当前生产Agent的真实能力以工具枚举和实际验收为准，不把合成适配器当已上线。
+
+## 2. 当前资产和目录角色
+
+| 位置 | 角色 / 处理原则 |
+| --- | --- |
+| D:\Tong\app | 正式应用，保持原位 |
+| D:\Tong\runtime | 正式登录Host、pin、状态、恢复、密钥与日志；保持原位 |
+| D:\Tong\tools\ngrok | 现役服务依赖；保持原位 |
+| D:\Tong\development\tong-desktop-control | 开发主仓库，生产pin仍将其作为sourceRepository；保留共享.git与node_modules |
+| D:\Tong\development\tong-024-startup-recovery | 当前维护、文档及恢复工作树，分支codex/024-maintenance-adapter-20261024 |
+| D:\Tong\development\tong-launcher-startup-recovery、tong-startup-hotfix | 其他Git worktree；有分叉提交，不按重复目录删除 |
+| D:\Tong\state | 历史测试、候选包和部分仍被生产/任务引用的依赖；允许**逐项精准精简**，禁止整根通配删除 |
+| D:\agentdock-poc-20261010、D:\tong-agentdock-local、D:\tong-codex-acceptance-20261010、D:\tong-desktop-control | D盘四处历史工程，目标是审查后整合到Tong内；旧Git/未提交源码/授权/绝对路径先梳理 |
+
+**Git及磁盘策略**：代码、任务书、非敏感必要证据通过GitHub保存；不上传token、OAuth、DPAPI、真实数据库、业务数据或私有日志。对于可重建的npm/pytest缓存、重复部署副本，在排除当前引用之后直接删并记录路径与实际结果，**不额外制作整目录备份**；不能从“文件名旧、测试已禁用”直接推断可删。单任务预计额外落盘超过1GiB先评估必要性和轻量替代，必要时取得明确资源授权。不要反复重装node_modules、创建巨型隔离环境。
+
+## 3. 目前已经实际验证的事实
+
+- 2026-10-27 本机最小恢复：正式Task TongLoginRuntime仅启动一次，新runId **2b871eeb-ea5c-4690-b4ec-d46454f3a9ed**进入READY，正式doctor.healthy=true、三个端口监听、ngrok正常；网页ChatGPT后来实际调用认证Tong MCP列出12项目、读取授权目录/文件、复核新runId与端口。恢复版本仍为**b9fe80150f9cdea47130e8952e85e39503187677**；**并不代表长期稳定、重启后自动恢复和底层故障已经根治**。
+- 2026-10-27已有一次doctor native_fast_fail（0xC0000409），随后另一次监控进入MONITOR_FAILED导致shutdown；触发链已记录但**底层异常没有充分诊断信息**。不要把此前缓存清理误当成故障原因。专项证据见[生产恢复记录](maintenance/Tong-Production-Abnormal-Exit-Recovery-20261027.md)。
+- 网页端通过Tong真实读取、写入、编辑已在授权文件夹D:\作业\111验收。未指定Agent时ChatGPT直接操作可用。
+- Codex原生会话在D:\作业\111已做过同会话多Turn及Desktop可见、继续测试；有时用户必须完全退出再打开Codex Desktop，新任务才出现在列表。**“正在执行时立即可见并自动刷新，无需重启”尚未验收通过**。
+- Goal Supervisor具备持久目标、真实原生child Turn、进度查询、同一session多回合及整个Goal结束通知的代码/历史验收；业务验收标记和技术检查应分开。有界wait代码存在，但本次当前MCP工具清单未暴露tong_goal_wait，不得声称网页侧已经实际调用。**ChatGPT网页端固定面板自动持续刷新和回复结束后主动消息推送尚未实现/验证**。
+- 磁盘：五处根目录在2026-10-27只读盘点的逻辑大小为43.622GiB（不等于可回收NTFS空间）；2026-10-27已精准删除两个历史npm-cache，共378,061,153字节/约360.55MiB。具体回执见[第一批清理记录](maintenance/Tong-Disk-Cleanup-Batch1-20261027.md)。本文件不声称磁盘已重新全量统计。
+
+## 4. 工作优先级（按以下顺序推进）
+
+**P0 — 文档/资产边界与磁盘精简（进行中）**
+
+1. 用本文件、根AGENTS.md和[任务书](Tong-Codex-Goal-Supervision-Taskbook.md)维护一个稳定入口；以后只维护这些入口与实际成果证据，不生成几十份重复说明。
+2. 下一批先核查D:\Tong\state\b23-release-fgKPTn两个candidate-58786f6（603,120,383字节）和candidate-9589698（603,448,013字节）的native、node_modules及temp差异，再查是否有绝对路径/恢复依赖；当前**未获删除许可的证据标准**，不能因源码SHA匹配就全目录删除。同根npm-cache（188,785,956字节）被现有回归测试默认引用，当前保留。
+3. 深入复核p27-autonomy-candidate、b23-switch、native-codex-acceptance等大体积历史根的部署副本，按确定无需保留的**精确子目录**分批删；先核对生产pin、任务参数、Git/独有数据与重要事故证据。目标是减少重复依赖和冗余发布副本，而非保留每次完整现场。
+4. D盘四外置旧根在确认真实使用者、原生会话cwd、受管登记与绝对路径后，优先迁入D:\Tong\archives及development\acceptance；能安全删的缓存先删，不为迁移额外生成5GiB副本。敏感运行态不入GitHub，不能随意改ACL/DPAPI或移动活动目录。
+
+**P1 — 运行稳定与故障可诊断（下一开发阶段）**
+
+1. 在**开发仓库**补Supervisor监控分段脱敏原始错误、native诊断回执/错误码，避免再次只有MONITOR_FAILED。
+2. 研究doctor native非零退出、Runner结束及Windows任务为何未持续自动恢复；尽量复用已有监控/重试逻辑，保持预算、次数、授权边界不变，不盲目延长超时。
+3. 小规模合成故障与有界回归先通过，形成精确源码差异和升级方案；生产部署需独立受控授权/回退验证，禁止直接修改app/runtime或强行重启“证明”。
+
+**P2 — 用户重点：ChatGPT→Codex任务级监督＋Desktop原生会话＋网页进度（最高功能优先级）**
+
+执行顺序参见[专项任务书](Tong-Codex-Goal-Supervision-Taskbook.md)：核实现有Goal真实可用性与准确业务验收；修复Desktop早期可见与列表刷新；提供可查询的进行中步骤与独立进度展示；只在**整项目标**完成或需用户实际处理时统一报告。新回合共享原生session，不让Desktop抢同一Thread writer。**任务状态、原生会话列表和ChatGPT UI实际展示是三件事，须逐个验收。**
+
+**P3 — 后续扩展**
+
+项目归档整理持续滚动；稳定后再开发已安装其他Agent的真实可用适配器，先Claude CLI，DSH受限执行器解决后再接，Zcode/Work Buddy需先发现协议。统一Tong调度，不为每个Agent另开一套MCP公开面。Windows常用文件/项目操作再按需求扩展。
+
+## 5. 典型端到端任务流程
+
+用户下任务 → 查已授权项目和最新原生会话 → 明确任务完整验收与有界步骤 → 由ChatGPT直接处理或Tong goal_start派给Codex → 在当前活动对话中轮询goal_status/可用wait、展示**有证据**的实际进度 → 需要独立审核时检查结果/差异/测试，未达到要求则在同一Goal/Session追加回合 → 整项目标完成再通知并集中汇报。异常与确实需要用户交互的授权阻塞可提前告知，不把正常子Turn结束当最终答复。常驻实时进度卡若宿主无法订阅，应准确显示“最近一次查询时间”，不能伪装自动刷新。
+
+## 6. 操作约束与工作标准
+
+- 按本轮Git状态保护原有用户文件；当前主开发仓库含2个修改、17个未跟踪；维护工作树原先有一份用户未提交的review文档改动。不得趁“整理”替用户清理、暂存或覆盖这些状态。
+- 当前开发默认在codex/分支推进；仅提交本任务文件，差异检查/必要测试后正常push，不修改main、不force push、不把敏感产物上传GitHub。
+- 普通开发、已有授信项目中读写与可逆测试按现有持久授权直接走；正式生产部署/ACL/身份、凭据、Windows任务、重要数据删除仍按工具和用户明确授权处理，不绕过native门禁。
+- 测试原则：目标明确、一次真实端到端 + 相应有界回归，避免每次都重做整套安装、冷启动和几十GB事故拷贝；区分模拟成功、原生Turn结束、业务验收通过、Desktop用户可见和真正网页实时显示。
+- 任何跨对话迁移前更新本文件中的当前状态/下一步/提交号，并链接实际依据；旧报告保留索引，不重写历史。
+
+## 7. 新会话接手指南（按顺序）
+
+1. 阅读根 [AGENTS.md](../AGENTS.md) → **本文件** → [专项任务书](Tong-Codex-Goal-Supervision-Taskbook.md)。
+2. 按需阅读[最新生产恢复回执](maintenance/Tong-Production-Abnormal-Exit-Recovery-20261027.md)、[磁盘清理记录](maintenance/Tong-Disk-Cleanup-Batch1-20261027.md)、[五处根独立复核](maintenance/Tong-Five-Root-Consolidation-ChatGPT-Review-20261027.md)及[Desktop历史验收](Tong-Codex-Desktop-Progress-Handoff-20261021.md)；这些是证据，不等同现在仍然健康。
+3. 先读Git status、实际生产profile/pin/Task快照及可用MCP工具列表；确认真实边界后做P0或P1/P2的下一个尚未完成项，不重复旧调查。
+4. 每项结束在同一入口更新“完成/未完成/阻塞/具体下一步”、精确路径、提交和测试证据。对长期UI/运行状态不得靠静态Markdown冒充实时。
+
+**下一步默认事项**：从P0两个旧candidate的只读去重与引用核查开始，交付精确可删项；随后优先P1的monitor/native诊断设计，P2的任务进度与Desktop可见性专项。若用户指定更高优先级，则以其当前指令为准。
