@@ -16,6 +16,7 @@ function Load-Function([string]$Name){
 }
 Invoke-Expression (Load-Function 'Stop-Login')
 $script:root='D:\Tong\runtime';$script:taskName='SyntheticTongMonitor'
+$script:ExpectedOldCommit=''
 $script:fakeDefinition=[pscustomobject]@{}
 $script:fakeDefinition|Add-Member ScriptMethod GetInstances {param($n) return $script:instances}
 $script:fakeFolder=[pscustomobject]@{}
@@ -76,7 +77,7 @@ $script:logLines=@(
 )
 if((Get-LoginFailure) -cne 'start: CLEANUP_REQUIRED'){throw 'Acceptance must retain the actual manager failure'}
 $text=[IO.File]::ReadAllText($wrapper)
-if(-not $text.Contains('if(-not $taskDisabled){Stop-Login $true}')){throw 'Rollback must explicitly allow an already exited monitor'}
+if(-not $text.Contains('if(-not $taskDisabled){Stop-Login $true $recoverySigned}')){throw 'Rollback must select the verified recovery mechanism and allow an exited monitor'}
 Invoke-Expression (Load-Function 'Verify-StoppedPreviousRuntime')
 Invoke-Expression (Load-Function 'Await-Stopped')
 $script:mockStatus=[pscustomobject]@{phase='abnormal_exit';runId='01234567-89ab-4cde-9012-0123456789abc';supervisorAlive=$false;guardianAlive=$false}

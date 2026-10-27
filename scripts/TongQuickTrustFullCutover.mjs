@@ -3,17 +3,21 @@ import {join,dirname,relative,isAbsolute,sep} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {execFile} from 'node:child_process';
+import {validateUpgradeBinding} from './TongUpgradeBinding.mjs';
+import {withMaintenanceFreeze} from './TongLifecycleFreeze.mjs';
 
 const BASE='D:\\Tong\\state\\p27-autonomy-candidate-20261017';
-const [action,snapshot,releaseOverride,candidateOverride,commitOverride,...extra]=process.argv.slice(2);
+const [action,snapshot,releaseOverride,candidateOverride,commitOverride,baselineOverride,...extra]=process.argv.slice(2);
 if([releaseOverride,candidateOverride,commitOverride].filter(value=>value!==undefined).length%3)throw Error('INCOMPLETE_RELEASE_BINDING');
 for(const [value,prefix] of [[releaseOverride,'quick-trust-release-'],[candidateOverride,'quick-trust-candidate-']]){
  if(value!==undefined&&(dirname(value)!==BASE||!new RegExp('^'+prefix+'[a-f0-9]{7,40}$').test(relative(BASE,value))))throw Error('RELEASE_SCOPE_DENIED');
 }
 if(commitOverride!==undefined&&!/^[a-f0-9]{40}$/.test(commitOverride))throw Error('COMMIT_BINDING_DENIED');
+if(baselineOverride!==undefined&&!/^[a-f0-9]{40}$/.test(baselineOverride))throw Error('BASELINE_BINDING_DENIED');
 const RUNTIME='D:\\Tong\\runtime';
+const TASK_RUNNER=join(RUNTIME,'login-management','TongLoginRuntime.ps1');
 const ROOTS={app:'D:\\Tong\\app',manager:join(RUNTIME,'releases','manager')};
-const ORIGINAL={app:'a1b56b3666651c3648327f05e0ea4154284645c3',manager:'a1b56b3666651c3648327f05e0ea4154284645c3'};
+const ORIGINAL={app:baselineOverride??'a1b56b3666651c3648327f05e0ea4154284645c3',manager:baselineOverride??'a1b56b3666651c3648327f05e0ea4154284645c3'};
 const NEW=commitOverride??'d9983bbc5fe1640f51d4a649ff0f018c9f458c6f';
 const RELEASE=releaseOverride??join(BASE,'quick-trust-release-d9983bb');
 const CANDIDATE=candidateOverride??join(BASE,'quick-trust-candidate-d9983bb');
@@ -37,6 +41,7 @@ async function official(){
  const {verifyRelease}=await import(pathToFileURL(join(CANDIDATE,'scripts','TongRuntimeRelease.mjs')).href);
  await verifyRelease({releaseRoot:RELEASE});
  const oldPins={app:await read(join(RUNTIME,'run','release-pin.json')),manager:await read(join(RUNTIME,'run','manager-pin.json'))};
+ validateUpgradeBinding({oldApp:oldPins.app,oldManager:oldPins.manager,manifest,expectedOld:ORIGINAL.app,expectedNew:NEW});
  for(const key of Object.keys(oldPins)){
   if(oldPins[key].commit!==ORIGINAL[key]||JSON.stringify(oldPins[key].native)!==JSON.stringify(manifest.native)||JSON.stringify(oldPins[key].versions)!==JSON.stringify(manifest.versions))fail('BASELINE_MISMATCH:'+key);
   const previous=oldPins[key].expectedDevspaceHashes,next=manifest.expectedDevspaceHashes;
@@ -103,9 +108,9 @@ async function makeSnapshot(verifiedState){
  await writeFile(join(dir,'snapshot.json'),JSON.stringify(evidence,null,2)+'\n',{flag:'wx'});
  console.log(JSON.stringify({ok:true,stage:'snapshotted',snapshot:dir,appFiles:verifiedState.oldPins.app.sourceFiles.length,managerFiles:verifiedState.oldPins.manager.sourceFiles.length}));
 }
-async function verifySnapshot(dir){
+async function verifySnapshot(dir,{unused=true}={}){
  const state=await existingSnapshot(dir);
- if(state.stage!=='snapshotted')fail('SNAPSHOT_ALREADY_USED');
+ if(unused&&state.stage!=='snapshotted')fail('SNAPSHOT_ALREADY_USED');
  for(const key of Object.keys(ROOTS)){
   const old=await read(join(dir,key==='app'?'release-pin.json':'manager-pin.json'));
   if(old.commit!==ORIGINAL[key])fail('OLD_SNAPSHOT_COMMIT_CHANGED');
@@ -125,7 +130,9 @@ async function recordStage(dir,stage){
  const p=join(dir,'snapshot.json');const v=await existingSnapshot(dir);v.stage=stage;v.updatedAt=new Date().toISOString();await writeFile(p,JSON.stringify(v,null,2)+'\n');
 }
 async function assertStopped(){
- const {runtimeStatus}=await import(pathToFileURL(join(ROOTS.manager,'scripts','TongAgentDockRuntime.mjs')).href);
+ // Do not cache the old installed Manager in this controller: activation
+ // imports the replacement Manager after its bytes have been installed.
+ const {runtimeStatus}=await import('./TongAgentDockRuntime.mjs');
  const current=await runtimeStatus(RUNTIME);
  if(current.supervisorAlive||current.guardianAlive||!['stopped','abnormal_exit'].includes(current.phase)||!current.runId)fail('RUNTIME_NOT_STOPPED');
  const guardian=await read(join(RUNTIME,'run','guardian.json'));
@@ -227,7 +234,7 @@ async function installRunner(dir){
  const m=await read(join(RELEASE,'release-manifest.json'));
  const runner=m.sourceFiles.find(f=>f.path==='scripts/TongLoginRuntime.ps1');
  const source=checked(ROOTS.manager,runner.path);await verified(source,runner);
- const dest='D:\\Tong\\runtime\\login-management\\TongLoginRuntime.ps1';
+ const dest=TASK_RUNNER;
  await copyFile(source,dest);await verified(dest,runner);
  await recordStage(dir,'runner-installed');
  console.log(JSON.stringify({ok:true,stage:'runner-installed'}));
@@ -243,12 +250,12 @@ async function checkInstalled(){
      if(sha(await data(checked(ROOTS[key],'node_modules/@waishnav/devspace/dist/'+name)))!==hash)fail('NEW_PATCH_NOT_INSTALLED');
  }
  const newRunner=m.sourceFiles.find(f=>f.path==='scripts/TongLoginRuntime.ps1');
- await verified('D:\\Tong\\runtime\\login-management\\TongLoginRuntime.ps1',newRunner);
+ await verified(TASK_RUNNER,newRunner);
  console.log(JSON.stringify({ok:true,stage:'installed-verified',app:pinApp.commit,manager:pinManager.commit}));
 }
 async function rollback(dir){
  const e=await existingSnapshot(dir);
- if(e.stage==='snapshotted')fail('NOT_MODIFIED');
+ if(e.stage==='snapshotted'&&!baselineOverride)fail('NOT_MODIFIED');
  // This action intentionally cannot stop a service or rewrite a live running release.
  await assertStopped();
  const m=await read(join(RELEASE,'release-manifest.json'));
@@ -274,11 +281,62 @@ async function rollback(dir){
    if(sha(await data(destination))!==hash)fail('OLD_PATCH_RESTORE_DENIED');
   }
  }
- for(const [name,target]of [['release-pin.json',join(RUNTIME,'run','release-pin.json')],['manager-pin.json',join(RUNTIME,'run','manager-pin.json')],['profile.json',join(RUNTIME,'profile.json')],['login-runner.ps1','D:\\Tong\\runtime\\login-management\\TongLoginRuntime.ps1']]){
+ for(const [name,target]of [['release-pin.json',join(RUNTIME,'run','release-pin.json')],['manager-pin.json',join(RUNTIME,'run','manager-pin.json')],['profile.json',join(RUNTIME,'profile.json')],['login-runner.ps1',TASK_RUNNER]]){
   await copyFile(join(dir,name),target);
  }
  await recordStage(dir,'rolled-back-old-code');
  console.log(JSON.stringify({ok:true,stage:'rolled-back-old-code',snapshot:dir,oldApp:ORIGINAL.app,oldManager:ORIGINAL.manager,recoveryPermissionNeedsFreshHumanApproval:true}));
+}
+// Reuse the existing snapshot/install/rollback operations under the shared
+// lifecycle gate. A failed controller leaves the gate present and startup
+// blocked, instead of exposing partly installed code to a login retry.
+async function upgradeProfiles(dir){
+ const baseline=await read(join(dir,'profile.json'));
+ const manifest=await read(join(RELEASE,'release-manifest.json'));
+ const {createProductionProfile,verifyRuntimeApproval}=await import('./TongProductionProfile.mjs');
+ const next=createProductionProfile({sourceDigest:manifest.files.find(f=>f.path==='code/source.tar').sha256,releaseDigest:sha(await data(join(RELEASE,'release-manifest.json'))),agentdockEnabled:true});
+ await verifyRuntimeApproval(baseline,'restore');
+ await verifyRuntimeApproval(next,'start');await verifyRuntimeApproval({...next,agentdockEnabled:false},'manager');
+ return {baseline,next};
+}
+async function upgradeGate(dir,fn,{release=false}={}){
+ await existingSnapshot(dir);const profiles=await upgradeProfiles(dir);
+ await assertStopped();
+ await withMaintenanceFreeze(profiles.next,{expectedSha256:sha(Buffer.alloc(0)),productionUpgrade:{baselineProfile:profiles.baseline},upgradeReceipt:join(dir,'upgrade-gate.json')},async lease=>{
+  await lease.proof();await assertStopped();await fn(profiles);
+  if(release)await lease.release();else await lease.proof();
+ });
+}
+async function installAndActivate(dir){
+ await verifySnapshot(dir);
+ await upgradeGate(dir,async({next})=>{
+  // This delta touches source, three known patches, runner, profile and pins.
+  // Existing OAuth/DPAPI/databases and recovery envelopes stay in place.
+  await recordStage(dir,'state-backed-up');
+  await install(dir);
+  const module=name=>pathToFileURL(join(ROOTS.manager,'scripts',name)).href;
+  const {pinRuntimeRelease,verifyRuntimeCandidate}=await import(module('TongRuntimeCandidate.mjs'));
+  const {updateRuntimeProfile}=await import(module('TongAgentDockRuntime.mjs'));
+  await pinRuntimeRelease({...next,agentdockEnabled:false},RELEASE,{manager:true,replace:true});
+  await updateRuntimeProfile(next,{releaseRoot:RELEASE});
+  await verifyRuntimeCandidate(next);await verifyRuntimeCandidate(next,{manager:true,reviewedManagerProfile:{...next,agentdockEnabled:false}});
+  await recordStage(dir,'pins-installed');await installRunner(dir);await checkInstalled();
+ });
+}
+async function releaseUpgradeGate(dir){
+ const state=await existingSnapshot(dir);
+ if(!['runner-installed','rolled-back-old-code'].includes(state.stage))fail('UPGRADE_GATE_STAGE_DENIED');
+ await upgradeGate(dir,async()=>{
+  const latest=await existingSnapshot(dir);
+  if(latest.stage==='runner-installed')await checkInstalled();
+  else{
+   if(latest.stage!=='rolled-back-old-code')fail('UPGRADE_GATE_STAGE_DENIED');
+   const p=await read(join(RUNTIME,'profile.json'));
+   const {verifyRuntimeCandidate}=await import(pathToFileURL(join(ROOTS.manager,'scripts/TongRuntimeCandidate.mjs')).href);
+   await verifyRuntimeCandidate(p);await verifyRuntimeCandidate(p,{manager:true,reviewedManagerProfile:{...p,agentdockEnabled:false}});
+  }
+ },{release:true});
+ console.log(JSON.stringify({ok:true,stage:'upgrade-gate-released'}));
 }
 try{
  if(extra.length)fail('UNEXPECTED_ARGUMENTS');
@@ -291,6 +349,13 @@ try{
  else if(action==='install'){await install(snapshot);}
  else if(action==='install-runner'){await installRunner(snapshot);}
  else if(action==='verify-installed'){await checkInstalled();}
- else if(action==='rollback'){await rollback(snapshot);}
+ else if(action==='install-activate'){await installAndActivate(snapshot);}
+ else if(action==='release-upgrade-gate'){await releaseUpgradeGate(snapshot);}
+ else if(action==='rollback-preflight'){
+  const evidence=await verifySnapshot(snapshot,{unused:false});
+  for(const pin of ['release-pin.json','manager-pin.json'])if(![ORIGINAL.app,NEW].includes((await read(join(RUNTIME,'run',pin))).commit))fail('ROLLBACK_CURRENT_VERSION_DENIED');
+  console.log(JSON.stringify({...evidence,rollbackPrepared:true}));
+ }
+ else if(action==='rollback'){if(baselineOverride)await upgradeGate(snapshot,()=>rollback(snapshot));else await rollback(snapshot);}
  else fail('BAD_ACTION');
 }catch(error){console.error(String(error?.code??error?.message??error).slice(0,230));process.exitCode=1}

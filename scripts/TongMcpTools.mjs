@@ -202,7 +202,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
   };
   registerTool(server,'tong_disk_cleanup_plan',{
     title:'Prepare bounded disk cleanup without deleting',
-    description:'Plan an exact disposable cache or archived candidate inside a locally registered writable project. Detect hardlinks, junctions, protected runtime paths and retain a short-lived one-use plan. This is read-only; broad disk scanning remains with tong_scan_directory.',
+    description:'Plan an exact disposable cache or verified archived candidate inside a readable project or a locally approved cleanup scope. Reports deletionAuthorized separately. Broad metadata scanning remains with tong_scan_directory.',
     inputSchema:{
       projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
       path:z.string().min(4).max(2048),
@@ -211,7 +211,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
   },cleanupHandler(input=>cleanup.plan(input)));
   registerTool(server,'tong_disk_cleanup_execute',{
     title:'Execute a previously verified cleanup plan',
-    description:'Delete exactly the prechecked disposable directory once, only inside an enabled locally authorized writable project. Refuses expired, changed, reparse, protected and unarchived targets; writes local audit entries. This does not create authorization or delete arbitrary folders.',
+    description:'Delete the exact prechecked directory once under a separate persistent local cleanup grant. Rechecks grant revision, expiry, target, links, pins and preserved archives; audits results. Project read/write permission alone never authorizes deletion.',
     inputSchema:{
       projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
       planId:z.string().uuid(),
@@ -229,7 +229,11 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     let policy,authorizationPolicyAvailable=true;
     try{policy=await new TongTrustedPolicy(stateDir?{policyPath:join(stateDir,'trusted-codex.json')}:{}).status();}
     catch{authorizationPolicyAvailable=false;policy={enabled:false,developmentGrants:[]};}
+    let cleanupScopes=[],cleanupAuthorizationAvailable=true;
+    try{cleanupScopes=(await cleanup.authorization.read()).grants.filter(g=>g.enabled).map(({id,root,scopes,revision})=>({id,root,scopes,revision}));}
+    catch{cleanupAuthorizationAvailable=false;}
     return {projects:(await access.listProjects()).map(project=>({...project,developmentAuthorization:policy.enabled&&project.effectiveCapabilities.includes('project.write')&&project.effectiveCapabilities.includes('agent.execute')?(policy.developmentGrants.find(g=>g.projectId===project.id&&g.root===project.root)??null):null})),trustedFolders:(policy.trustedRoots??[]).map(item=>({root:item.root,gitCommit:item.capabilities.includes('git.commit'),gitPush:item.capabilities.includes('git.push')})),authorizationPolicyAvailable,
+      cleanupScopes,cleanupAuthorizationAvailable,
       confirmation:{clientElicitationAvailable:Boolean(server.server?.getClientCapabilities?.()?.elicitation),verifiedUserPresence:false,authorizationMethod:'local-interactive-console',chatTextCanAuthorize:false}};
   }));
 

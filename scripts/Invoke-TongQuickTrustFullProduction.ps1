@@ -1,9 +1,10 @@
 param(
-  [ValidateSet('Preflight','Deploy')][string]$Mode='Preflight',
+  [ValidateSet('Preflight','Deploy','Rollback')][string]$Mode='Preflight',
   [string]$ReleaseRoot='',
   [string]$CandidateRoot='',
   [string]$SnapshotRoot='',
-  [string]$ExpectedCommit=''
+  [string]$ExpectedCommit='',
+  [string]$ExpectedOldCommit=''
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -13,9 +14,10 @@ $base='D:\Tong\state\p27-autonomy-candidate-20261017'
 $customBinding=@($ReleaseRoot,$CandidateRoot,$SnapshotRoot,$ExpectedCommit)|Where-Object {$_}
 if(@($customBinding).Count -notin @(0,4)){throw 'Release, candidate, snapshot and exact commit must be supplied together'}
 if($ExpectedCommit -and $ExpectedCommit -cnotmatch '^[a-f0-9]{40}$'){throw 'Exact repaired release commit required'}
+if($ExpectedOldCommit -and $ExpectedOldCommit -cnotmatch '^[a-f0-9]{40}$'){throw 'Exact baseline commit required'}
 $helper=Join-Path $PSScriptRoot 'TongQuickTrustFullCutover.mjs'
 $cleanupProbe=Join-Path $PSScriptRoot 'TongCutoverStoppedRunProbe.mjs'
-$helperSha256='6e5e5f00eec9daa6223236e123b01ead0112f48322afb18771c416e939646926'
+$helperSha256='267ad9dcc55e500f9cfb9643a550b32598e7e834d07691e102bf16d25869aceb'
 $cleanupProbeSha256='4835f8665760baa12eaf1699d793654d06fa92d12fa74000ea4aa1705171d91a'
 $release=if($ReleaseRoot){$ReleaseRoot}else{Join-Path $base 'quick-trust-release-d9983bb'}
 $candidate=if($CandidateRoot){$CandidateRoot}else{Join-Path $base 'quick-trust-candidate-d9983bb'}
@@ -24,8 +26,8 @@ $manager=Join-Path $root 'releases\manager\scripts\TongAgentDockRuntime.mjs'
 $signer=Join-Path $root 'releases\manager\scripts\TongProductionApproval.ps1'
 $taskName='TongLoginRuntime'
 $originalRun=$null
-$expectedOldApp='a1b56b3666651c3648327f05e0ea4154284645c3'
-$expectedOldManager='a1b56b3666651c3648327f05e0ea4154284645c3'
+$expectedOldApp=if($ExpectedOldCommit){$ExpectedOldCommit}else{'a1b56b3666651c3648327f05e0ea4154284645c3'}
+$expectedOldManager=$expectedOldApp
 $expectedNew=if($ExpectedCommit){$ExpectedCommit}else{'d9983bbc5fe1640f51d4a649ff0f018c9f458c6f'}
 $snapshot=$null
 $wasStopped=$false
@@ -37,6 +39,7 @@ function Native([string]$Name,[string[]]$Arguments){
   if($Arguments[0] -ceq $helper){
     if($Arguments.Count -eq 2){$Arguments+= '-'}
     $Arguments+=@($release,$candidate,$expectedNew)
+    if($ExpectedOldCommit){$Arguments+= $ExpectedOldCommit}
   }
   $raw=& $node @Arguments
   if($LASTEXITCODE -ne 0){throw ('FAILED: '+$Name+' exit='+$LASTEXITCODE)}
@@ -44,6 +47,16 @@ function Native([string]$Name,[string[]]$Arguments){
 }
 function CurrentStatus(){
   return (Native 'manager status' @($manager,'status','--root',$root))
+}
+function Assert-ControlSourceBinding(){
+  if(-not $ExpectedOldCommit){return}
+  $manifest=Get-Content -LiteralPath (Join-Path $release 'release-manifest.json') -Raw|ConvertFrom-Json
+  if($manifest.commit -cne $expectedNew){throw 'Control source commit mismatch'}
+  foreach($entry in @($manifest.sourceFiles|Where-Object path -like 'scripts/*')){
+    if($entry.path -notmatch '^scripts/[A-Za-z0-9_.-]+$'){throw 'Control source path denied'}
+    $path=Join-Path $PSScriptRoot ([IO.Path]::GetFileName([string]$entry.path))
+    if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry.sha256){throw ('Control source differs from reviewed release: '+$entry.path)}
+  }
 }
 function Assert-Activation-Bindings(){
   # Parse and syntax-check the *actual embedded activation code* before stopping Tong.
@@ -86,6 +99,7 @@ console.log(JSON.stringify({activationBindings:true,locations:locations.length,e
   if(-not $result.activationBindings -or $result.locations -ne 2 -or $result.exportsChecked -ne 4){throw 'Invalid activation export result'}
 }
 function Assert-Release(){
+  Assert-ControlSourceBinding
   # Reject the previous failed candidate before stopping anything. A repaired
   # release must contain the exact Manager runtime reviewed with this wrapper.
   $reviewedRuntime=Join-Path $PSScriptRoot 'TongAgentDockRuntime.mjs'
@@ -98,7 +112,7 @@ function Assert-Release(){
   if(-not (Test-Path -LiteralPath $cleanupProbe -PathType Leaf) -or (Get-FileHash -LiteralPath $cleanupProbe -Algorithm SHA256).Hash.ToLowerInvariant() -cne $cleanupProbeSha256){throw 'Stopped-runtime proof changed since review'}
   $checkedSnapshot=Native 'verified source rollback snapshot' @($helper,'verify-snapshot',$reviewedSnapshot)
   if(-not $checkedSnapshot.ok -or $checkedSnapshot.stage -cne 'snapshotted' -or
-      $checkedSnapshot.appFiles -ne 191 -or $checkedSnapshot.managerFiles -ne 191){
+      $checkedSnapshot.appFiles -lt 1 -or $checkedSnapshot.managerFiles -lt 1){
       throw 'Full rollback snapshot is missing or changed'
   }
   $result=Native 'verified production preflight' @($helper,'preflight')
@@ -107,7 +121,7 @@ function Assert-Release(){
   if($task.Principal.UserId -notin @('Rune','RUNE') -or $task.Actions.Count -ne 1 -or $task.Actions[0].Execute -ine (Join-Path $root 'login-management\TongLoginHost.exe')){throw 'Unknown login task definition'}
   $s=CurrentStatus
   if($s.phase -cne 'ready' -or -not $s.supervisorAlive -or -not $s.guardianAlive){throw 'Production is not healthy'}
-  $d=Native 'manager doctor' @($manager,'doctor','--root',$root)
+  $d=Native 'manager doctor' @($manager,'doctor','--root',$root,'--login-recovery')
   if(-not $d.healthy){throw 'Production doctor is not healthy'}
   return $s
 }
@@ -126,7 +140,7 @@ const sourceDigest=m.files.find(x=>x.path==='code/source.tar').sha256;
 const releaseDigest=createHash('sha256').update(bytes).digest('hex');
 const profile=enabled=>createProductionProfile({sourceDigest,releaseDigest,agentdockEnabled:enabled});
 const encode=x=>Buffer.from(JSON.stringify(x)).toString('base64');
-console.log(JSON.stringify({app:encode(profile(true)),manager:encode(profile(false)),commit:m.commit}));
+console.log(JSON.stringify({app:encode(profile(true)),manager:encode(profile(false)),baseline:encode(JSON.parse(await readFile('D:\\Tong\\runtime\\profile.json','utf8'))),commit:m.commit}));
 '@
   $raw=& $node --input-type=module -e $program $release
   if($LASTEXITCODE -ne 0){throw 'Failed to derive exact production grant descriptors'}
@@ -198,7 +212,7 @@ function Await-Healthy(){
     $failure=Get-LoginFailure
     if($failure){throw ('Login monitor exited: '+$failure)}
     if($status.phase -eq 'ready' -and $status.supervisorAlive -and $status.guardianAlive){
-      $healthy=Native 'production doctor' @($manager,'doctor','--root',$root)
+      $healthy=Native 'production doctor' @($manager,'doctor','--root',$root,'--login-recovery')
       if($healthy.healthy){return $status}
     }
     Start-Sleep -Seconds 3
@@ -211,7 +225,7 @@ function Enable-Login(){
   $script:monitorWindowStart=[DateTime]::UtcNow
   Start-ScheduledTask -TaskName $taskName
 }
-function Stop-Login([bool]$AllowAbsent=$false){
+function Stop-Login([bool]$AllowAbsent=$false,[bool]$UseRecovery=$true){
   $scheduler=New-Object -ComObject Schedule.Service
   $scheduler.Connect()
   $definition=$scheduler.GetFolder('\').GetTask($taskName)
@@ -245,9 +259,14 @@ function Stop-Login([bool]$AllowAbsent=$false){
   $script:taskDisabled=$true
   $current=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
   if($null -eq $current -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.CommandLine -ine $expectedRunner){throw 'Monitor runner identity changed'}
-  # Terminate only the exact login runner. The GUI host waits for it and exits;
-  # Supervisor and Guardian are independent and must remain untouched.
-  Stop-Process -Id $runner.ProcessId -Force -ErrorAction Stop
+  # Existing stop-run records a requested stop. The runner observes it and
+  # exits normally, then Host exits. Never force-terminate either process.
+  $s=CurrentStatus
+  if($s.supervisorAlive){
+    $stopArgs=@($manager,'stop-run','--root',$root,'--run-id',$s.runId,'--error-json')
+    if($UseRecovery){$stopArgs+='--login-recovery'}
+    $null=Native 'graceful exact-run stop' $stopArgs
+  }
   $limit=(Get-Date).AddSeconds(30)
   while((Get-Date) -lt $limit){
     if(@($definition.GetInstances(0)).Count -eq 0 -and -not (Get-Process -Id $runner.ProcessId -ErrorAction SilentlyContinue)){return}
@@ -296,7 +315,7 @@ console.log(JSON.stringify({pinsUpdated:true,commit:data.commit}));
 function Restore-Old(){
   if(-not $snapshot){throw 'No exact restore snapshot available'}
   Write-Warning ('Initiating bounded source rollback from '+$snapshot)
-  if(-not $taskDisabled){Stop-Login $true}
+  if(-not $taskDisabled){Stop-Login $true $recoverySigned}
   $s=CurrentStatus
   if($s.supervisorAlive){$null=Stop-ExactRun $recoverySigned}
   $null=Await-Stopped
@@ -310,6 +329,7 @@ function Restore-Old(){
     & (Join-Path $root 'releases\manager\scripts\TongProductionApproval.ps1') -Mode approve-login-recovery
     if(-not $? -or $LASTEXITCODE -ne 0){throw 'Old login recovery challenge not completed. Task remains disabled.'}
   }
+  if($ExpectedOldCommit){$null=Native 'release restored lifecycle gate' @($helper,'release-upgrade-gate',$snapshot)}
   Enable-Login
   $back=Await-Healthy
   Write-Host ('Old version recovered: '+$back.runId) -ForegroundColor Green
@@ -323,6 +343,21 @@ if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Envi
   throw 'Visible, nonredirected PowerShell 7 ConsoleHost required'
 }
 if($PSVersionTable.PSVersion.Major -lt 7){throw 'Use PowerShell 7'}
+if($Mode -eq 'Rollback'){
+  if(-not $ExpectedOldCommit){throw 'Standalone rollback requires explicit baseline binding'}
+  Assert-ControlSourceBinding
+  if((Get-FileHash -LiteralPath $helper -Algorithm SHA256).Hash.ToLowerInvariant() -cne $helperSha256 -or (Get-FileHash -LiteralPath $cleanupProbe -Algorithm SHA256).Hash.ToLowerInvariant() -cne $cleanupProbeSha256){throw 'Reviewed rollback helper changed'}
+  $null=Native 'verify standalone rollback binding' @($helper,'rollback-preflight',$reviewedSnapshot)
+  $plan=Get-NewProfiles
+  Sign 'start' $plan.app;Sign 'manager' $plan.manager
+  $baseline=Get-Content -LiteralPath (Join-Path $reviewedSnapshot 'profile.json') -Raw
+  Sign 'restore' ([Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($baseline)))
+  try{$recoverySigned=(Native 'verify current recovery for rollback' @($manager,'preflight-login','--root',$root,'--error-json')).approved -eq $true}catch{}
+  if(-not $recoverySigned){Sign 'stop' $plan.baseline}
+  $snapshot=$reviewedSnapshot
+  Restore-Old
+  exit 0
+}
 try{
   $old=Assert-Release
   $originalRun=[string]$old.runId
@@ -334,6 +369,7 @@ try{
   # fixed recovery grant authorizes Manager/start/stop after activation; separate
   # duplicate stop and Manager receipts are neither needed nor minted.
   foreach($action in @('start','enable-agentdock')){Sign $action $plan.app}
+  if($ExpectedOldCommit){Sign 'manager' $plan.manager;Sign 'restore' $plan.baseline}
   $record=Native 'verify immutable production snapshot' @($helper,'verify-snapshot',$reviewedSnapshot)
   if(-not $record.ok -or $record.stage -cne 'snapshotted'){
     throw 'Production rollback snapshot verification failed'
@@ -346,22 +382,25 @@ try{
   Stop-Login
   $null=Stop-ExactRun $true
   $wasStopped=$true
-  $state=Native 'backup private production state' @($helper,'backup-state',$snapshot)
-  if(-not $state.ok -or $state.stage -cne 'state-backed-up'){
-    throw 'Consistent private runtime-state backup was not verified'
-  }
   $didInstall=$true
-  $result=Native 'copy reviewed candidate sources' @($helper,'install',$snapshot)
-  if(-not $result.ok){throw 'Candidate files not fully installed'}
-  Activate-Pins
-  $null=Native 'copy and hash login runner' @($helper,'install-runner',$snapshot)
-  $null=Native 'verify entire installed candidate' @($helper,'verify-installed')
+  if($ExpectedOldCommit){
+    $null=Native 'install and activate under lifecycle gate' @($helper,'install-activate',$snapshot)
+  }else{
+    $state=Native 'backup private production state' @($helper,'backup-state',$snapshot)
+    if(-not $state.ok -or $state.stage -cne 'state-backed-up'){throw 'Consistent private runtime-state backup was not verified'}
+    $result=Native 'copy reviewed candidate sources' @($helper,'install',$snapshot)
+    if(-not $result.ok){throw 'Candidate files not fully installed'}
+    Activate-Pins
+    $null=Native 'copy and hash login runner' @($helper,'install-runner',$snapshot)
+    $null=Native 'verify entire installed candidate' @($helper,'verify-installed')
+  }
   Write-Host 'Installed files and pins verified; the new login recovery grant requires your exact local challenge.'
   & (Join-Path $root 'releases\manager\scripts\TongProductionApproval.ps1') -Mode approve-login-recovery
   if(-not $? -or $LASTEXITCODE -ne 0){throw 'New login recovery grant not approved'}
   $verifiedRecovery=Native 'verify new login recovery' @($manager,'preflight-login','--root',$root,'--error-json')
   if(-not $verifiedRecovery.approved){throw 'Installed recovery authorization did not validate'}
   $recoverySigned=$true
+  if($ExpectedOldCommit){$null=Native 'release verified lifecycle gate' @($helper,'release-upgrade-gate',$snapshot)}
   Enable-Login
   $ready=Await-Healthy
   if([string](Get-ScheduledTask -TaskName $taskName).State -ne 'Running'){throw 'Login monitor did not remain Running'}

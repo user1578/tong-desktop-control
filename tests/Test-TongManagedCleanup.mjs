@@ -11,6 +11,10 @@ try {
   const root=join(tmp.path,'authorized-project');
   const audits=join(tmp.path,'audit-store');
   await mkdir(root,{recursive:true});
+  await mkdir(audits);
+  const grant={id:'synthetic-project',root,enabled:true,revision:'fixture-1',scopes:[{relativeRoot:'.',categories:['cache','historical-candidate']}]};
+  const saveGrant=()=>writeFile(join(audits,'disk-cleanup-grants.json'),JSON.stringify({schemaVersion:1,grants:[grant]}));
+  await saveGrant();
   let enabled=true;
   const access={listProjects:async()=>[{
     id:'synthetic-project',root,status:'enabled',available:true,
@@ -38,10 +42,14 @@ try {
   await assert.rejects(cleanup.plan({projectId:'synthetic-project',path:join(root,'src')}),/CLEANUP_CATEGORY_NOT_ALLOWED/);
   // A registry write flag is mandatory; it cannot be inferred from chat text.
   enabled=false;
+  grant.enabled=false;await saveGrant();
   await mkdir(join(root,'__pycache__'));
   await writeFile(join(root,'__pycache__','x.pyc'),'test');
-  await assert.rejects(cleanup.plan({projectId:'synthetic-project',path:join(root,'__pycache__')}),/CLEANUP_PERMISSION_REQUIRED/);
+  const deniedPlan=await cleanup.plan({projectId:'synthetic-project',path:join(root,'__pycache__')});
+  assert.equal(deniedPlan.deletionAuthorized,false);
+  await assert.rejects(cleanup.execute({projectId:'synthetic-project',planId:deniedPlan.planId}),/CLEANUP_PERMISSION_REQUIRED/);
   enabled=true;
+  grant.enabled=true;await saveGrant();
   // Any change between plan and execution causes rejection.
   let expired=await cleanup.plan({projectId:'synthetic-project',path:join(root,'__pycache__')});
   now+=5*60*1000+1;
@@ -71,8 +79,9 @@ try {
   await archived('code/source/package-lock.json','synthetic lock');
   for(let i=0;i<23;i++)await archived('native/node_modules/f'+i+'.bin','synthetic native '+i);
   await writeFile(join(candidate,'package-lock.json'),'synthetic lock');
-  await writeFile(join(candidate,'release-restore-evidence.json'),JSON.stringify({commit,patchChecked:true,sqliteNativeLoaded:true,nativeRestore:'exact archived hashes'}));
-  await writeFile(join(release,'release-manifest.json'),JSON.stringify({commit,files:records}));
+  const sourceFiles=[{path:'package-lock.json',size:Buffer.byteLength('synthetic lock'),sha256:hash('synthetic lock')}];
+  await writeFile(join(candidate,'release-restore-evidence.json'),JSON.stringify({commit,sourceFilesVerified:1,patchChecked:true,sqliteNativeLoaded:true,nativeRestore:'exact archived hashes'}));
+  await writeFile(join(release,'release-manifest.json'),JSON.stringify({commit,sourceFiles,files:records}));
   const histPlan=await cleanup.plan({projectId:'synthetic-project',path:candidate});
   await writeFile(join(release,'code','source.tar'),'tampered archive');
   await assert.rejects(cleanup.execute({projectId:'synthetic-project',planId:histPlan.planId}),/CLEANUP_ARCHIVE_MISMATCH/);

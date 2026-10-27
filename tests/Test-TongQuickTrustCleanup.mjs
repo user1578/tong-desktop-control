@@ -33,11 +33,22 @@ try{
  await writeFile(join(candidate,'release-restore-evidence.json'),JSON.stringify({commit,sourceFilesVerified:src.length,patchChecked:true,sqliteNativeLoaded:true,nativeRestore:'exact archived hashes'}));
  await mkdir(join(candidate,'node_modules'),{recursive:true});
  await writeFile(join(candidate,'node_modules','installed-dependency.js'),'rebuildable');
+ const retained=join(fixture.path,'retained-dependencies');await mkdir(retained);
+ await writeFile(join(retained,'installed-dependency.js'),'rebuildable');
  let enabled=true;
  const access={listProjects:async()=>[{id:'synthetic',root,status:'enabled',available:true,effectiveCapabilities:enabled?['project.write','project.read']:['project.read']}]};
- const manager=new TongManagedCleanup({access,stateDir:join(fixture.path,'audit')});
+ const store=join(fixture.path,'audit');await mkdir(store);
+ await writeFile(join(store,'disk-cleanup-grants.json'),JSON.stringify({schemaVersion:1,grants:[{id:'synthetic',root,enabled:true,revision:'fixture-1',scopes:[{relativeRoot:'.',categories:['quick-trust-candidate']}]}]}));
+ const manager=new TongManagedCleanup({access,stateDir:store,retainedDependencies:retained});
  const plan=await manager.plan({projectId:'synthetic',path:candidate});
  assert.equal(plan.category,'quick-trust-candidate');
+ await mkdir(join(candidate,'temp'));
+ await writeFile(join(candidate,'temp','business.sqlite'),'unique database');
+ await assert.rejects(manager.plan({projectId:'synthetic',path:candidate}),/CLEANUP_(?:PROTECTED_CONTENT|UNARCHIVED_TEMP)/);
+ await import('node:fs/promises').then(fs=>fs.unlink(join(candidate,'temp','business.sqlite')));
+ await writeFile(join(candidate,'node_modules','unique-user-file.txt'),'unique content');
+ await assert.rejects(manager.plan({projectId:'synthetic',path:candidate}),/CLEANUP_DEPENDENCY_MISMATCH/);
+ await import('node:fs/promises').then(fs=>fs.unlink(join(candidate,'node_modules','unique-user-file.txt')));
  // Unarchived business source must block.
  await local('independent-data.txt','do not lose me');
  await assert.rejects(manager.plan({projectId:'synthetic',path:candidate}),/CLEANUP_UNARCHIVED_SOURCE/);

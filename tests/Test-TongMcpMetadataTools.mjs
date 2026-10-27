@@ -24,6 +24,7 @@ await writeFile(join(scanRoot, "sample.txt"), "SYNTHETIC_FILE_BODY", "utf8");
 const access = new TongProjectAccess({ registryPath: join(temp, "registry.json"), agentAccessPath: join(temp, "agent-access.json"),
   demoRoot: demo, scanRoots: [scanRoot] });
 await access.addProject({ id: "registered", name: "Registered", root: registered, permission: "write" });
+await writeFile(join(temp,'disk-cleanup-grants.json'),JSON.stringify({schemaVersion:1,grants:[{id:'registered',root:registered,enabled:true,revision:'fixture-1',scopes:[{relativeRoot:'.',categories:['cache']}]}]}));
 const tasks = new TongAgentTaskManager({ access, statePath: join(temp, "agent-tasks.json"), executionEnabled: false });
 process.env.TONG_RESTRICTED_MCP = "1";
 const server = new McpServer({ name: "tong-metadata-test", version: "1" });
@@ -79,6 +80,8 @@ try {
   const projects = await client.callTool({ name: "tong_list_projects", arguments: {} });
   assert.equal(projects.isError, undefined);
   assert.equal(projects.structuredContent.projects[1].id, "registered");
+  assert.equal(projects.structuredContent.cleanupScopes[0].id,'registered');
+  assert.equal(projects.structuredContent.cleanupAuthorizationAvailable,true);
   assert.deepEqual(projects.structuredContent.projects[1].effectiveCapabilities, ["project.metadata", "project.read", "project.write"]);
   const untrustedPrepare=await client.callTool({name:'tong_project_prepare',arguments:{projectPath:registered}});
   assert.equal(untrustedPrepare.isError,undefined);

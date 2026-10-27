@@ -1,6 +1,9 @@
 import {randomUUID, createHash} from 'node:crypto';
-import {lstat, realpath, readdir, rm, appendFile, mkdir, readFile} from 'node:fs/promises';
+import {lstat, realpath, readdir, rm, appendFile, readFile} from 'node:fs/promises';
 import {isAbsolute, resolve, relative, sep, parse, basename, dirname, join} from 'node:path';
+import {TongCleanupAuthorization} from './TongCleanupAuthorization.mjs';
+import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 
 const CACHE_NAMES=new Set(['npm-cache','.npm-cache','node-compile-cache','.pytest_cache','__pycache__','.cache']);
 const PRIVATE_PARTS=new Set(['.git','.hg','.svn','.ssh','.codex','.devspace','appdata','program files','program files (x86)','windows','system volume information','$recycle.bin','.aws','.gnupg','credentials','secrets','state-backups','state-restores','oauth','runtime']);
@@ -57,24 +60,41 @@ async function snapshot(target){
     for(const item of entries){
       const path=join(dir,item.name);
       const x=await plain(path);
+      if(['.git','.ssh','.codex','secrets','credentials','oauth','state-backups','state-restores'].includes(item.name.toLowerCase())||/^\.env(?:\.|$)|^(?:credentials|secrets)(?:\.|$)|\.(?:db|sqlite|sqlite3|dpapi|pem|key|pfx|p12|kdbx)(?:-(?:wal|shm))?$/i.test(item.name))fail('CLEANUP_PROTECTED_CONTENT');
       if(item.isSymbolicLink()||x.isSymbolicLink()||x.nlink>1)fail('CLEANUP_UNSAFE_ITEM');
       const rel=relative(target,path);
       if(x.isDirectory())stack.push(path);
       else if(x.isFile()){files++;total+=x.size;}
       else fail('CLEANUP_UNSAFE_ITEM');
+      if(dirs+files>maxItems)fail('CLEANUP_TOO_MANY_FILES');
       if(total>maxBytes)fail('CLEANUP_TOO_LARGE');
       lastSha.update(rel).update('\0').update(String(x.size)).update('\0').update(String(x.mtimeMs)).update('\0').update(x.isDirectory()?'d':'f');
     }
   }
   return {files,directories:dirs,bytes:total,signature:lastSha.digest('hex')};
 }
-async function safeAuthorizedRoot(access,projectId,target){
-  const p=(await access.listProjects()).find(item=>item.id===projectId&&item.available&&item.status==='enabled'&&item.effectiveCapabilities.includes('project.write'));
+async function assertNoRuntimeReferences(target){
+  if(!within('D:\\Tong\\state',target))return;
+  const helper=fileURLToPath(new URL('./TongCleanupReferences.ps1',import.meta.url));
+  const result=await new Promise((accept,reject)=>{
+    const child=spawn('C:\\Program Files\\PowerShell\\7\\pwsh.exe',['-NoLogo','-NoProfile','-NonInteractive','-File',helper],{windowsHide:true,stdio:['pipe','pipe','ignore']});
+    let out='';const timer=setTimeout(()=>child.kill(),20000);
+    child.stdin.on('error',()=>{});child.stdin.end(target);
+    child.stdout.on('data',b=>{out+=b;if(out.length>4096)child.kill();});
+    child.once('error',()=>{clearTimeout(timer);reject(Error('CLEANUP_REFERENCE_CHECK_FAILED'));});
+    child.once('close',code=>{clearTimeout(timer);try{if(code!==0)throw Error();accept(JSON.parse(out));}catch{reject(Error('CLEANUP_REFERENCE_CHECK_FAILED'));}});
+  }).catch(()=>fail('CLEANUP_REFERENCE_CHECK_FAILED'));
+  if(result.readOnly!==true||result.references!==0||result.unknown!==0)fail('CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN');
+}
+async function safeAuthorizedRoot(access,authorization,projectId,target,{execute=false}={}){
+  const grant=await authorization.resolve(projectId,target,supportedTarget(target));
+  const p=grant?{root:grant.root}:(await access.listProjects()).find(item=>item.id===projectId&&item.available&&item.status==='enabled'&&item.effectiveCapabilities.includes('project.read'));
+  if(execute&&!grant)fail('CLEANUP_PERMISSION_REQUIRED');
   if(!p)fail('CLEANUP_PERMISSION_REQUIRED');
   const root=safePath(p.root);
   await checkAncestors(root);
   if(same(root,target)||!within(root,target))fail('CLEANUP_OUTSIDE_ROOT');
-  return root;
+  return {root,revision:grant?.revision??null};
 }
 function assertTarget(root,target){
   if(blockPath(target)||blockPath(root))fail('CLEANUP_PROTECTED_PATH');
@@ -92,7 +112,7 @@ async function pinnedProtected(target,productionRoot){
 }
 // An optional immutable legacy candidate may be deleted only when an adjacent
 // archive preserves its complete version manifest, lock file and native files.
-async function verifyHistoric(target) {
+async function verifyHistoric(target,retainedDependencies) {
   const category=supportedTarget(target);
   if(!['historical-candidate','quick-trust-candidate'].includes(category))return;
   const prefix=category==='quick-trust-candidate'?'quick-trust-candidate-':'candidate-';
@@ -109,15 +129,16 @@ async function verifyHistoric(target) {
   const preserved=manifest.files.filter(x=>x.path==='code/source.tar'||x.path==='code/source/package-lock.json'||x.path.startsWith('native/node_modules/'));
   if(preserved.length<25)fail('CLEANUP_ARCHIVE_INVALID');
   for(const item of preserved){
+    if(typeof item.path!=='string'||item.path.includes('\\')||item.path.startsWith('/')||item.path.split('/').some(p=>!p||p==='.'||p==='..'||p.includes(':')))fail('CLEANUP_ARCHIVE_INVALID');
     if(typeof item.sha256!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))fail('CLEANUP_ARCHIVE_INVALID');
     const saved=join(release,...item.path.split('/'));
     await plain(saved,'file');
     const digest=createHash('sha256').update(await readFile(saved)).digest('hex');
     if(digest!==item.sha256)fail('CLEANUP_ARCHIVE_MISMATCH');
   }
-  if(category==='quick-trust-candidate'){
+  {
     if(!Array.isArray(manifest.sourceFiles)||proof.sourceFilesVerified!==manifest.sourceFiles.length)fail('CLEANUP_ARCHIVE_INVALID');
-    if(manifest.sourceFiles.some(x=>typeof x.path!=='string'||x.path.includes('\\')||x.path.startsWith('/')||x.path.split('/').some(p=>!p||p==='.'||p==='..')))fail('CLEANUP_ARCHIVE_INVALID');
+    if(manifest.sourceFiles.some(x=>typeof x.path!=='string'||x.path.includes('\\')||x.path.startsWith('/')||x.path.split('/').some(p=>!p||p==='.'||p==='..'||p.includes(':'))))fail('CLEANUP_ARCHIVE_INVALID');
     const expected=new Set(manifest.sourceFiles.map(x=>x.path));
     const queue=[target];
     while(queue.length){
@@ -139,55 +160,87 @@ async function verifyHistoric(target) {
       if(info.size!==source.size||createHash('sha256').update(await readFile(local)).digest('hex')!==source.sha256)fail('CLEANUP_ARCHIVE_MISMATCH');
     }
   }
+  const temp=join(target,'temp');
+  try{await plain(temp,'directory');if((await readdir(temp)).length)fail('CLEANUP_UNARCHIVED_TEMP');}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
+  const modules=join(target,'node_modules');
+  let hasModules=true;
+  try{await plain(modules,'directory');}catch(e){if(e.code==='CLEANUP_PATH_MISSING')hasModules=false;else throw e;}
+  if(hasModules){
+    await checkAncestors(retainedDependencies);
+    const walk=[modules];
+    while(walk.length){
+      const dir=walk.pop();
+      for(const entry of await readdir(dir,{withFileTypes:true})){
+        const path=join(dir,entry.name),info=await plain(path),rel=relative(modules,path).replaceAll('\\','/');
+        if(info.isDirectory()){walk.push(path);continue;}
+        const patch=rel.match(/^@waishnav\/devspace\/dist\/(pi-tools\.js|server\.js|workspaces\.js)$/);
+        const actual=createHash('sha256').update(await readFile(path)).digest('hex');
+        if(patch){if(actual!==manifest.expectedDevspaceHashes?.[patch[1]])fail('CLEANUP_DEPENDENCY_MISMATCH');continue;}
+        const saved=join(retainedDependencies,...rel.split('/'));
+        const reference=await plain(saved,'file').catch(()=>fail('CLEANUP_DEPENDENCY_MISMATCH'));
+        if(reference.size!==info.size||createHash('sha256').update(await readFile(saved)).digest('hex')!==actual)fail('CLEANUP_DEPENDENCY_MISMATCH');
+      }
+    }
+  }
   const lock=manifest.files.find(x=>x.path==='code/source/package-lock.json');
   const actual=createHash('sha256').update(await readFile(join(target,'package-lock.json'))).digest('hex');
   if(actual!==lock.sha256)fail('CLEANUP_ARCHIVE_MISMATCH');
 }
 export class TongManagedCleanup{
   #plans=new Map();
-  constructor({access,stateDir,productionRoot='D:\\Tong\\runtime',now=()=>Date.now()}={}){
+  constructor({access,stateDir,productionRoot='D:\\Tong\\runtime',retainedDependencies='D:\\Tong\\app\\node_modules',now=()=>Date.now()}={}){
     if(!access||!isAbsolute(stateDir??''))throw Error('CLEANUP_INVALID_CONFIGURATION');
     this.access=access;this.stateDir=stateDir;this.productionRoot=productionRoot;this.now=now;
+    this.authorization=new TongCleanupAuthorization(stateDir);
+    this.retainedDependencies=retainedDependencies;
   }
   async plan({projectId,path}){
     const target=safePath(path);
-    const root=await safeAuthorizedRoot(this.access,projectId,target);
+    const {root,revision}=await safeAuthorizedRoot(this.access,this.authorization,projectId,target);
     assertTarget(root,target);
     await checkAncestors(target);
     await plain(target,'directory');
     await pinnedProtected(target,this.productionRoot);
-    await verifyHistoric(target);
+    await assertNoRuntimeReferences(target);
+    await verifyHistoric(target,this.retainedDependencies);
     const stats=await snapshot(target);
     const planId=randomUUID(),expiresAt=this.now()+ttl;
-    this.#plans.set(planId,{projectId,root,target,stats,expiresAt});
+    this.#plans.set(planId,{projectId,root,target,stats,expiresAt,revision});
     if(this.#plans.size>64)this.#plans.delete(this.#plans.keys().next().value);
-    return {planId,projectId,path:target,category:supportedTarget(target),files:stats.files,directories:stats.directories,bytes:stats.bytes,expiresAt:new Date(expiresAt).toISOString(),requiresExecute:true};
+    return {planId,projectId,path:target,category:supportedTarget(target),files:stats.files,directories:stats.directories,bytes:stats.bytes,expiresAt:new Date(expiresAt).toISOString(),requiresExecute:true,deletionAuthorized:revision!==null};
   }
   async execute({planId,projectId}){
     const plan=this.#plans.get(planId);
     this.#plans.delete(planId);
     if(!plan||plan.projectId!==projectId||this.now()>plan.expiresAt)fail('CLEANUP_PLAN_EXPIRED');
-    const root=await safeAuthorizedRoot(this.access,projectId,plan.target);
-    if(!same(root,plan.root))fail('CLEANUP_PERMISSION_CHANGED');
+    const auditPath=join(this.stateDir,'disk-cleanup-audit.jsonl');
+    const category=supportedTarget(plan.target),reason=category==='cache'?'locally-authorized-rebuildable-cache':'verified-preserved-release';
+    const audit=async(event,details={})=>{
+      if(within(plan.target,this.stateDir))fail('CLEANUP_AUDIT_TARGET');
+      await checkAncestors(this.stateDir);
+      try{await plain(auditPath,'file');}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
+      await appendFile(auditPath,JSON.stringify({at:new Date(this.now()).toISOString(),event,planId,projectId,path:plan.target,category,reason,files:plan.stats.files,directories:plan.stats.directories,logicalBytes:plan.stats.bytes,...details})+'\n',{flag:'a',mode:0o600});
+    };
+    try{
+    const {root,revision}=await safeAuthorizedRoot(this.access,this.authorization,projectId,plan.target,{execute:true});
+    if(!same(root,plan.root)||revision!==plan.revision)fail('CLEANUP_PERMISSION_CHANGED');
     assertTarget(root,plan.target);
     await checkAncestors(plan.target);
     await pinnedProtected(plan.target,this.productionRoot);
-    await verifyHistoric(plan.target);
+    await assertNoRuntimeReferences(plan.target);
+    await verifyHistoric(plan.target,this.retainedDependencies);
     const next=await snapshot(plan.target);
     if(next.signature!==plan.stats.signature||next.bytes!==plan.stats.bytes||next.files!==plan.stats.files||next.directories!==plan.stats.directories)fail('CLEANUP_TARGET_CHANGED');
-    const auditPath=join(this.stateDir,'disk-cleanup-audit.jsonl');
-    if(within(plan.target,this.stateDir))fail('CLEANUP_AUDIT_TARGET');
-    await mkdir(this.stateDir,{recursive:true});
-    const at=new Date(this.now()).toISOString();
     // Predelete audit must succeed: never delete unaccountably.
-    await appendFile(auditPath,JSON.stringify({at,event:'cleanup_begin',planId,projectId,path:plan.target,bytes:next.bytes,files:next.files})+'\n',{flag:'a',mode:0o600});
+    await audit('cleanup_begin');
     try{
       await rm(plan.target,{recursive:true,force:false,maxRetries:0});
-      await appendFile(auditPath,JSON.stringify({at:new Date(this.now()).toISOString(),event:'cleanup_deleted',planId,path:plan.target,bytes:next.bytes})+'\n');
+      await audit('cleanup_deleted');
       return {status:'deleted',path:plan.target,files:next.files,logicalBytes:next.bytes};
-    }catch{
-      await appendFile(auditPath,JSON.stringify({at:new Date(this.now()).toISOString(),event:'cleanup_failed',planId,path:plan.target})+'\n').catch(()=>{});
+    }catch(e){
+      await audit('cleanup_failed',{code:/^[A-Z0-9_]{1,64}$/.test(e.code??'')?e.code:'CLEANUP_IO_FAILED'}).catch(()=>{});
       fail('CLEANUP_DELETE_FAILED');
     }
+    }catch(e){await audit('cleanup_rejected',{code:/^CLEANUP_[A-Z_]{1,64}$/.test(e.code??'')?e.code:'CLEANUP_OPERATION_FAILED'}).catch(()=>{});throw e;}
   }
 }
