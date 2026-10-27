@@ -11,8 +11,11 @@ try {
     if ($Mode -eq 'acl') {
         $items = @()
         foreach ($target in $inputData.paths) {
-            $item = Get-Item -LiteralPath $target -Force
-            $acl = Get-Acl -LiteralPath $target
+            # PS5's filesystem provider needs an extended absolute path beyond
+            # MAX_PATH. Keep the same owner/DACL/reparse checks and public path.
+            $nativeTarget=if(([string]$target).Length -ge 248 -and ([string]$target) -match '^[A-Za-z]:\\'){'\\?\'+[string]$target}else{[string]$target}
+            $item = Get-Item -LiteralPath $nativeTarget -Force
+            $acl = Get-Acl -LiteralPath $nativeTarget
             $ownerSid = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
             $rules = @($acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
             $raw = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)

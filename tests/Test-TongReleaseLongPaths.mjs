@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {join} from 'node:path';
 import {createTongTestDirectory} from './fixtures/TongTestDirectory.mjs';
+import {inspectSecurity} from '../scripts/TongRuntimeSecurity.mjs';
 const tmp=await createTongTestDirectory('release-long-path-');let passed=false;
 try{
  const source=await readFile(new URL('../scripts/TongRuntimeRelease.mjs',import.meta.url),'utf8');
@@ -11,6 +12,7 @@ try{
  const make=spawnSync(python,['-I','-c',"import tarfile,io,sys; a=tarfile.open(sys.argv[1],'w',format=tarfile.PAX_FORMAT,pax_headers={'comment':sys.argv[2]});m=tarfile.TarInfo(sys.argv[3]);m.size=5;a.addfile(m,io.BytesIO(b'hello'));a.close()",archive,commit,name],{encoding:'utf8',windowsHide:true});
  assert.equal(make.status,0,make.stderr);
  const r=spawnSync(python,['-I','-c',extract,archive,dest,commit],{encoding:'utf8',windowsHide:true});
- assert.equal(r.status,0,r.stderr);assert.equal(await readFile(join(dest,...name.split('/')),'utf8'),'hello');
+ assert.equal(r.status,0,r.stderr);const longFile=join(dest,...name.split('/'));assert.equal(await readFile(longFile,'utf8'),'hello');
+ const security=await inspectSecurity([longFile]);assert.equal(security.items[0].path,longFile);assert.ok(security.items[0].aces.length>0,'Long paths must undergo real ACL enumeration');
  passed=true;console.log(JSON.stringify({passed,longPathChars:join(dest,name).length,systemPolicyChanged:false}));
 }finally{await tmp.finish(passed);}
