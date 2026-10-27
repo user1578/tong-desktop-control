@@ -4,7 +4,7 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 
 ## Current project entry points and work order (2026-10-27)
 
-**For future ChatGPT/Codex conversations start with** [AGENTS.md](AGENTS.md), [project overview / current roadmap / handoff](docs/Tong-Project-Plan-and-Handoff.md), and [Codex goal supervision + Desktop session + chat progress taskbook](docs/Tong-Codex-Goal-Supervision-Taskbook.md). These distinguish implemented code, actually deployed features, unverified UI behavior and the next tasks. The 2026-10-27 production incident was minimally recovered and web-side authenticated MCP was independently verified, but root-cause reliability work remains open. Disk cleanup is now exact-path and low-backup by default; no blanket deletion of production state.
+**For future ChatGPT/Codex conversations start with** [AGENTS.md](AGENTS.md), [**whole-project master taskbook**](docs/Tong-Master-Project-Taskbook.md), [project overview / current roadmap / handoff](docs/Tong-Project-Plan-and-Handoff.md), and [Codex goal supervision + Desktop session + chat progress taskbook](docs/Tong-Codex-Goal-Supervision-Taskbook.md). These distinguish implemented code, actually deployed features, unverified UI behavior and the next tasks. The 2026-10-27 production incident was minimally recovered and web-side authenticated MCP was independently verified, but root-cause reliability work remains open. Disk cleanup is now exact-path and low-backup by default; no blanket deletion of production state.
 
 ## Production communication restored (2026-10-27)
 
