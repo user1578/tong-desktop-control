@@ -35,8 +35,21 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name),
-    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_list_projects", "tong_project_prepare", "tong_agent_start", "tong_agent_sessions", "tong_agent_status",
-      "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result"]);
+    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_disk_cleanup_plan", "tong_disk_cleanup_execute", "tong_list_projects", "tong_project_prepare", "tong_agent_start", "tong_agent_sessions", "tong_agent_status", "tong_agent_wait",
+      "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
+      "tong_goal_start", "tong_goal_status", "tong_goal_result", "tong_goal_cancel", "tong_goal_resume",
+      "tong_goal_wait", "tong_goal_review", "tong_goal_list"]);
+  const disposable=join(registered,'npm-cache');
+  await mkdir(disposable,{recursive:true});
+  await writeFile(join(disposable,'fixture'),'temporary synthetic cache');
+  const plan=await client.callTool({name:'tong_disk_cleanup_plan',arguments:{projectId:'registered',path:disposable}});
+  assert.equal(plan.isError,undefined);
+  assert.equal(plan.structuredContent.category,'cache');
+  const deletion=await client.callTool({name:'tong_disk_cleanup_execute',arguments:{projectId:'registered',planId:plan.structuredContent.planId}});
+  assert.equal(deletion.isError,undefined);
+  assert.equal(deletion.structuredContent.status,'deleted');
+  const replay=await client.callTool({name:'tong_disk_cleanup_execute',arguments:{projectId:'registered',planId:plan.structuredContent.planId}});
+  assert.equal(replay.isError,true);
   const wrongEnvTool = await client.callTool({ name: "tong_dev_environment", arguments: {tool: "arbitrary-program"} });
   assert.equal(wrongEnvTool.isError, true);
   if (process.platform === "win32") {

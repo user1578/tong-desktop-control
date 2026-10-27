@@ -9,7 +9,8 @@ import { closeAgentDockSessionCoordinators } from "./TongAgentDockSessions.mjs";
 import { closeTongWorkspaceTools } from './TongWorkspaceTools.mjs';
 import { inspectWindows } from './TongWindowsInspect.mjs';
 import { inspectDevEnvironment } from './TongDevEnvironment.mjs';
-import { isAbsolute, join } from "node:path";
+import { isAbsolute, join, dirname } from "node:path";
+import { TongManagedCleanup } from './TongManagedCleanup.mjs';
 
 let defaultTaskManager;
 let defaultGoalSupervisor;
@@ -189,6 +190,34 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     _meta: {},
     annotations: { readOnlyHint: true },
   }, safe((input) => access.scanDirectory(input)));
+
+  const cleanup = new TongManagedCleanup({access,stateDir:stateDir??dirname(access.registryPath)});
+  const cleanupHandler = handler => async input=>{
+    try { return success(await handler(input)); }
+    catch(error){
+      const message = typeof error?.code==='string' && /^CLEANUP_[A-Z_]{3,50}$/.test(error.code)
+        ? error.code : 'CLEANUP_OPERATION_FAILED';
+      return {content:[{type:'text',text:message}],isError:true};
+    }
+  };
+  registerTool(server,'tong_disk_cleanup_plan',{
+    title:'Prepare bounded disk cleanup without deleting',
+    description:'Plan an exact disposable cache or archived candidate inside a locally registered writable project. Detect hardlinks, junctions, protected runtime paths and retain a short-lived one-use plan. This is read-only; broad disk scanning remains with tong_scan_directory.',
+    inputSchema:{
+      projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
+      path:z.string().min(4).max(2048),
+    },
+    annotations:{readOnlyHint:true,destructiveHint:false},_meta:{},
+  },cleanupHandler(input=>cleanup.plan(input)));
+  registerTool(server,'tong_disk_cleanup_execute',{
+    title:'Execute a previously verified cleanup plan',
+    description:'Delete exactly the prechecked disposable directory once, only inside an enabled locally authorized writable project. Refuses expired, changed, reparse, protected and unarchived targets; writes local audit entries. This does not create authorization or delete arbitrary folders.',
+    inputSchema:{
+      projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),
+      planId:z.string().uuid(),
+    },
+    annotations:{readOnlyHint:false,destructiveHint:true},_meta:{},
+  },cleanupHandler(input=>cleanup.execute(input)));
 
   registerTool(server, "tong_list_projects", {
     title: "List locally registered projects",

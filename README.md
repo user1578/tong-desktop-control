@@ -6,6 +6,10 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 
 **For future ChatGPT/Codex conversations start with** [AGENTS.md](AGENTS.md), [confirmed 22-question product decisions](docs/Tong-GrillMe-Final-Decisions-20261027.md), [new chat / repair entry](docs/Tong-New-Chat-Repair-Guide.md), [**whole-project master taskbook**](docs/Tong-Master-Project-Taskbook.md), [project overview / current roadmap / handoff](docs/Tong-Project-Plan-and-Handoff.md), and [Codex goal supervision + Desktop session + chat progress taskbook](docs/Tong-Codex-Goal-Supervision-Taskbook.md). These distinguish implemented code, actually deployed features, unverified UI behavior and the next tasks. The 2026-10-27 production incident was minimally recovered and web-side authenticated MCP was independently verified, but root-cause reliability work remains open. Disk cleanup is now exact-path and low-backup by default; no blanket deletion of production state.
 
+## Managed disk cleanup (development, not yet deployed)
+
+The development branch adds `tong_disk_cleanup_plan` and `tong_disk_cleanup_execute` for exact disposable caches and validated historical release candidates inside independently authorized writable project roots. See [managed cleanup policy, tests, production limitations and 35GB dependency-copy explanation](docs/maintenance/Tong-Managed-Disk-Cleanup.md). Scanning readable metadata does **not** confer recursive deletion rights. Production upgrades and enrolling `D:\\Tong\\state` as a writable managed root require their own existing local approval controls; current live Tong does not yet expose these new tools.
+
 ## Independent read-only health monitor
 
 For recording the next actual failure without restarting Tong, use the [external health monitor and validation notes](docs/maintenance/Tong-External-Health-Monitor.md). Start `scripts/Start-TongHealthMonitor.cmd` **from Windows Explorer** (not as a child of Tong). It samples runtime state/ports and redacted event codes every 10 seconds, with bounded rotated user-local logs; it cannot repair the existing root cause and is not an auto-restart service.
