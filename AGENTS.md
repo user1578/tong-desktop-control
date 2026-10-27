@@ -8,6 +8,7 @@
 - **Git 必须收尾**：实际修改源码、测试或规则后，检查 diff、完成相关验证，只暂存本任务文件，在当前已授权的 `codex/` 开发分支创建本地 commit，并正常 push 至现有 upstream。禁止修改 main、force push 或提交无关文件；无实际修改则报告无需提交。报告分支、SHA、push 和 upstream 状态。
 - **保护真实工作区**：每轮先核对git status，保护当下已修改、未跟踪文件、分支ref和共享.git；不以旧记录的固定文件数作为当前状态。不要为整理覆盖、暂存或删除既有用户改动。当前维护工作树的独立复核文档有用户未提交修改，保持原样。
 - **减少重复工作**：优先引用已有设计、审核和验证结果，不重复编写计划、重做架构、重新打包或开发已有能力。
+- **外部健康监控与故障取证**：可用 `scripts/Watch-TongHealth.ps1` 的独立只读监控，启动入口 `scripts/Start-TongHealthMonitor.cmd` 和 [说明文档](docs/maintenance/Tong-External-Health-Monitor.md)。后台监控应由用户自己的Windows Shell/资源管理器启动，不把Tong托管子进程当独立看门狗；不额外注册计划任务或自启。只对诊断日志做大小限制和脱敏，绝不将监控程序视作根因修复、自动清理/恢复授权。
 - **生产边界与故障诊断**：当前生产运行时的源码pin、授权、服务、Windows任务、恢复预算和用户数据不因整理/文档自动变化。2026-10-27仅恢复了READY与网页MCP通信，native doctor fast-fail及MONITOR_FAILED底层根因尚未根治。新故障先核查本次证据，不能凭旧EPERM/超时猜测。部署、提权、ACL/身份/认证、重置预算和重要数据删除按实际工具门禁取得明确授权。
 
 ## 项目总入口与Codex任务约定
