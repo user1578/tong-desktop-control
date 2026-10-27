@@ -4,6 +4,14 @@
 
 更新：2026-10-27。**本文件是未来对话与Codex接手时优先阅读的当前导航，不把历史已验收和未来目标混为一谈。**
 
+### 最近运维进度（2026-10-27 23:18 JST，只读实测）
+
+- 用户最终需求已确认：见[22项需求定稿](Tong-GrillMe-Final-Decisions-20261027.md)、[跨新对话修复指南](Tong-New-Chat-Repair-Guide.md)。当前最高优先级是**生产长时间稳定与诊断**，磁盘第二批清理和新功能暂缓。
+- 正式run `2b871eeb-ea5c-4690-b4ec-d46454f3a9ed`运行约2小时后，Runner在2026-10-27 12:59:03Z的doctor遇`APPROVAL_DENIED`（原始native退出码1），12:59:16Z记录runner_failed；同run后续Supervisor发生`MONITOR_FAILED`并完整关闭。**现有证据不能证明二者由同一个底层错误触发**。
+- 用户在正式预检`Approved=True`且预算0/3、旧Guardian清理完成后，**手动启动一次**正式Task；最新run `d90f5e72-dd41-4ee4-9e2a-9eb3b0f490dd`于14:14:36Z进入READY，14:14:59Z记录runtime_healthy。23:18 JST网页ChatGPT通过Tong实际再查Task Running、唯一Host、12个项目、授权工作区和生命周期日志成功。新run在当时未出现shutdown；**这不是长期稳定性或故障根治证明**。
+- 源码疑点：`TongLoginRecovery.mjs`的loadGrant会将底层失败压成统一`APPROVAL_DENIED`，Supervisor定期监控将任意失败压成`MONITOR_FAILED`，丢失精确阶段。优先在开发分支添加只含固定阶段/错误类别的诊断并进行小范围测试；在取得故障根因和受控升级批准前，不改生产pin、授权、预算或Task。
+
+
 ## 1. 目标与分工
 
 Tong是连接ChatGPT网页端与用户Windows本机的统一入口。用户用自然语言提出一个**完整目标**；ChatGPT负责识别目标、限定范围、安排执行Agent、监督进度、核验证据、必要时追加修复回合，并在**整个目标**完成后统一反馈。

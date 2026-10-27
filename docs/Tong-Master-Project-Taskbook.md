@@ -1,5 +1,7 @@
 # Tong Desktop Control — 全项目总任务书
 
+> **2026-10-27用户最终产品决定**：[22项Grill-Me需求定稿](Tong-GrillMe-Final-Decisions-20261027.md)；跨新对话和新电脑维护参见[零长交接及修复指南](Tong-New-Chat-Repair-Guide.md)。本总任务书是全局规划，需求取舍以用户已确认的决定为准，不能把未来实现目标说成已上线。
+
 更新：2026-10-27。范围：**整个Tong长期项目**，不只是磁盘清理或Codex当前阶段。本文件是项目级最高规划入口；AGENTS.md定义执行约束，Tong-Project-Plan-and-Handoff.md是简要现状，其他报告是专项证据。每次跨对话接手先看本文件和当前Git/生产实况。
 
 ## 1. 最终定位与统一架构

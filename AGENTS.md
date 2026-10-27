@@ -12,7 +12,7 @@
 
 ## 项目总入口与Codex任务约定
 
-- **先读全项目总任务书**：[docs/Tong-Master-Project-Taskbook.md](docs/Tong-Master-Project-Taskbook.md) → [docs/Tong-Project-Plan-and-Handoff.md](docs/Tong-Project-Plan-and-Handoff.md) → 当前专项子任务书（如 [Codex进度与原生会话](docs/Tong-Codex-Goal-Supervision-Taskbook.md)）。总任务书覆盖Tong统一MCP、所有Agent Provider、Windows磁盘/RAM/PC维护、全局编排、项目治理、稳定性与交付；后两份不是整个项目的替代品。若当前Git worktree缺文档，从已授权的`codex/024-maintenance-adapter-20261024`分支读取，不强制切分支、覆盖dirty文件。旧报告是历史证据，不冒充实时状态。
+- **先读全项目总任务书**：[docs/Tong-Master-Project-Taskbook.md](docs/Tong-Master-Project-Taskbook.md)、[用户确认的22项最终需求](docs/Tong-GrillMe-Final-Decisions-20261027.md)和[新对话修复入口](docs/Tong-New-Chat-Repair-Guide.md) → [docs/Tong-Project-Plan-and-Handoff.md](docs/Tong-Project-Plan-and-Handoff.md) → 当前专项子任务书（如 [Codex进度与原生会话](docs/Tong-Codex-Goal-Supervision-Taskbook.md)）。总任务书覆盖Tong统一MCP、所有Agent Provider、Windows磁盘/RAM/PC维护、全局编排、项目治理、稳定性与交付；后两份不是整个项目的替代品。若当前Git worktree缺文档，从已授权的`codex/024-maintenance-adapter-20261024`分支读取，不强制切分支、覆盖dirty文件。旧报告是历史证据，不冒充实时状态。
 - **谁操作**：用户没指定Agent时ChatGPT优先使用Tong直接操作。用户指定Codex时须实际调用Tong创建/继续**Codex Desktop原生会话**；不能假冒CLI/非原生会话。默认优先同项目最新适用会话，用户指定准确会话时按其选择。writer冲突不清锁、不强杀桌面App、不静默换新Session。
 - **一个任务一个Goal**：预计多轮的任务优先走`tong_goal_start`并保持goalId/projectId/nativeSessionId/child Turn；ChatGPT监督、查询、核验并在同一目标中继续，通常2–4个必要回合，不凑回合。**单轮Turn成功不等于业务完成；不能每轮给用户最终汇报。** 整项目标通过业务验收后统一总结；只有需要用户真正决定/操作的阻塞提前报告。
 - **本机资源管理是长期工作**：用户可随时要求扫C/D盘、RAM/CPU/进程和帮助清理存储。先走Tong只读受管观测，找出实际大文件/缓存/重复依赖，按精确路径执行获准清理并核实空间变化。磁盘文件逻辑大小不是实际NTFS释放量，RAM与磁盘不要混淆。不默认扫描私人文件正文或擅自关闭系统进程。
