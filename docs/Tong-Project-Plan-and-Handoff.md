@@ -1,4 +1,6 @@
-# Tong Desktop Control — 项目总说明、路线图与跨对话交接
+# Tong Desktop Control — 项目现况、近期路线图与跨对话交接
+
+> **项目最高层完整任务书**：[Tong-Master-Project-Taskbook.md](Tong-Master-Project-Taskbook.md)。本页作为当前状态与快速交接导航；覆盖所有Agent、统筹MCP、系统/磁盘/RAM维护和长期里程碑的完整规划以总任务书为准。
 
 更新：2026-10-27。**本文件是未来对话与Codex接手时优先阅读的当前导航，不把历史已验收和未来目标混为一谈。**
 

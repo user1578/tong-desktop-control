@@ -1,5 +1,7 @@
 # Tong — ChatGPT任务级Codex调度、桌面原生可见性与网页进度专项任务书
 
+> 这是[全项目总任务书](Tong-Master-Project-Taskbook.md)下的Codex专项子任务书，不代表Tong全部能力。Tong同时负责统一MCP、多Agent调度、Windows本机工具、磁盘/RAM诊断和空间清理等长期任务。
+
 版本：2026-10-27。执行入口：D:\Tong\development\tong-024-startup-recovery；主开发源码位于D:\Tong\development\tong-desktop-control（共享Git worktree，不得拆散）。本任务书定义**目标、现状、分步实现和验收**，不是完成证明，也不授权立即生产发布。
 
 ## 1. 用户需求（不可弱化）

@@ -4,7 +4,7 @@ Local DevSpace MCP for ChatGPT, exposed through the existing ngrok domain via a 
 
 ## Current project plan and Codex supervision (2026-10-27)
 
-Read [AGENTS.md](AGENTS.md), [current project overview / disk cleanup / next steps / conversation handoff](docs/Tong-Project-Plan-and-Handoff.md), then [ChatGPT→Codex native-session goal supervision and live progress taskbook](docs/Tong-Codex-Goal-Supervision-Taskbook.md). Evidence for the 2026-10-27 production recovery and precise cache deletion is linked from the plan. This development branch does not mean those proposed Desktop/UI features are deployed or verified.
+Read [AGENTS.md](AGENTS.md), [**whole-project master taskbook**](docs/Tong-Master-Project-Taskbook.md), [current project overview / disk cleanup / next steps / conversation handoff](docs/Tong-Project-Plan-and-Handoff.md), then [ChatGPT→Codex native-session goal supervision and live progress taskbook](docs/Tong-Codex-Goal-Supervision-Taskbook.md). Evidence for the 2026-10-27 production recovery and precise cache deletion is linked from the plan. This development branch does not mean those proposed Desktop/UI features are deployed or verified.
 
 ## Tong · one-time trusted folders and automatic Codex project onboarding (development only)
 
