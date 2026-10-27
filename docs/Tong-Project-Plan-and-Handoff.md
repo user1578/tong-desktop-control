@@ -15,6 +15,14 @@
 - **接下来必须做的事**：评审这些仅诊断的源码差异，并制定受控的生产候选、版本/审批/回退/真实可用性验证。只有新版明确记录了下一次实际失败阶段，或通过有界模拟稳定复现，才针对已定位根因提出真正修复；**不能把这次记录增强宣称为长期稳定性已经修好**。
 
 
+### 短时稳定性测试（2026-10-27 23:41–23:43 JST，已实测）
+
+- 正式生产基线继续保持runId `d90f5e72-dd41-4ee4-9e2a-9eb3b0f490dd`、phase=`ready`、TongLoginRuntime Task=`Running`；TongLoginHost始终1个（PID 30820），Supervisor（24292）和Guardian（18288）在当前检查时均存活；7676/7677/18765均监听，ngrok服务Running。恢复预算最近30分钟为0次。未运行正式doctor（此前曾导致native退出/授权拒绝）。
+- **持续观察**：2026-10-27 23:41:42–23:42:41 JST，7次间隔检查**7/7通过**，每次均有唯一Host、相同runId、Supervisor/Guardian实际进程及3个端口；窗口内未新增login-management或该run生命周期事件，也没有重启、停止或版本切换。
+- **网页端实际调用**：`tong_list_projects`返回12个登记项目；`tong_goal_list`返回4个已保存Goal；受管`read`实际读到项目需求文件，`tong_windows_inspect`确认唯一Host。127.0.0.1:7676的OAuth discovery HTTP 200，127.0.0.1:4040的ngrok本地API HTTP 200；这不是未经认证公网终端的全面压测。
+- **开发环境回归**：`node tests/Test-TongRuntimeFailureDiagnostics.mjs`通过、`node tests/Test-TongRuntimeReadiness.mjs`通过；测试未触发生产故障注入、生产升级或服务重启。
+- **边界**：短时Smoke通过，不等于至少2小时/24小时连续稳定验收；未验证Windows重启后恢复、周期doctor在长时间运行下的安全性、Codex长Goal满负荷期间的可靠性、重新获取授权或生产部署后的兼容性。提交`614aa0e`的诊断代码**尚未打包部署到生产**，所以现役服务的旧诊断缺口仍然存在。生产版本继续维持原pin，长期稳定性仍为**待验收**。
+
 ## 1. 目标与分工
 
 Tong是连接ChatGPT网页端与用户Windows本机的统一入口。用户用自然语言提出一个**完整目标**；ChatGPT负责识别目标、限定范围、安排执行Agent、监督进度、核验证据、必要时追加修复回合，并在**整个目标**完成后统一反馈。
