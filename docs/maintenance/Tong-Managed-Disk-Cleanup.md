@@ -10,7 +10,7 @@
 
 - `tong_disk_cleanup_plan({projectId,path})`：在**已注册且可写的项目**里对单个缓存/历史候选产生5分钟有效的只读计划，包括精确目录、类别、文件/目录数和逻辑大小。
 - `tong_disk_cleanup_execute({projectId,planId})`：仅对同一项目的有效一次性计划执行，删除前重新核对项目授权、目录路径、文件摘要、生产pin和历史release完整性；缺少任何证据即拒绝，结果写到本地`disk-cleanup-audit.jsonl`。不会从聊天文本临时扩权。
-- 第一阶段允许对象：`npm-cache`、`.npm-cache`、`node-compile-cache`、`.pytest_cache`、`__pycache__`、项目内部`.cache`，以及确有匹配、可验证release归档的`b23-release-*/candidate-<commit前缀>`；不允许指定任意目录、普通源码目录或共享`node_modules`本身。
+- 第一阶段允许对象：`npm-cache`、`.npm-cache`、`node-compile-cache`、`.pytest_cache`、`__pycache__`、项目内部`.cache`，以及确有匹配、可验证release归档的`b23-release-*/candidate-<commit前缀>`和`p27-autonomy-candidate-20261017/quick-trust-candidate-<7位提交前缀>`；不允许指定任意目录、普通源码目录或共享`node_modules`本身。
 - 系统目录、凭据、Git仓库管理目录、正式Tong app/runtime/tools、state-backups和state-restores被拒；禁止符号链接、junction、硬链接、不一致的归档；单次计划最多12万文件、4GiB，避免大范围删除误操作。
 - 预检先记录审计后删除；不会自动重启Tong、修改pin、改任务、修改授权或跨目录搬迁；回收数报告逻辑大小，不伪称实际NTFS空闲增量。
 
@@ -22,6 +22,7 @@
 
 - `tests/Test-TongManagedCleanup.mjs`在独立夹具中已覆盖：计划不删除、实际缓存删除、审计记录、重放拒绝、普通源码拒绝、未授权项目拒绝、计划过期拒绝、文件改变拒绝、共享依赖拒绝。
 - `tests/Test-TongMcpMetadataTools.mjs`MCP联调验证新工具注册、缓存Plan/Execute真实返回、重复执行拒绝；Gateway原有测试通过。该联调使用独立合成目录而非D:\Tong\state。没有测试真实生产批量删除、跨重启长寿命计划或公开网络端到端。
+- 2026-10-28补充针对10套Quick Trust恢复候选的精确核验：[第三批候选只读审查](Tong-Disk-Cleanup-Batch3-QuickTrust-Review-20261028.md)，合计6,051,846,951字节（5.636GiB），累计核对2,765个源码文件和250个归档文件SHA。配套`Test-TongQuickTrustCleanup.mjs`在独立夹具中通过增量独有源码拒删、损坏native拒删、清理成功并保留release及审计的模拟测试。**此批未实施实际state删除。**
 - 下一步：重点验证超大候选、断电/中断时的审计与清理恢复、更多权限组合/符号链接竞态、Gateway压力与错误返回格式；完成代码评审、独立生产版本门禁和必要的长期监控后方可正式发布。实际35GB容量治理采用已有清单按root/子目录重复性逐批审核，拒绝未经核实的整state通配删除。
 
 ## 后续空间治理建议

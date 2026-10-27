@@ -42,6 +42,7 @@ function supportedTarget(p){
   const base=basename(p).toLowerCase();
   if(CACHE_NAMES.has(base))return 'cache';
   if(/^candidate-[a-f0-9]{7,12}$/.test(base) && /[\\/]b23-release-[a-z0-9]+[\\/]candidate-[a-f0-9]{7,12}$/i.test(p))return 'historical-candidate';
+  if(/^quick-trust-candidate-[a-f0-9]{7}$/.test(base) && /[\\/]p27-autonomy-candidate-20261017[\\/]quick-trust-candidate-[a-f0-9]{7}$/i.test(p))return 'quick-trust-candidate';
   return null;
 }
 async function snapshot(target){
@@ -92,9 +93,11 @@ async function pinnedProtected(target,productionRoot){
 // An optional immutable legacy candidate may be deleted only when an adjacent
 // archive preserves its complete version manifest, lock file and native files.
 async function verifyHistoric(target) {
-  if(supportedTarget(target)!=='historical-candidate')return;
-  const tag=basename(target).slice('candidate-'.length);
-  const release=join(dirname(target),'release-'+tag);
+  const category=supportedTarget(target);
+  if(!['historical-candidate','quick-trust-candidate'].includes(category))return;
+  const prefix=category==='quick-trust-candidate'?'quick-trust-candidate-':'candidate-';
+  const tag=basename(target).slice(prefix.length);
+  const release=join(dirname(target),category==='quick-trust-candidate'?'quick-trust-release-'+tag:'release-'+tag);
   await plain(release,'directory');
   const manifest=JSON.parse(await readFile(join(release,'release-manifest.json'),'utf8').catch(()=>fail('CLEANUP_ARCHIVE_MISSING')));
   const proof=JSON.parse(await readFile(join(target,'release-restore-evidence.json'),'utf8').catch(()=>fail('CLEANUP_ARCHIVE_MISSING')));
@@ -111,6 +114,30 @@ async function verifyHistoric(target) {
     await plain(saved,'file');
     const digest=createHash('sha256').update(await readFile(saved)).digest('hex');
     if(digest!==item.sha256)fail('CLEANUP_ARCHIVE_MISMATCH');
+  }
+  if(category==='quick-trust-candidate'){
+    if(!Array.isArray(manifest.sourceFiles)||proof.sourceFilesVerified!==manifest.sourceFiles.length)fail('CLEANUP_ARCHIVE_INVALID');
+    if(manifest.sourceFiles.some(x=>typeof x.path!=='string'||x.path.includes('\\')||x.path.startsWith('/')||x.path.split('/').some(p=>!p||p==='.'||p==='..')))fail('CLEANUP_ARCHIVE_INVALID');
+    const expected=new Set(manifest.sourceFiles.map(x=>x.path));
+    const queue=[target];
+    while(queue.length){
+      const dir=queue.pop();
+      for(const entry of await readdir(dir,{withFileTypes:true})){
+        if(dir===target && (entry.name==='node_modules'||entry.name==='temp'))continue;
+        const path=join(dir,entry.name);
+        const info=await plain(path);
+        if(info.isDirectory()){queue.push(path);continue;}
+        const rel=relative(target,path).replaceAll('\\','/');
+        if(rel==='release-restore-evidence.json')continue;
+        if(!expected.has(rel))fail('CLEANUP_UNARCHIVED_SOURCE');
+      }
+    }
+    for(const source of manifest.sourceFiles){
+      if(typeof source.path!=='string'||typeof source.sha256!=='string'||!/^([a-f0-9]{64})$/.test(source.sha256))fail('CLEANUP_ARCHIVE_INVALID');
+      const local=join(target,...source.path.split('/'));
+      const info=await plain(local,'file');
+      if(info.size!==source.size||createHash('sha256').update(await readFile(local)).digest('hex')!==source.sha256)fail('CLEANUP_ARCHIVE_MISMATCH');
+    }
   }
   const lock=manifest.files.find(x=>x.path==='code/source/package-lock.json');
   const actual=createHash('sha256').update(await readFile(join(target,'package-lock.json'))).digest('hex');
