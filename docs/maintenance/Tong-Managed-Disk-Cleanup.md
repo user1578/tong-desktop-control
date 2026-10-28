@@ -1,6 +1,8 @@
-# Tong 受管磁盘清理与容量治理 — 开发版
+# Tong 受管磁盘清理与容量治理
 
 > 2026-10-28最新入口：[最终清理与目录归并交接](Tong-Final-Cleanup-and-Directory-Order-20261028.md)。已增加独立、可撤销的持久清理许可，普通project.write不再隐含递归删除。下文“可写项目”的旧开发合同已被新许可分离规则取代；生产部署/许可/小缓存MCP删除仍须分别以真实回执为准。
+
+2026-10-29：正式54f3072已部署，受保护策略目录的持久许可已启用，正式认证MCP可发现两个清理工具。小缓存实际Plan因COM任务引用检查失败而拒绝，尚未Execute。新增修复按任务类型解析COM注册及打包路径；用户批准的受保护SYSTEM任务未知实现仅记审计警告，已知引用和其他unknown仍拒绝。警告通过Plan的`referenceWarnings`返回，Execute重新检查并写入审计；新修复上线仍需本机哈希挑战。准确状态以交接页最新记录为准。
 
 ## 问题来源
 
@@ -8,9 +10,9 @@
 
 第一批实际删除两个npm缓存378,061,153字节；第二批用户在PowerShell单次执行并经Tong元数据再次独立验证，两份历史candidate共删除1,206,568,396字节。因此截至本记录按逻辑文件长度累计1,584,629,549字节（约1.476GiB），并不代表只能清理这些。两份历史release归档及b23测试使用的npm-cache继续保留，当前pin仍指向b9fe801...另一处releaseRoot。
 
-## 开发版接口（当前生产尚未提供）
+## 接口
 
-- `tong_disk_cleanup_plan({projectId,path})`：在**已注册且可写的项目**里对单个缓存/历史候选产生5分钟有效的只读计划，包括精确目录、类别、文件/目录数和逻辑大小。
+- `tong_disk_cleanup_plan({projectId,path})`：在**已注册且拥有独立有效清理许可的项目范围**里对单个缓存/历史候选产生5分钟有效的只读计划，包括精确目录、类别、文件/目录数和逻辑大小。
 - `tong_disk_cleanup_execute({projectId,planId})`：仅对同一项目的有效一次性计划执行，删除前重新核对项目授权、目录路径、文件摘要、生产pin和历史release完整性；缺少任何证据即拒绝，结果写到本地`disk-cleanup-audit.jsonl`。不会从聊天文本临时扩权。
 - 第一阶段允许对象：`npm-cache`、`.npm-cache`、`node-compile-cache`、`.pytest_cache`、`__pycache__`、项目内部`.cache`，以及确有匹配、可验证release归档的`b23-release-*/candidate-<commit前缀>`和`p27-autonomy-candidate-20261017/quick-trust-candidate-<7位提交前缀>`；不允许指定任意目录、普通源码目录或共享`node_modules`本身。
 - 系统目录、凭据、Git仓库管理目录、正式Tong app/runtime/tools、state-backups和state-restores被拒；禁止符号链接、junction、硬链接、不一致的归档；单次计划最多12万文件、4GiB，避免大范围删除误操作。

@@ -4,6 +4,22 @@
 
 ## 1. 当前生产与升级通道
 
+### 54f3072已上线并获持久许可；正式MCP引用预检修复（2026-10-29，最新）
+
+本人完成本机确认后，App/Manager正式双pin为`54f307282dedd00a48d942154645e95a9f3d11a6`，run `b3529663-aaf3-4c35-89aa-fb84d5323685`。唯一Host PID9572，Task Running、7676/7677/18765、READY及doctor healthy=true已核验；独立监测持续更新，04:12 JST样本仍healthy=true、同run且无检查错误。旧e0eb933及更早失败快照完整保留。
+
+受保护策略目录的持久清理许可已于2026-10-28T16:30:25.878Z正式启用，revision `c4da4b91-5d4a-42ff-9877-70eadadc8629`；projectId `tong-state-cleanup`、根`D:\Tong\state`、cache/historical-candidate/quick-trust-candidate三个范围。后续升级复用此许可，不重新颁发或扩大范围。测试目标`D:\Tong\state\cleanup-acceptance-20261028\npm-cache`已存在，只有一个69字节文件；不重建或覆盖。
+
+正式Gateway认证SDK的tools/list返回40项，已含Plan/Execute；项目查询返回12项及有效cleanupScopes。实际Plan因`CLEANUP_REFERENCE_CHECK_FAILED`拒绝，未产生planId、未调用Execute、未删除缓存。原回执保留在54f3072快照的`mcp-cleanup-acceptance-20261028163355203.json`。根因是ScheduledTask COM-handler没有ExecAction的Execute字段，StrictMode导致整个引用检查失败。
+
+修复按实际任务类型读取字段，并只读检查双视图HKLM/HKCU COM服务器、CodeBase、AppID服务、TreatAs和打包COM路径，不实例化COM。GetStagedPackagePathByFullName明确确认未staged的旧包记录不会遮蔽当前有效包；即便旧包仍保留已知绝对引用，仍拒删。读取/API失败、仅有旧包、未知非系统任务均保持拒绝。
+
+用户明确批准受限规则：仅位于系统Microsoft\\Windows任务目录、以SYSTEM运行、任务定义及祖先不可被非SYSTEM/Administrators替换且无reparse的任务，其未解析COM实现可成为审计警告。所有已知路径引用仍拒删。实际只读检查得到references=0、unknown=0和一条`TRUSTED_SYSTEM_COM_UNRESOLVED`：`\Microsoft\Windows\BrokerInfrastructure\BgTaskRegistrationMaintenanceTask`，CLSID `{e984d939-0e00-4dd9-ac3a-7aca04745521}`。Plan展示警告，Execute重查并写入审计；此规则仍有系统处理程序间接依赖无法完整证明的已知限制。
+
+新增PS7隔离测试覆盖COM字段/服务器/服务/打包路径、URI、先前读取失败后仍收集已知引用、SYSTEM/ACL/owner/reparse/祖先/遍历边界和枚举失败；引用证明协议测试及受管清理夹具测试通过。实际只读检查通过，没有重新运行旧部署/回退矩阵、扫描磁盘或触碰生产代码。仍须构建新commit绑定的release/候选/54f3072回退快照，正式Preflight及新本机哈希挑战后上线，再执行正式MCP小缓存验收。大规模候选仍未删除。
+
+当前模型连接工具目录仍是旧38项，而新认证tools/list是40项，属于宿主目录未刷新。按[OpenAI连接说明](https://developers.openai.com/plugins/deploy/connect-chatgpt)在Tong连接详情Refresh，再用新对话选Tong验证；当前没有可调用的宿主Refresh API，未擅自卸载、重建连接或修改权限。既有项目查询认证正常，先刷新目录，只有连接要求重新认证时才重连。
+
 ### 正式e0eb933已上线，清理授权存储修复准备（2026-10-29，最新）
 
 2026-10-28 18:34 JST在用户完成真实本机哈希挑战后执行一次正式升级，控制台输出`PRODUCTION-UPGRADE-OK`。正式App/Manager双pin已一致为`e0eb933cec1b3cb88a4d34b19e3257228f39541e`；新run为`cd8d0e41-e961-44eb-b8b3-2ab31128b4b8`，18:41:15进入READY。归档控制器`verify-installed`确认完整源码/补丁/Runner/pin/profile一致；实际doctor healthy=true，认证AgentDock MCP及Tong discovery通过；唯一Host PID57820、Supervisor29972、Guardian45820和7676/7677/18765正常，gate已由正式机制释放。本次没有发生自动回退或反复升级。

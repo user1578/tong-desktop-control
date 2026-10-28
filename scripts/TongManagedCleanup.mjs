@@ -74,7 +74,7 @@ async function snapshot(target){
   return {files,directories:dirs,bytes:total,signature:lastSha.digest('hex')};
 }
 async function assertNoRuntimeReferences(target){
-  if(!within('D:\\Tong\\state',target))return;
+  if(!within('D:\\Tong\\state',target))return [];
   const helper=fileURLToPath(new URL('./TongCleanupReferences.ps1',import.meta.url));
   const result=await new Promise((accept,reject)=>{
     const child=spawn('C:\\Program Files\\PowerShell\\7\\pwsh.exe',['-NoLogo','-NoProfile','-NonInteractive','-File',helper],{windowsHide:true,stdio:['pipe','pipe','ignore']});
@@ -85,6 +85,9 @@ async function assertNoRuntimeReferences(target){
     child.once('close',code=>{clearTimeout(timer);try{if(code!==0)throw Error();accept(JSON.parse(out));}catch{reject(Error('CLEANUP_REFERENCE_CHECK_FAILED'));}});
   }).catch(()=>fail('CLEANUP_REFERENCE_CHECK_FAILED'));
   if(result.readOnly!==true||result.references!==0||result.unknown!==0)fail('CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN');
+  const warnings=result.warnings??[];
+  if(!Array.isArray(warnings)||warnings.length>16||warnings.some(w=>w?.code!=='TRUSTED_SYSTEM_COM_UNRESOLVED'||!/^\{[a-f0-9-]{36}\}$/i.test(w.classId??'')||typeof w.task!=='string'||!w.task.toLowerCase().startsWith('\\microsoft\\windows\\')||w.task.length>1024))fail('CLEANUP_REFERENCE_CHECK_FAILED');
+  return warnings;
 }
 async function safeAuthorizedRoot(access,authorization,projectId,target,{execute=false}={}){
   const grant=await authorization.resolve(projectId,target,supportedTarget(target));
@@ -201,13 +204,13 @@ export class TongManagedCleanup{
     await checkAncestors(target);
     await plain(target,'directory');
     await pinnedProtected(target,this.productionRoot);
-    await assertNoRuntimeReferences(target);
+    const referenceWarnings=await assertNoRuntimeReferences(target);
     await verifyHistoric(target,this.retainedDependencies);
     const stats=await snapshot(target);
     const planId=randomUUID(),expiresAt=this.now()+ttl;
-    this.#plans.set(planId,{projectId,root,target,stats,expiresAt,revision});
+    this.#plans.set(planId,{projectId,root,target,stats,expiresAt,revision,referenceWarnings});
     if(this.#plans.size>64)this.#plans.delete(this.#plans.keys().next().value);
-    return {planId,projectId,path:target,category:supportedTarget(target),files:stats.files,directories:stats.directories,bytes:stats.bytes,expiresAt:new Date(expiresAt).toISOString(),requiresExecute:true,deletionAuthorized:revision!==null};
+    return {planId,projectId,path:target,category:supportedTarget(target),files:stats.files,directories:stats.directories,bytes:stats.bytes,expiresAt:new Date(expiresAt).toISOString(),requiresExecute:true,deletionAuthorized:revision!==null,referenceWarnings};
   }
   async execute({planId,projectId}){
     const plan=this.#plans.get(planId);
@@ -215,11 +218,12 @@ export class TongManagedCleanup{
     if(!plan||plan.projectId!==projectId||this.now()>plan.expiresAt)fail('CLEANUP_PLAN_EXPIRED');
     const auditPath=join(this.stateDir,'disk-cleanup-audit.jsonl');
     const category=supportedTarget(plan.target),reason=category==='cache'?'locally-authorized-rebuildable-cache':'verified-preserved-release';
+    let referenceWarnings=plan.referenceWarnings??[];
     const audit=async(event,details={})=>{
       if(within(plan.target,this.stateDir))fail('CLEANUP_AUDIT_TARGET');
       await checkAncestors(this.stateDir);
       try{await plain(auditPath,'file');}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
-      await appendFile(auditPath,JSON.stringify({at:new Date(this.now()).toISOString(),event,planId,projectId,path:plan.target,category,reason,files:plan.stats.files,directories:plan.stats.directories,logicalBytes:plan.stats.bytes,...details})+'\n',{flag:'a',mode:0o600});
+      await appendFile(auditPath,JSON.stringify({at:new Date(this.now()).toISOString(),event,planId,projectId,path:plan.target,category,reason,files:plan.stats.files,directories:plan.stats.directories,logicalBytes:plan.stats.bytes,referenceWarnings,...details})+'\n',{flag:'a',mode:0o600});
     };
     try{
     const {root,revision}=await safeAuthorizedRoot(this.access,this.authorization,projectId,plan.target,{execute:true});
@@ -227,7 +231,7 @@ export class TongManagedCleanup{
     assertTarget(root,plan.target);
     await checkAncestors(plan.target);
     await pinnedProtected(plan.target,this.productionRoot);
-    await assertNoRuntimeReferences(plan.target);
+    referenceWarnings=await assertNoRuntimeReferences(plan.target);
     await verifyHistoric(plan.target,this.retainedDependencies);
     const next=await snapshot(plan.target);
     if(next.signature!==plan.stats.signature||next.bytes!==plan.stats.bytes||next.files!==plan.stats.files||next.directories!==plan.stats.directories)fail('CLEANUP_TARGET_CHANGED');
