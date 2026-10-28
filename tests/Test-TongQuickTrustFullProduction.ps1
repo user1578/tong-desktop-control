@@ -14,7 +14,7 @@ function Load-Function([string]$Name){
   $text=$text.Replace("& (Join-Path `$root 'releases\manager\scripts\TongProductionApproval.ps1') -Mode approve-login-recovery",'Mock-Sign')
   return $text
 }
-Invoke-Expression (Load-Function 'Stop-Login')
+foreach($name in @('Get-LoginShellPaths','Get-LoginProcessIdentity','Get-LoginMonitorIdentity','Assert-LoginMonitorIdentity','Assert-LoginMonitorAbsent','Stop-Login')){Invoke-Expression (Load-Function $name)}
 $script:root='D:\Tong\runtime';$script:taskName='SyntheticTongMonitor'
 $script:ExpectedOldCommit=''
 $script:fakeDefinition=[pscustomobject]@{}
@@ -49,6 +49,8 @@ if($script:disabledCalls){throw 'Initial stop must reject absence before mutatio
 Reset-Case;$script:taskState='Running'
 Assert-Fails {Stop-Login $true} 'Scheduler still reports'
 Reset-Case;$script:processes=@([pscustomobject]@{Name='TongLoginHost.exe';ExecutablePath='D:\Tong\runtime\login-management\TongLoginHost.exe';CommandLine='host'})
+Assert-Fails {Stop-Login $true} 'unclaimed live process'
+Reset-Case;$script:processes=@([pscustomobject]@{Name='pwsh.exe';ExecutablePath='C:\Program Files\PowerShell\7\pwsh.exe';CommandLine='"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -NoProfile -NonInteractive -File "D:\Tong\runtime\login-management\TongLoginRuntime.ps1" -Mode run'})
 Assert-Fails {Stop-Login $true} 'unclaimed live process'
 Reset-Case;$script:processes=@([pscustomobject]@{Name='powershell.exe';ExecutablePath='C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe';CommandLine='"C:\Windows\system32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -File "D:\Tong\runtime\login-management\TongLoginRuntime.ps1" -Mode run'})
 Assert-Fails {Stop-Login $true} 'unclaimed live process'

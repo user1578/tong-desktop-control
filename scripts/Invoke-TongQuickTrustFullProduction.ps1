@@ -34,6 +34,7 @@ $wasStopped=$false
 $didInstall=$false
 $recoverySigned=$false
 $taskDisabled=$false
+$stoppingLoginIdentity=$null
 $monitorWindowStart=$null
 function Native([string]$Name,[string[]]$Arguments){
   if($Arguments[0] -ceq $helper){
@@ -119,6 +120,9 @@ function Assert-Release(){
   if(-not $result.ok -or $result.oldApp -cne $expectedOldApp -or $result.oldManager -cne $expectedOldManager -or $result.newCommit -cne $expectedNew){throw 'Unexpected release hashes or production baseline'}
   $task=Get-ScheduledTask -TaskName $taskName
   if($task.Principal.UserId -notin @('Rune','RUNE') -or $task.Actions.Count -ne 1 -or $task.Actions[0].Execute -ine (Join-Path $root 'login-management\TongLoginHost.exe')){throw 'Unknown login task definition'}
+  $scheduler=New-Object -ComObject Schedule.Service
+  $scheduler.Connect()
+  $null=Get-LoginMonitorIdentity ($scheduler.GetFolder('\').GetTask($taskName))
   $s=CurrentStatus
   if($s.phase -cne 'ready' -or -not $s.supervisorAlive -or -not $s.guardianAlive){throw 'Production is not healthy'}
   $d=Native 'manager doctor' @($manager,'doctor','--root',$root,'--login-recovery')
@@ -225,43 +229,112 @@ function Enable-Login(){
   $script:monitorWindowStart=[DateTime]::UtcNow
   Start-ScheduledTask -TaskName $taskName
 }
+function Get-LoginShellPaths(){
+  # Match the native Host's fixed PS7 launch contract, plus the fixed legacy
+  # Windows shell for a verified old rollback. Never trust PATH or process name.
+  return @(
+    (Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'PowerShell\7\pwsh.exe'),
+    (Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\v1.0\powershell.exe')
+  )
+}
+function Get-LoginProcessIdentity($Process){
+  if($null -eq $Process -or [int]$Process.ProcessId -le 0 -or
+      -not $Process.ExecutablePath -or -not $Process.CommandLine -or
+      $Process.CreationDate -isnot [DateTime]){throw 'Incomplete login process identity'}
+  # Copy scalar values: a later observation must not mutate the saved identity.
+  return [pscustomobject]@{
+    pid=[int]$Process.ProcessId;parent=[int]$Process.ParentProcessId
+    name=[string]$Process.Name;path=[string]$Process.ExecutablePath
+    command=[string]$Process.CommandLine;created=$Process.CreationDate.ToUniversalTime().Ticks
+  }
+}
+function Get-LoginMonitorIdentity($Definition){
+  $task=Get-ScheduledTask -TaskName $taskName
+  $expectedHost=Join-Path $root 'login-management\TongLoginHost.exe'
+  $runnerPath=Join-Path $root 'login-management\TongLoginRuntime.ps1'
+  if(@($task.Actions).Count -ne 1 -or $task.Actions[0].Execute -ine $expectedHost -or
+      [string]$task.Actions[0].Arguments -cne '' -or $task.Actions[0].WorkingDirectory -ine $root){throw 'Login task action identity mismatch'}
+  $instances=@($Definition.GetInstances(0))
+  if($instances.Count -ne 1){throw 'Expected exactly one live login monitor instance'}
+  $instance=$instances[0];$instanceId=[guid]::Empty
+  if(-not [guid]::TryParse([string]$instance.InstanceGuid,[ref]$instanceId) -or
+      $instanceId -eq [guid]::Empty -or [int]$instance.EnginePID -le 0 -or [int]$instance.State -ne 4){throw 'Login task instance identity mismatch'}
+  $hosts=@(Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$instance.EnginePID))
+  if($hosts.Count -ne 1){throw 'Login host disappeared'}
+  $hostIdentity=Get-LoginProcessIdentity $hosts[0]
+  $hostCommands=@(('"'+$expectedHost+'"'))
+  if($expectedHost -notmatch '\s'){$hostCommands+=$expectedHost}
+  if($hostIdentity.pid -ne [int]$instance.EnginePID -or $hostIdentity.name -ine 'TongLoginHost.exe' -or
+      $hostIdentity.path -ine $expectedHost -or $hostCommands -inotcontains $hostIdentity.command.Trim()){throw 'Login host identity mismatch'}
+  # The native Host owns precisely one child. An extra or malformed child must
+  # refuse the stop, even when one other child looks like a legitimate runner.
+  $children=@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$hostIdentity.pid))
+  if($children.Count -ne 1){throw 'Unable to identify the single original monitor runner'}
+  $runnerIdentity=Get-LoginProcessIdentity $children[0]
+  $shells=@(Get-LoginShellPaths | Where-Object {
+    $runnerIdentity.path -ieq $_ -and $runnerIdentity.name -ieq [IO.Path]::GetFileName($_) -and
+    $runnerIdentity.command -ieq ('"'+$_+'" -NoLogo -NoProfile -NonInteractive -File "'+$runnerPath+'" -Mode run')
+  })
+  if($shells.Count -ne 1 -or $runnerIdentity.parent -ne $hostIdentity.pid -or
+      $runnerIdentity.created -lt $hostIdentity.created -or $runnerIdentity.created -gt [DateTime]::UtcNow.Ticks){throw 'Login runner identity mismatch'}
+  return [pscustomobject]@{
+    instance=$instanceId.ToString();hostProcess=$hostIdentity;runner=$runnerIdentity
+    taskUser=[string]$task.Principal.UserId;taskPath=[string]$task.Actions[0].Execute
+    taskArguments=[string]$task.Actions[0].Arguments;taskDirectory=[string]$task.Actions[0].WorkingDirectory
+  }
+}
+function Assert-LoginMonitorIdentity($Definition,$Expected){
+  $current=Get-LoginMonitorIdentity $Definition
+  if(($current|ConvertTo-Json -Depth 4 -Compress) -cne ($Expected|ConvertTo-Json -Depth 4 -Compress)){throw 'Login monitor identity changed'}
+}
+function Assert-LoginMonitorAbsent(){
+  $expectedHost=Join-Path $root 'login-management\TongLoginHost.exe'
+  $runnerPath=Join-Path $root 'login-management\TongLoginRuntime.ps1'
+  $unclaimed=@(Get-CimInstance Win32_Process | Where-Object {
+    ($_.Name -ieq 'TongLoginHost.exe' -and (-not $_.ExecutablePath -or $_.ExecutablePath -ieq $expectedHost)) -or
+    ($_.Name -in @('pwsh.exe','powershell.exe') -and $_.CommandLine -and
+      $_.CommandLine.IndexOf($runnerPath,[StringComparison]::OrdinalIgnoreCase) -ge 0)
+  })
+  if($unclaimed.Count){throw 'Monitor has an unclaimed live process; rollback refused'}
+}
+function Restore-LoginAfterRejectedStop(){
+  # An integrity rejection must survive the outer catch. Only re-enable the
+  # same still-running, healthy original; never Start a possibly replaced task.
+  if($null -eq $stoppingLoginIdentity){throw 'No verified original login identity; task remains disabled'}
+  $scheduler=New-Object -ComObject Schedule.Service
+  $scheduler.Connect()
+  $definition=$scheduler.GetFolder('\').GetTask($taskName)
+  Assert-LoginMonitorIdentity $definition $stoppingLoginIdentity
+  $s=CurrentStatus
+  if($s.runId -cne $originalRun -or $s.phase -cne 'ready' -or -not $s.supervisorAlive -or -not $s.guardianAlive){throw 'Original runtime no longer healthy; task remains disabled'}
+  Assert-LoginMonitorIdentity $definition $stoppingLoginIdentity
+  Enable-ScheduledTask -TaskName $taskName | Out-Null
+  $script:taskDisabled=$false
+}
 function Stop-Login([bool]$AllowAbsent=$false,[bool]$UseRecovery=$true){
   $scheduler=New-Object -ComObject Schedule.Service
   $scheduler.Connect()
   $definition=$scheduler.GetFolder('\').GetTask($taskName)
   $instances=@($definition.GetInstances(0))
-  $expectedHost=Join-Path $root 'login-management\TongLoginHost.exe'
-  $expectedRunner='"C:\Windows\system32\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -File "D:\Tong\runtime\login-management\TongLoginRuntime.ps1" -Mode run'
   if($instances.Count -eq 0 -and $AllowAbsent){
     if([string](Get-ScheduledTask -TaskName $taskName).State -eq 'Running'){throw 'Scheduler still reports a running monitor'}
-    $assertUnclaimedAbsent={
-      $unclaimed=@(Get-CimInstance Win32_Process | Where-Object {
-        ($_.Name -ieq 'TongLoginHost.exe' -and $_.ExecutablePath -ieq $expectedHost) -or
-        ($_.Name -ieq 'powershell.exe' -and $_.CommandLine -ieq $expectedRunner)
-      })
-      if($unclaimed.Count){throw 'Monitor has an unclaimed live process; rollback refused'}
-    }
-    & $assertUnclaimedAbsent
+    Assert-LoginMonitorAbsent
     Disable-ScheduledTask -TaskName $taskName | Out-Null
     $script:taskDisabled=$true
     if(@($definition.GetInstances(0)).Count){throw 'Monitor appeared while disabling its task'}
-    & $assertUnclaimedAbsent
+    Assert-LoginMonitorAbsent
     return
   }
   if($instances.Count -ne 1){throw 'Expected exactly one live login monitor instance'}
-  $engineProcessId=[int]$instances[0].EnginePID
-  $hostProcess=Get-CimInstance Win32_Process -Filter ('ProcessId='+$engineProcessId)
-  if($null -eq $hostProcess -or $hostProcess.Name -ine 'TongLoginHost.exe' -or $hostProcess.ExecutablePath -ine $expectedHost){throw 'Login host identity mismatch'}
-  $runners=@(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$engineProcessId) | Where-Object { $_.Name -ieq 'powershell.exe' -and $_.CommandLine -ieq $expectedRunner })
-  if($runners.Count -ne 1){throw 'Unable to identify the single original monitor runner'}
-  $runner=$runners[0]
+  $identity=Get-LoginMonitorIdentity $definition
+  $script:stoppingLoginIdentity=$identity
   Disable-ScheduledTask -TaskName $taskName | Out-Null
   $script:taskDisabled=$true
-  $current=Get-CimInstance Win32_Process -Filter ('ProcessId='+$runner.ProcessId)
-  if($null -eq $current -or $current.ParentProcessId -ne $engineProcessId -or $current.CreationDate -ne $runner.CreationDate -or $current.CommandLine -ine $expectedRunner){throw 'Monitor runner identity changed'}
+  Assert-LoginMonitorIdentity $definition $identity
   # Existing stop-run records a requested stop. The runner observes it and
   # exits normally, then Host exits. Never force-terminate either process.
   $s=CurrentStatus
+  Assert-LoginMonitorIdentity $definition $identity
   if($s.supervisorAlive){
     $stopArgs=@($manager,'stop-run','--root',$root,'--run-id',$s.runId,'--error-json')
     if($UseRecovery){$stopArgs+='--login-recovery'}
@@ -269,7 +342,14 @@ function Stop-Login([bool]$AllowAbsent=$false,[bool]$UseRecovery=$true){
   }
   $limit=(Get-Date).AddSeconds(30)
   while((Get-Date) -lt $limit){
-    if(@($definition.GetInstances(0)).Count -eq 0 -and -not (Get-Process -Id $runner.ProcessId -ErrorAction SilentlyContinue)){return}
+    $remaining=@(foreach($original in @($identity.hostProcess,$identity.runner)){
+      $found=@(Get-CimInstance Win32_Process -Filter ('ProcessId='+$original.pid))
+      if($found.Count){
+        if($found.Count -ne 1 -or ((Get-LoginProcessIdentity $found[0])|ConvertTo-Json -Compress) -cne ($original|ConvertTo-Json -Compress)){throw 'Login process identity changed while awaiting exit'}
+        $found[0]
+      }
+    })
+    if(@($definition.GetInstances(0)).Count -eq 0 -and $remaining.Count -eq 0){Assert-LoginMonitorAbsent;return}
     Start-Sleep -Seconds 1
   }
   throw 'Login monitor did not fully exit; do not continue to runtime stop'
@@ -412,7 +492,7 @@ try{
   if($wasStopped -and $didInstall){
     try{Restore-Old}catch{Write-Warning ('Automatic rollback requires attention: '+$_.Exception.Message)}
   }elseif($taskDisabled -and -not $didInstall){
-    try{Enable-Login;$null=Await-Healthy}catch{Write-Warning ('Old startup needs attention: '+$_.Exception.Message)}
+    try{Restore-LoginAfterRejectedStop}catch{Write-Warning ('Old startup needs attention: '+$_.Exception.Message)}
   }
   if($snapshot){Write-Warning ('Evidence: '+$snapshot)}
   throw $failure

@@ -4,6 +4,18 @@
 
 ## 1. 当前生产与升级通道
 
+### Runner身份匹配故障续修（2026-10-28）
+
+本机cb0355b升级窗口在`Stop-Login()`报`Unable to identify the single original monitor runner`，失败回执为`native-window-failed-or-cancelled`。原快照`quick-trust-full-cutover-20261027174339358-177eb337`仍为`snapshotted`；其候选绑定、失败回执和授权审计保留，不覆盖旧归档。现场只读确认Task唯一实例EnginePID=30820、Host真实路径为runtime/login-management/TongLoginHost.exe，唯一子Runner PID28216实际为`C:\Program Files\PowerShell\7\pwsh.exe`。旧过滤器只接受PS5.1，故匹配为零；未停止正式运行。
+
+本次只修当前完整升级/独立回退共用的进程识别：固定PS7及系统PS5路径白名单、完整启动命令、唯一子进程、Task动作/实例GUID/EnginePID、Host路径、父子关系及创建时间；禁用Task后和调用stop-run前重新读取并逐项对比，消失、复用或身份变化均拒绝停止。预检现在也读取同一完整身份。无强杀、无按名称泛匹配。真实Host无参数命令尾部空白可以存在，额外参数仍拒绝。
+
+同类固定PS5匹配还见于旧`Invoke-TongQuickTrustProduction.ps1`、`Set-TongSilentLogin.ps1`的一次性历史切换，当前FullProduction/FullCutover/独立Rollback不调用它们，本次不启用或迁移旧入口。当前冻结门及Host使用PS7；`TongProductionProfile.mjs`、`TongRuntimeSecurity.mjs`的固定PS5调用是原有原生安全/DPAPI助手契约，不是Runner身份过滤，本次保持不变。
+
+新增PS7回归先在旧代码复现同一报错，再验证正常停止及18项身份/竞态拒绝；真实隔离Host/PS7正常退出通过（最终夹具`test-temp/runner-stop-12dd5acaf81548a997227da2a2bfab21`，仅Scheduler和Manager请求投递为测试适配器）。原升级包装器、实际文件增量完整/部分安装回退、生命周期gate、升级版本绑定、readiness和控制脚本绑定测试通过。只读独立审查发现外层catch会在身份拒绝后按任务名重启；已补实际外层catch的先红后绿回归，并改为只允许重新验证完整原身份和原健康run后Enable，不自动Start。以上不是生产切换成功。待新commit归档/release/新快照绑定及正式只读预检后，才能开启新本机授权窗口。没有重扫磁盘、删除小缓存或5.636GiB候选。
+
+### 上一轮准备与失败现场（历史）
+
 本轮实测双pin为 `b9fe80150f9cdea47130e8952e85e39503187677`，run `d90f5e72-dd41-4ee4-9e2a-9eb3b0f490dd` 为ready；独立HealthMonitor持续记录healthy=true、唯一Host和7676/7677/18765，正式MCP返回12个项目。`preflight-login`实际approved=true，但开发入口`getApprovedProductionProfile('manager')`实际APPROVAL_DENIED。旧版本持久恢复许可不包含新版本部署，这是权限分离，不能改密文绕过。
 
 旧`Tong024ProductionMaintenance.mjs`仍绑定024事故并保留MAINTENANCE_NOT_READY；本轮修复既有`Invoke-TongQuickTrustFullProduction.ps1` / `TongQuickTrustFullCutover.mjs`通道：显式旧/新commit、所有控制脚本字节绑定、正常stop-run让Runner/Host退出、增量源码快照、原生生命周期门、双pin/profile/App/Manager同步激活及独立Rollback。未强杀进程或复制整套运行态；OAuth/DPAPI/真实数据库原位保留。
@@ -23,7 +35,7 @@ gate先在快照内准备并持久保存物理身份回执，再不覆盖地原�
 - 上述快照中的`Run-Approved-Upgrade.ps1`已由PS7解析并打开本机真实控制台。`native-window-result.json`只记脱敏阶段；`awaiting-native-approvals`不代表批准或部署。必须等真实挑战完成并现场验收。窗口内升级成功才申请限定清理许可，再建立小缓存；不删除大候选。
 - 若需独立回退，使用同一归档`Invoke-TongQuickTrustFullProduction.ps1 -Mode Rollback`，带本节release/candidate/snapshot和完整ExpectedCommit/ExpectedOldCommit；当前原版本为`b9fe80150f9cdea47130e8952e85e39503187677`。普通批准过期会要求本人续签，不能清gate或修改密文。
 
-本轮6处明确发布/暂存/快照产物元数据合计90,245,564逻辑字节（86.06MiB，含前述失败/中间产物，跳过1个SDK junction，不含小型测试夹具）。没有重新安装或复制整套node_modules。维护窗口启动后当前阶段仍为`awaiting-native-approvals`；未替用户输入挑战、未正式切换、未授予state清理许可、未执行小缓存或大候选删除。
+本轮6处明确发布/暂存/快照产物元数据合计90,245,564逻辑字节（86.06MiB，含前述失败/中间产物，跳过1个SDK junction，不含小型测试夹具）。没有重新安装或复制整套node_modules。维护窗口初始阶段为`awaiting-native-approvals`，随后在Runner身份检查处失败，见本节顶部最新记录；未替用户输入挑战、未正式切换、未授予state清理许可、未执行小缓存或大候选删除。
 
 ## 2. 验证与未完成项
 
