@@ -20,6 +20,8 @@
 
 当前模型连接工具目录仍是旧38项，而新认证tools/list是40项，属于宿主目录未刷新。按[OpenAI连接说明](https://developers.openai.com/plugins/deploy/connect-chatgpt)在Tong连接详情Refresh，再用新对话选Tong验证；当前没有可调用的宿主Refresh API，未擅自卸载、重建连接或修改权限。既有项目查询认证正常，先刷新目录，只有连接要求重新认证时才重连。
 
+修复commit **`9850cc45abd812156d59d16808f20c97bdfdc035`已推送**。新`quick-trust-release-9850cc4` build/verify通过（565源码、23 native）；`quick-trust-candidate-9850cc4`仅源码/三补丁/共享SDK，无依赖安装。新快照`quick-trust-full-cutover-20261028191510376-62cbbcf1`逐项保留54f3072旧App/Manager各561源码，并绑定新旧commit；04:16 JST归档包装器正式Preflight输出`PRECHECK PASS`，旧run健康且无生产修改。控制器SHA仍为`9379c38974dbf7aee9f6807e14f2d4a0dd6c191a7e06645a7df532b20d431749`，stopped probe仍为`544a545ce87c50a2e06c1dae5ad4329a69b2c28e71c1f0cd0265dd93d65367ac`，未改校验值。新本机启动器仅Deploy及核对既有许可/缓存，不调用grant-state，不创建缓存或删除目录。新版本仍待本人哈希确认，不把Preflight当成部署成功。
+
 ### 正式e0eb933已上线，清理授权存储修复准备（2026-10-29，最新）
 
 2026-10-28 18:34 JST在用户完成真实本机哈希挑战后执行一次正式升级，控制台输出`PRODUCTION-UPGRADE-OK`。正式App/Manager双pin已一致为`e0eb933cec1b3cb88a4d34b19e3257228f39541e`；新run为`cd8d0e41-e961-44eb-b8b3-2ab31128b4b8`，18:41:15进入READY。归档控制器`verify-installed`确认完整源码/补丁/Runner/pin/profile一致；实际doctor healthy=true，认证AgentDock MCP及Tong discovery通过；唯一Host PID57820、Supervisor29972、Guardian45820和7676/7677/18765正常，gate已由正式机制释放。本次没有发生自动回退或反复升级。
