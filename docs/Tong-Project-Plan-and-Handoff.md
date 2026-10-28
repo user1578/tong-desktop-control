@@ -4,7 +4,7 @@
 
 ### 当前执行入口（2026-10-28）
 
-**最新：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。正在修复单JSON协议及自动回退结果表达，做隔离回归、新候选与只读预检；本次不直接重试生产。独立监测日志停在13:46 JST，当前不能作为持续健康证据。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
+**最新：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。单JSON协议及回退结果表达已修复，commit `e0eb933`已推送；隔离回归、新候选/release/快照和归档包装器只读预检通过。本次未重新Deploy，启动器仅准备，等新一轮本人明确确认。独立监测日志停在13:46 JST，进入下一维护窗口前需由本机Shell恢复监测。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
 
 cb0355b正式升级在旧PS5 Runner匹配条件处失败，原生产仍READY；本次续修当前FullProduction/独立Rollback共用身份验证，先隔离测试、新候选/快照绑定与正式只读预检，再走真实本机授权。旧失败快照和授权审计保留，不重新盘点或清理历史大候选。详见下述交接页顶部最新记录。
 

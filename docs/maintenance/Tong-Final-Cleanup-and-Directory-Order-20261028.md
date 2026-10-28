@@ -14,7 +14,17 @@
 
 修复：所有内部步骤返回对象；CLI只在完整动作及最后lease proof成功后输出一个成功JSON，异常只输出一个失败JSON并返回非零退出码，诊断使用stderr。Native严格要求一个JSON对象，不采用取最后一行或吞掉多条结果的兼容；错误带具体操作名，异常原文不回显。自动回退最终状态明确区分`UPGRADE_FAILED_OLD_VERSION_RECOVERED`和`UPGRADE_FAILED_ROLLBACK_FAILED`，后者同时保留原升级及恢复失败原因。
 
-隔离测试覆盖复合安装、释放gate、最终lease proof失败、部分安装后失败、回退文件恢复失败、自动回退成功/源码恢复失败/旧版启动失败，以及多JSON、空输出、数组、stdout诊断、stderr诊断和exit=0但ok=false。使用真实小文件复制/回退与真实CLI stdout，Task/授权等外部边界保持隔离。新候选尚待提交构建与正式只读预检；本次不直接重试正式升级，先准备完整新绑定，再等新一轮本人确认。小缓存与5.636GiB历史候选仍未删除。
+隔离测试覆盖复合安装、释放gate、最终lease proof失败、部分安装后失败、回退文件恢复失败、自动回退成功/源码恢复失败/旧版启动失败，以及多JSON、空输出、数组、stdout诊断、stderr诊断和exit=0但ok=false。使用真实小文件复制/回退与真实CLI stdout，Task/授权等外部边界保持隔离。独立审查指出原partial-install用例首个复制文件内容相同，已改为先实际写入新版payload并断言现场已改变，再断言回退还原；新版复合stdout及PS Native/自动回退测试通过，原增量回退、Runner身份/包装器、升级gate/版本绑定和控制字节绑定回归通过。
+
+修复commit **`e0eb933cec1b3cb88a4d34b19e3257228f39541e`已推送**至当前codex分支。新发布绑定如下（均在`D:\Tong\state\p27-autonomy-candidate-20261017`）：
+
+- release：`quick-trust-release-e0eb933`，559源码/23 native，完整build/verify通过。
+- candidate：`quick-trust-candidate-e0eb933`，源码+3份已核对补丁+共享SDK；不是完整npm恢复，不重新安装依赖。
+- snapshot：`quick-trust-full-cutover-20261028083606841-c7ddb8fd`，新/旧commit分别绑定e0eb933/b9fe801，App/Manager旧源码各284文件验证通过，stage=`snapshotted`。
+
+17:36 JST从新归档包装器执行`-Mode Preflight`实际输出PRECHECK PASS；现场旧run `1c07a229-806c-4795-b418-b401c847cfbf`健康、无生产变更。归档内`Test-TongUpgradeControlBinding.mjs`通过；helper新SHA为`9379c38974dbf7aee9f6807e14f2d4a0dd6c191a7e06645a7df532b20d431749`，与Git归档实际导出字节和release清单一致，未改旧归档或停用校验。正式认证MCP项目查询成功返回12项，仍是旧版、没有cleanupScopes。新增三处产物约34MiB，仅包含必要源码/native/回退材料及少量暂存；未复制完整依赖。
+
+新快照内`Run-Approved-Upgrade.ps1`仅已准备并通过PS7解析，**本次未打开窗口或执行Deploy**。遵守用户“本次不要直接重试生产升级”：下一次明确进入维护窗口前先恢复独立监测（由本人自己的Windows Shell启动现有入口），重新读取实时门禁，再由本人完成新哈希绑定挑战。旧快照、回执、授权材料及所有历史候选保留；小缓存与5.636GiB候选均未删除。新候选的生产运行/MCP清理/真实小缓存验收仍未完成。
 
 ### 前一轮Runner修复与发布准备（历史）
 
