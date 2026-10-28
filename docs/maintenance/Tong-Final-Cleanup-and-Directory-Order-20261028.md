@@ -16,7 +16,11 @@
 
 新增只读`Test-TongCleanupProductionStore.mjs`先复现旧路径失败，再验证新目录ACL、status可读和开发入口不能grant，通过；没有重跑之前的隔离矩阵。独立静态审查未发现阻塞问题。该两文件修复尚须绑定新候选并由本人批准新的维护窗口，不能覆盖已安装e0eb933字节。新的生产基线应为e0eb933，旧b9fe801快照继续保留。
 
-正式SDK工具发现的本地验收脚本保存在已用快照中；宿主连接器工具目录尚未刷新出清理Plan/Execute。原SDK尝试的OAuth注册回调不在允许主机中，已按服务契约改为loopback回调；公开网络另遇UND_ERR_SOCKET，已改经同一正式Gateway的7676回环认证端点（不直连7677）。当前停在OAuth owner读取：生产没有`runtime/secrets/oauth-owner.dpapi`，尚未读取替代凭据、修改认证或完成SDK工具发现。失败回执均原样保留，不能记为MCP清理验收成功。
+SDK验收已打通：按已部署DevSpace契约使用允许的loopback回调，并经同一正式Gateway的7676认证端点（不直连7677）；生产Owner凭据使用TongRuntimeServer同一只读loadDevspaceFiles流程，仅在进程内用于标准OAuth/PKCE，不输出、复制或修改原凭据。之前的公开网络UND_ERR_SOCKET、错误回调和误用simulation DPAPI路径的失败回执原样保留。
+
+2026-10-29 01:11 JST正式认证tools/list实测返回38项，**清理工具实际缺失，并非宿主缓存**；项目查询返回12项且cleanupScopes为空。回执为已用e0eb933快照下`mcp-discovery-acceptance-20261028161112404.json`。根因是上游server.js的固定TONG_ALLOWED_TOOLS漏了两个清理工具，尽管注册模块和Gateway已支持。已补纯补丁变换仅添加Plan/Execute，原补丁SHA保留为previousHash15，新补丁真实输出SHA为`75cc461fd74af533629e87247520f5f82524351ccea9586fbd75d4dcae10703c`。新增注册测试先复现两工具被过滤，再验证真实guard允许清理工具、拒绝exec_command、重复应用幂等并匹配归档哈希；相应历史allowlist期望更新后通过。
+
+`1079b1a`仅包含许可存储修复，已build/verify生成`quick-trust-release-1079b1a`，**不是最终上线候选**，没有创建其生产切换或覆盖原归档。最终候选必须同时带两个修复，以当前e0eb933为回退基线，完成正式只读预检后再由本人决定新的维护窗口。未自动反复升级、未颁发许可或执行Plan/Execute，历史大候选继续保留。
 
 ### 前一轮JSON修复与发布准备（历史）
 
