@@ -20,7 +20,13 @@ SDK验收已打通：按已部署DevSpace契约使用允许的loopback回调，�
 
 2026-10-29 01:11 JST正式认证tools/list实测返回38项，**清理工具实际缺失，并非宿主缓存**；项目查询返回12项且cleanupScopes为空。回执为已用e0eb933快照下`mcp-discovery-acceptance-20261028161112404.json`。根因是上游server.js的固定TONG_ALLOWED_TOOLS漏了两个清理工具，尽管注册模块和Gateway已支持。已补纯补丁变换仅添加Plan/Execute，原补丁SHA保留为previousHash15，新补丁真实输出SHA为`75cc461fd74af533629e87247520f5f82524351ccea9586fbd75d4dcae10703c`。新增注册测试先复现两工具被过滤，再验证真实guard允许清理工具、拒绝exec_command、重复应用幂等并匹配归档哈希；相应历史allowlist期望更新后通过。
 
-`1079b1a`仅包含许可存储修复，已build/verify生成`quick-trust-release-1079b1a`，**不是最终上线候选**，没有创建其生产切换或覆盖原归档。最终候选必须同时带两个修复，以当前e0eb933为回退基线，完成正式只读预检后再由本人决定新的维护窗口。未自动反复升级、未颁发许可或执行Plan/Execute，历史大候选继续保留。
+`1079b1a`仅包含许可存储修复，已build/verify生成`quick-trust-release-1079b1a`，**不是最终上线候选**，没有创建其生产切换或覆盖原归档。两个增量修复均经独立静态审查无阻塞发现，最终commit **`54f307282dedd00a48d942154645e95a9f3d11a6`已推送**至当前codex分支。
+
+最终release为同根`quick-trust-release-54f3072`，561源码/23 native，build/verify通过；暂存`quick-trust-candidate-54f3072`仅源码/3补丁/共享SDK。在新暂存内实际应用补丁，输出server.js SHA75cc461f…，没有改正式App或共享开发依赖。新回退快照`quick-trust-full-cutover-20261028161419921-ecccdfec`绑定54f3072/e0eb933，旧App/Manager各559源码/补丁/pin/profile/Runner核验通过。01:15 JST从最终归档包装器执行正式Preflight，输出旧run健康、候选验证通过且无生产变更。
+
+01:16 JST新快照内`Run-Approved-Upgrade.ps1`已打开可见PS7窗口，初始PID58832，回执`awaiting-native-approvals`；只有本人完成新哈希挑战后才切换，失败回到e0eb933，旧b9fe801快照继续保留。MCP小缓存验收客户端也在同快照，已按正式OAuth/PKCE和7676 Gateway实际契约准备；使用同一连接执行Plan→Execute。此刻尚未颁发新许可或执行删除，不把待批准写成完成。
+
+本次1079中间release、54最终release/暂存/e0回退快照共约62.34MiB（不含小型测试/SDK诊断回执），没有完整依赖复制或安装。历史大候选继续保留。
 
 ### 前一轮JSON修复与发布准备（历史）
 

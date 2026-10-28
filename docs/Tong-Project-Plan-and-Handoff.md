@@ -4,7 +4,7 @@
 
 ### 当前执行入口（2026-10-28）
 
-**2026-10-29最新：**正式e0eb933已成功上线，run `cd8d0e41-e961-44eb-b8b3-2ab31128b4b8`持续READY，doctor、双pin、三端口及独立监测已实测。后续清理grant因App元数据目录ACL拒绝而未完成；已准备将许可存储到现有受保护runtime/tong-policy的两文件最小修复，并通过新增只读验证和独立审查，等新候选及本人新的维护窗口确认。小缓存/历史候选均未删除，正式SDK清理工具验收未完成。准确路径与阻塞见[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+**2026-10-29最新：**正式e0eb933已成功上线，run `cd8d0e41-e961-44eb-b8b3-2ab31128b4b8`持续READY，doctor、双pin、三端口及独立监测已实测。清理grant因App目录ACL拒绝，且正式认证tools/list确认DevSpace白名单漏了两个清理工具。两项最小修复已提交推送为54f3072，通过新增针对性验证/独立审查、完整release绑定和正式只读Preflight；01:16 JST已打开新本机确认窗口，回退基线e0eb933。小缓存/历史候选均未删除，尚待本人挑战与实际MCP Plan→Execute验收。准确路径与状态见[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
 **最新：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。单JSON协议及回退结果表达已修复，commit `e0eb933`已推送；隔离回归、新候选/release/快照和归档包装器只读预检通过。本次未重新Deploy，启动器仅准备，等新一轮本人明确确认。独立监测日志停在13:46 JST，进入下一维护窗口前需由本机Shell恢复监测。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
 
