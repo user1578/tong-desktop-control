@@ -1,13 +1,13 @@
 import {readFile,writeFile,rename,open,unlink,appendFile} from 'node:fs/promises';
-import {join} from 'node:path';
+import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {TongCleanupAuthorization,validateCleanupGrants,cleanupOrdinaryPath,cleanupCategories} from './TongCleanupAuthorization.mjs';
 import {confirmLocally} from './TongLocalConfirmation.mjs';
 import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
 
-const state='D:\\Tong\\app\\runtime',id='tong-state-cleanup',root='D:\\Tong\\state';
-const policy=new TongCleanupAuthorization(state),[command,...extra]=process.argv.slice(2);
+const id='tong-state-cleanup',root='D:\\Tong\\state';
+const policy=new TongCleanupAuthorization('D:\\Tong\\app\\runtime'),state=dirname(policy.path),[command,...extra]=process.argv.slice(2);
 try{
   if(extra.length||!['status','grant-state','revoke-state'].includes(command))throw Error('Usage: status | grant-state | revoke-state');
   await assertProtectedPaths([state]);await cleanupOrdinaryPath(state);

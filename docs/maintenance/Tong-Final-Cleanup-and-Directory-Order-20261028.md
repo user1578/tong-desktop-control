@@ -4,6 +4,22 @@
 
 ## 1. 当前生产与升级通道
 
+### 正式e0eb933已上线，清理授权存储修复准备（2026-10-29，最新）
+
+2026-10-28 18:34 JST在用户完成真实本机哈希挑战后执行一次正式升级，控制台输出`PRODUCTION-UPGRADE-OK`。正式App/Manager双pin已一致为`e0eb933cec1b3cb88a4d34b19e3257228f39541e`；新run为`cd8d0e41-e961-44eb-b8b3-2ab31128b4b8`，18:41:15进入READY。归档控制器`verify-installed`确认完整源码/补丁/Runner/pin/profile一致；实际doctor healthy=true，认证AgentDock MCP及Tong discovery通过；唯一Host PID57820、Supervisor29972、Guardian45820和7676/7677/18765正常，gate已由正式机制释放。本次没有发生自动回退或反复升级。
+
+独立监测PID47076连续运行，覆盖请求停机、安装、启动到恢复健康。维护停机约18:35–18:41 JST有预期不健康样本；随后Gateway端点恢复，2026-10-29 01:02 JST仍为同一新run健康，无检查错误。当前只声称已观察窗口，不扩展为重启/长期稳定验收。正式连接器项目查询实测返回12项并新增cleanupAuthorizationAvailable=true，尚无cleanupScopes。
+
+整个维护窗口最终记`native-window-failed-or-cancelled`，准确原因是升级成功后`TongCleanupControl.mjs grant-state`在首次ACL检查报`ACL_DENIED`，没有进入真实本机清理确认。App元数据目录`D:\Tong\app\runtime`继承了开发沙盒写ACE，不适合保存递归删除许可。未改ACL、未跳过校验、未手工写入许可；小缓存也尚未创建/删除。原失败回执、快照和授权审计保留。
+
+已准备最小源码修复：正式清理许可固定迁到已存在且通过安全校验的`D:\Tong\runtime\tong-policy\disk-cleanup-grants.json`；Control的锁、临时文件和授权审计也使用该策略目录，每次生产读取重新核对runtime、policy目录及许可文件ACL。开发/隔离夹具维持原有路径语义，MCP仍没有颁发许可入口，scope/revision/撤销规则不扩大。没有搬迁其他状态、改权限或迁移旧许可（尚不存在）。
+
+新增只读`Test-TongCleanupProductionStore.mjs`先复现旧路径失败，再验证新目录ACL、status可读和开发入口不能grant，通过；没有重跑之前的隔离矩阵。独立静态审查未发现阻塞问题。该两文件修复尚须绑定新候选并由本人批准新的维护窗口，不能覆盖已安装e0eb933字节。新的生产基线应为e0eb933，旧b9fe801快照继续保留。
+
+正式SDK工具发现的本地验收脚本保存在已用快照中；宿主连接器工具目录尚未刷新出清理Plan/Execute。原SDK尝试的OAuth注册回调不在允许主机中，已按服务契约改为loopback回调；公开网络另遇UND_ERR_SOCKET，已改经同一正式Gateway的7676回环认证端点（不直连7677）。当前停在OAuth owner读取：生产没有`runtime/secrets/oauth-owner.dpapi`，尚未读取替代凭据、修改认证或完成SDK工具发现。失败回执均原样保留，不能记为MCP清理验收成功。
+
+### 前一轮JSON修复与发布准备（历史）
+
 ### CLI单JSON协议故障续修（2026-10-28，最新）
 
 2fcea75这次正式升级已经失败并自动回退，不能继续使用上一节历史的“等待授权”作为当前状态。快照`quick-trust-full-cutover-20261028042414441-0da1d9af`于13:38:20 JST进入`rolled-back-old-code`；13:42:41登录日志记录旧版run `9cdb151b-8250-4b65-bf41-02e306878b0b`健康。`native-window-result.json`仍记`native-window-failed-or-cancelled`，表示升级未成功，与回退成功不矛盾。失败快照、授权审计和已释放门禁的`upgrade-gate.json`回执全部保留。

@@ -4,6 +4,8 @@
 
 ### 当前执行入口（2026-10-28）
 
+**2026-10-29最新：**正式e0eb933已成功上线，run `cd8d0e41-e961-44eb-b8b3-2ab31128b4b8`持续READY，doctor、双pin、三端口及独立监测已实测。后续清理grant因App元数据目录ACL拒绝而未完成；已准备将许可存储到现有受保护runtime/tong-policy的两文件最小修复，并通过新增只读验证和独立审查，等新候选及本人新的维护窗口确认。小缓存/历史候选均未删除，正式SDK清理工具验收未完成。准确路径与阻塞见[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+
 **最新：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。单JSON协议及回退结果表达已修复，commit `e0eb933`已推送；隔离回归、新候选/release/快照和归档包装器只读预检通过。本次未重新Deploy，启动器仅准备，等新一轮本人明确确认。独立监测日志停在13:46 JST，进入下一维护窗口前需由本机Shell恢复监测。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
 
 cb0355b正式升级在旧PS5 Runner匹配条件处失败，原生产仍READY；本次续修当前FullProduction/独立Rollback共用身份验证，先隔离测试、新候选/快照绑定与正式只读预检，再走真实本机授权。旧失败快照和授权审计保留，不重新盘点或清理历史大候选。详见下述交接页顶部最新记录。

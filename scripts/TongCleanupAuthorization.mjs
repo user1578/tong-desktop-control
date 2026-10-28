@@ -1,5 +1,6 @@
 import {readFile,lstat,realpath} from 'node:fs/promises';
-import {isAbsolute,resolve,relative,sep,join,parse} from 'node:path';
+import {isAbsolute,resolve,relative,sep,join,parse,dirname} from 'node:path';
+import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
 
 export const cleanupCategories=Object.freeze(['cache','historical-candidate','quick-trust-candidate']);
 const fail=code=>{const e=Error(code);e.code=code;throw e;};
@@ -22,9 +23,22 @@ export function validateCleanupGrants(value){
 }
 // Deliberately read-only. No MCP handler can create or renew a grant.
 export class TongCleanupAuthorization{
-  constructor(stateDir){if(!isAbsolute(stateDir??''))fail('CLEANUP_INVALID_CONFIGURATION');this.path=join(stateDir,'disk-cleanup-grants.json');}
+  constructor(stateDir){
+    if(!isAbsolute(stateDir??''))fail('CLEANUP_INVALID_CONFIGURATION');
+    const productionRoot='D:\\Tong\\runtime',policyDir=join(productionRoot,'tong-policy');
+    const formal=[resolve('D:\\Tong\\app\\runtime').toLowerCase(),policyDir.toLowerCase()].includes(resolve(stateDir).toLowerCase());
+    // App metadata is development-writable. Production deletion authority lives
+    // with the existing protected runtime policy, never beside that metadata.
+    this.protectedRoot=formal?productionRoot:null;
+    this.path=join(formal?policyDir:stateDir,'disk-cleanup-grants.json');
+  }
   async read(){
-    try{await cleanupOrdinaryPath(this.path);return validateCleanupGrants(JSON.parse(await readFile(this.path,'utf8')));}
+    if(this.protectedRoot)await assertProtectedPaths([this.protectedRoot,dirname(this.path)]);
+    try{
+      await cleanupOrdinaryPath(this.path);
+      if(this.protectedRoot)await assertProtectedPaths([this.path]);
+      return validateCleanupGrants(JSON.parse(await readFile(this.path,'utf8')));
+    }
     catch(e){if(e.code==='ENOENT')return {schemaVersion:1,grants:[]};if(e.code?.startsWith('CLEANUP_'))throw e;fail('CLEANUP_AUTHORIZATION_INVALID');}
   }
   async resolve(projectId,target,category){
