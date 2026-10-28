@@ -12,7 +12,13 @@
 
 同类固定PS5匹配还见于旧`Invoke-TongQuickTrustProduction.ps1`、`Set-TongSilentLogin.ps1`的一次性历史切换，当前FullProduction/FullCutover/独立Rollback不调用它们，本次不启用或迁移旧入口。当前冻结门及Host使用PS7；`TongProductionProfile.mjs`、`TongRuntimeSecurity.mjs`的固定PS5调用是原有原生安全/DPAPI助手契约，不是Runner身份过滤，本次保持不变。
 
-新增PS7回归先在旧代码复现同一报错，再验证正常停止及18项身份/竞态拒绝；真实隔离Host/PS7正常退出通过（最终夹具`test-temp/runner-stop-12dd5acaf81548a997227da2a2bfab21`，仅Scheduler和Manager请求投递为测试适配器）。原升级包装器、实际文件增量完整/部分安装回退、生命周期gate、升级版本绑定、readiness和控制脚本绑定测试通过。只读独立审查发现外层catch会在身份拒绝后按任务名重启；已补实际外层catch的先红后绿回归，并改为只允许重新验证完整原身份和原健康run后Enable，不自动Start。以上不是生产切换成功。待新commit归档/release/新快照绑定及正式只读预检后，才能开启新本机授权窗口。没有重扫磁盘、删除小缓存或5.636GiB候选。
+新增PS7回归先在旧代码复现同一报错，再验证正常停止及18项身份/竞态拒绝；真实隔离Host/PS7正常退出通过（最终夹具`test-temp/runner-stop-12dd5acaf81548a997227da2a2bfab21`，仅Scheduler和Manager请求投递为测试适配器）。原升级包装器、实际文件增量完整/部分安装回退、生命周期gate、升级版本绑定、readiness和控制脚本绑定测试通过。只读独立审查发现外层catch会在身份拒绝后按任务名重启；已补实际外层catch的先红后绿回归，并改为只允许重新验证完整原身份和原健康run后Enable，不自动Start。以上不是生产切换成功。
+
+修复commit **`2fcea7523d358190661fc905a23b482386f6fecd`已推送**至`codex/024-maintenance-adapter-20261024`。新release为`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-release-2fcea75`，557源码/23 native，完整build/verify通过；新暂存为同根`quick-trust-candidate-2fcea75`，仅源码、3补丁和共享SDK。新快照为同根`quick-trust-full-cutover-20261028042414441-0da1d9af`，原App/Manager各284源码、pin/profile/Runner及补丁验证通过，新/旧commit分别绑定2fcea75/b9fe801。旧cb0355b归档与失败快照未覆盖或改绑定。
+
+13:24 JST从新归档包装器执行正式`-Mode Preflight`实际通过，包括真实Task/Host/PS7 Runner身份；生产仍是原run、READY、三端口及独立监测healthy，未出现backup.freeze。13:25 JST新快照内`Run-Approved-Upgrade.ps1`已打开可见PS7控制台（初始PID4980），回执`awaiting-native-approvals`，待本人真实挑战。新版本需要新哈希绑定普通许可，旧许可不代替；先验证再停止、安装/激活、恢复许可、READY，之后才限定清理许可与小缓存MCP验收。独立回退使用新候选归档包装器`-Mode Rollback`及本段三个路径、完整新/旧commit。
+
+本次三处新release/暂存/快照合计35,634,645逻辑字节（约33.98MiB，不含小型测试夹具），没有安装或复制整套依赖。没有重扫磁盘、删除小缓存或5.636GiB候选。当前仍须根据本机窗口回执与现场状态确认生产结果，不能把预检通过记为正式升级成功。
 
 ### 上一轮准备与失败现场（历史）
 
