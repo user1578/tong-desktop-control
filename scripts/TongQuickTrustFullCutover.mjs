@@ -8,12 +8,6 @@ import {withMaintenanceFreeze} from './TongLifecycleFreeze.mjs';
 
 const BASE='D:\\Tong\\state\\p27-autonomy-candidate-20261017';
 const [action,snapshot,releaseOverride,candidateOverride,commitOverride,baselineOverride,...extra]=process.argv.slice(2);
-if([releaseOverride,candidateOverride,commitOverride].filter(value=>value!==undefined).length%3)throw Error('INCOMPLETE_RELEASE_BINDING');
-for(const [value,prefix] of [[releaseOverride,'quick-trust-release-'],[candidateOverride,'quick-trust-candidate-']]){
- if(value!==undefined&&(dirname(value)!==BASE||!new RegExp('^'+prefix+'[a-f0-9]{7,40}$').test(relative(BASE,value))))throw Error('RELEASE_SCOPE_DENIED');
-}
-if(commitOverride!==undefined&&!/^[a-f0-9]{40}$/.test(commitOverride))throw Error('COMMIT_BINDING_DENIED');
-if(baselineOverride!==undefined&&!/^[a-f0-9]{40}$/.test(baselineOverride))throw Error('BASELINE_BINDING_DENIED');
 const RUNTIME='D:\\Tong\\runtime';
 const TASK_RUNNER=join(RUNTIME,'login-management','TongLoginRuntime.ps1');
 const ROOTS={app:'D:\\Tong\\app',manager:join(RUNTIME,'releases','manager')};
@@ -106,7 +100,7 @@ async function makeSnapshot(verifiedState){
  }
  const evidence={schemaVersion:1,oldApp:ORIGINAL.app,oldManager:ORIGINAL.manager,newCommit:NEW,originalRunId:null,stage:'snapshotted',at:new Date().toISOString()};
  await writeFile(join(dir,'snapshot.json'),JSON.stringify(evidence,null,2)+'\n',{flag:'wx'});
- console.log(JSON.stringify({ok:true,stage:'snapshotted',snapshot:dir,appFiles:verifiedState.oldPins.app.sourceFiles.length,managerFiles:verifiedState.oldPins.manager.sourceFiles.length}));
+ return {ok:true,stage:'snapshotted',snapshot:dir,appFiles:verifiedState.oldPins.app.sourceFiles.length,managerFiles:verifiedState.oldPins.manager.sourceFiles.length};
 }
 async function verifySnapshot(dir,{unused=true}={}){
  const state=await existingSnapshot(dir);
@@ -190,7 +184,7 @@ async function backupPrivateState(dir){
  await writeFile(evidence,JSON.stringify(collected,null,2)+'\n',{flag:'wx'});
  await assertProtectedPaths([dir,evidence]);
  await recordStage(dir,'state-backed-up');
- console.log(JSON.stringify({ok:true,stage:'state-backed-up',count:groups.length,totalBytes}));
+ return {ok:true,stage:'state-backed-up',count:groups.length,totalBytes};
 }
 async function install(dir){
  const evidence=await existingSnapshot(dir);
@@ -225,7 +219,7 @@ async function install(dir){
   }
  }
  await recordStage(dir,'files-installed');
- console.log(JSON.stringify({ok:true,stage:'files-installed',snapshot:dir}));
+ return {ok:true,stage:'files-installed',snapshot:dir};
 }
 async function installRunner(dir){
  await assertStopped();
@@ -237,7 +231,7 @@ async function installRunner(dir){
  const dest=TASK_RUNNER;
  await copyFile(source,dest);await verified(dest,runner);
  await recordStage(dir,'runner-installed');
- console.log(JSON.stringify({ok:true,stage:'runner-installed'}));
+ return {ok:true,stage:'runner-installed'};
 }
 async function checkInstalled(){
  const m=await read(join(RELEASE,'release-manifest.json'));
@@ -251,7 +245,7 @@ async function checkInstalled(){
  }
  const newRunner=m.sourceFiles.find(f=>f.path==='scripts/TongLoginRuntime.ps1');
  await verified(TASK_RUNNER,newRunner);
- console.log(JSON.stringify({ok:true,stage:'installed-verified',app:pinApp.commit,manager:pinManager.commit}));
+ return {ok:true,stage:'installed-verified',app:pinApp.commit,manager:pinManager.commit};
 }
 async function rollback(dir){
  const e=await existingSnapshot(dir);
@@ -285,7 +279,7 @@ async function rollback(dir){
   await copyFile(join(dir,name),target);
  }
  await recordStage(dir,'rolled-back-old-code');
- console.log(JSON.stringify({ok:true,stage:'rolled-back-old-code',snapshot:dir,oldApp:ORIGINAL.app,oldManager:ORIGINAL.manager,recoveryPermissionNeedsFreshHumanApproval:true}));
+ return {ok:true,stage:'rolled-back-old-code',snapshot:dir,oldApp:ORIGINAL.app,oldManager:ORIGINAL.manager,recoveryPermissionNeedsFreshHumanApproval:true};
 }
 // Reuse the existing snapshot/install/rollback operations under the shared
 // lifecycle gate. A failed controller leaves the gate present and startup
@@ -302,14 +296,15 @@ async function upgradeProfiles(dir){
 async function upgradeGate(dir,fn,{release=false}={}){
  await existingSnapshot(dir);const profiles=await upgradeProfiles(dir);
  await assertStopped();
- await withMaintenanceFreeze(profiles.next,{expectedSha256:sha(Buffer.alloc(0)),productionUpgrade:{baselineProfile:profiles.baseline},upgradeReceipt:join(dir,'upgrade-gate.json')},async lease=>{
-  await lease.proof();await assertStopped();await fn(profiles);
+ return await withMaintenanceFreeze(profiles.next,{expectedSha256:sha(Buffer.alloc(0)),productionUpgrade:{baselineProfile:profiles.baseline},upgradeReceipt:join(dir,'upgrade-gate.json')},async lease=>{
+  await lease.proof();await assertStopped();const result=await fn(profiles);
   if(release)await lease.release();else await lease.proof();
+  return result;
  });
 }
 async function installAndActivate(dir){
  await verifySnapshot(dir);
- await upgradeGate(dir,async({next})=>{
+ return await upgradeGate(dir,async({next})=>{
   // This delta touches source, three known patches, runner, profile and pins.
   // Existing OAuth/DPAPI/databases and recovery envelopes stay in place.
   await recordStage(dir,'state-backed-up');
@@ -320,7 +315,7 @@ async function installAndActivate(dir){
   await pinRuntimeRelease({...next,agentdockEnabled:false},RELEASE,{manager:true,replace:true});
   await updateRuntimeProfile(next,{releaseRoot:RELEASE});
   await verifyRuntimeCandidate(next);await verifyRuntimeCandidate(next,{manager:true,reviewedManagerProfile:{...next,agentdockEnabled:false}});
-  await recordStage(dir,'pins-installed');await installRunner(dir);await checkInstalled();
+  await recordStage(dir,'pins-installed');await installRunner(dir);return await checkInstalled();
  });
 }
 async function releaseUpgradeGate(dir){
@@ -336,26 +331,40 @@ async function releaseUpgradeGate(dir){
    await verifyRuntimeCandidate(p);await verifyRuntimeCandidate(p,{manager:true,reviewedManagerProfile:{...p,agentdockEnabled:false}});
   }
  },{release:true});
- console.log(JSON.stringify({ok:true,stage:'upgrade-gate-released'}));
+ return {ok:true,stage:'upgrade-gate-released'};
 }
 try{
  if(extra.length)fail('UNEXPECTED_ARGUMENTS');
+ if([releaseOverride,candidateOverride,commitOverride].filter(value=>value!==undefined).length%3)fail('INCOMPLETE_RELEASE_BINDING');
+ for(const [value,prefix] of [[releaseOverride,'quick-trust-release-'],[candidateOverride,'quick-trust-candidate-']]){
+  if(value!==undefined&&(dirname(value)!==BASE||!new RegExp('^'+prefix+'[a-f0-9]{7,40}$').test(relative(BASE,value))))fail('RELEASE_SCOPE_DENIED');
+ }
+ if(commitOverride!==undefined&&!/^[a-f0-9]{40}$/.test(commitOverride))fail('COMMIT_BINDING_DENIED');
+ if(baselineOverride!==undefined&&!/^[a-f0-9]{40}$/.test(baselineOverride))fail('BASELINE_BINDING_DENIED');
+ let result;
  if(action==='preflight'){
-  const s=await official();console.log(JSON.stringify({ok:true,action,oldApp:s.oldPins.app.commit,oldManager:s.oldPins.manager.commit,newCommit:s.manifest.commit,
-  appCount:s.manifest.sourceFiles.length,nativeCount:s.manifest.native.length,existingNewFiles:false}));
- }else if(action==='snapshot'){await makeSnapshot(await official());}
- else if(action==='verify-snapshot'){console.log(JSON.stringify(await verifySnapshot(snapshot)));}
- else if(action==='backup-state'){await backupPrivateState(snapshot);}
- else if(action==='install'){await install(snapshot);}
- else if(action==='install-runner'){await installRunner(snapshot);}
- else if(action==='verify-installed'){await checkInstalled();}
- else if(action==='install-activate'){await installAndActivate(snapshot);}
- else if(action==='release-upgrade-gate'){await releaseUpgradeGate(snapshot);}
+  const s=await official();result={ok:true,oldApp:s.oldPins.app.commit,oldManager:s.oldPins.manager.commit,newCommit:s.manifest.commit,
+  appCount:s.manifest.sourceFiles.length,nativeCount:s.manifest.native.length,existingNewFiles:false};
+ }else if(action==='snapshot'){result=await makeSnapshot(await official());}
+ else if(action==='verify-snapshot'){result=await verifySnapshot(snapshot);}
+ else if(action==='backup-state'){result=await backupPrivateState(snapshot);}
+ else if(action==='install'){result=await install(snapshot);}
+ else if(action==='install-runner'){result=await installRunner(snapshot);}
+ else if(action==='verify-installed'){result=await checkInstalled();}
+ else if(action==='install-activate'){result=await installAndActivate(snapshot);}
+ else if(action==='release-upgrade-gate'){result=await releaseUpgradeGate(snapshot);}
  else if(action==='rollback-preflight'){
   const evidence=await verifySnapshot(snapshot,{unused:false});
   for(const pin of ['release-pin.json','manager-pin.json'])if(![ORIGINAL.app,NEW].includes((await read(join(RUNTIME,'run',pin))).commit))fail('ROLLBACK_CURRENT_VERSION_DENIED');
-  console.log(JSON.stringify({...evidence,rollbackPrepared:true}));
+  result={...evidence,rollbackPrepared:true};
  }
- else if(action==='rollback'){if(baselineOverride)await upgradeGate(snapshot,()=>rollback(snapshot));else await rollback(snapshot);}
+ else if(action==='rollback'){result=baselineOverride?await upgradeGate(snapshot,()=>rollback(snapshot)):await rollback(snapshot);}
  else fail('BAD_ACTION');
-}catch(error){console.error(String(error?.code??error?.message??error).slice(0,230));process.exitCode=1}
+ // Exactly one machine-readable result, only after the full action and final
+ // lease proof complete. Internal helpers return values and never print JSON.
+ if(!result||result.ok!==true)fail('MISSING_CUTOVER_RESULT');
+ console.log(JSON.stringify({...result,action}));
+}catch(error){
+ const code=String(error?.code??error?.message??error).slice(0,230);
+ console.error(code);console.log(JSON.stringify({ok:false,action,error:code}));process.exitCode=1;
+}

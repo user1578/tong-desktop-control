@@ -4,6 +4,20 @@
 
 ## 1. 当前生产与升级通道
 
+### CLI单JSON协议故障续修（2026-10-28，最新）
+
+2fcea75这次正式升级已经失败并自动回退，不能继续使用上一节历史的“等待授权”作为当前状态。快照`quick-trust-full-cutover-20261028042414441-0da1d9af`于13:38:20 JST进入`rolled-back-old-code`；13:42:41登录日志记录旧版run `9cdb151b-8250-4b65-bf41-02e306878b0b`健康。`native-window-result.json`仍记`native-window-failed-or-cancelled`，表示升级未成功，与回退成功不矛盾。失败快照、授权审计和已释放门禁的`upgrade-gate.json`回执全部保留。
+
+17:22 JST直接只读核对：App/Manager双pin均`b9fe80150f9cdea47130e8952e85e39503187677`；两套各284源码逐文件、3份补丁、实际Runner与profile/pin digest匹配。当前run为`1c07a229-806c-4795-b418-b401c847cfbf`、READY，Task Running、唯一Host PID36492、7676/7677/18765均监听，`backup.freeze`不存在。本轮没有停止Task或调整gate。旧版15:06再次启动，16:23 Gateway退出`0xC0000409/native_fast_fail`，16:27自动恢复成功；此历史稳定性问题不属于本次stdout修复，未声称根治。独立监测器当前无活动进程，最后样本为13:46 JST，不能当作当前连续健康证据。
+
+根因与准确边界：`install-activate`在同一CLI中依次调用install、installRunner、checkInstalled，三者各写一条stdout JSON。完整调用正常退出后，包装器Native将stdout合并再ConvertFrom-Json一次，于是报`Additional text encountered after finished reading JSON content`并进入自动回退。隔离执行同一实际组合代码复现“exit=0但3条JSON”。现场未保存原始stdout，三条输出的确认来自归档代码和隔离复现；原快照最终阶段不能还原全部中间时间线。回退后的同一报错是外层重新抛出原安装解析错误，不等于回退再失败。新版释放gate路径也有同类嵌套输出，已一起覆盖。
+
+修复：所有内部步骤返回对象；CLI只在完整动作及最后lease proof成功后输出一个成功JSON，异常只输出一个失败JSON并返回非零退出码，诊断使用stderr。Native严格要求一个JSON对象，不采用取最后一行或吞掉多条结果的兼容；错误带具体操作名，异常原文不回显。自动回退最终状态明确区分`UPGRADE_FAILED_OLD_VERSION_RECOVERED`和`UPGRADE_FAILED_ROLLBACK_FAILED`，后者同时保留原升级及恢复失败原因。
+
+隔离测试覆盖复合安装、释放gate、最终lease proof失败、部分安装后失败、回退文件恢复失败、自动回退成功/源码恢复失败/旧版启动失败，以及多JSON、空输出、数组、stdout诊断、stderr诊断和exit=0但ok=false。使用真实小文件复制/回退与真实CLI stdout，Task/授权等外部边界保持隔离。新候选尚待提交构建与正式只读预检；本次不直接重试正式升级，先准备完整新绑定，再等新一轮本人确认。小缓存与5.636GiB历史候选仍未删除。
+
+### 前一轮Runner修复与发布准备（历史）
+
 ### Runner身份匹配故障续修（2026-10-28）
 
 本机cb0355b升级窗口在`Stop-Login()`报`Unable to identify the single original monitor runner`，失败回执为`native-window-failed-or-cancelled`。原快照`quick-trust-full-cutover-20261027174339358-177eb337`仍为`snapshotted`；其候选绑定、失败回执和授权审计保留，不覆盖旧归档。现场只读确认Task唯一实例EnginePID=30820、Host真实路径为runtime/login-management/TongLoginHost.exe，唯一子Runner PID28216实际为`C:\Program Files\PowerShell\7\pwsh.exe`。旧过滤器只接受PS5.1，故匹配为零；未停止正式运行。

@@ -17,7 +17,7 @@ if($ExpectedCommit -and $ExpectedCommit -cnotmatch '^[a-f0-9]{40}$'){throw 'Exac
 if($ExpectedOldCommit -and $ExpectedOldCommit -cnotmatch '^[a-f0-9]{40}$'){throw 'Exact baseline commit required'}
 $helper=Join-Path $PSScriptRoot 'TongQuickTrustFullCutover.mjs'
 $cleanupProbe=Join-Path $PSScriptRoot 'TongCutoverStoppedRunProbe.mjs'
-$helperSha256='267ad9dcc55e500f9cfb9643a550b32598e7e834d07691e102bf16d25869aceb'
+$helperSha256='9379c38974dbf7aee9f6807e14f2d4a0dd6c191a7e06645a7df532b20d431749'
 $cleanupProbeSha256='544a545ce87c50a2e06c1dae5ad4329a69b2c28e71c1f0cd0265dd93d65367ac'
 $release=if($ReleaseRoot){$ReleaseRoot}else{Join-Path $base 'quick-trust-release-d9983bb'}
 $candidate=if($CandidateRoot){$CandidateRoot}else{Join-Path $base 'quick-trust-candidate-d9983bb'}
@@ -36,6 +36,25 @@ $recoverySigned=$false
 $taskDisabled=$false
 $stoppingLoginIdentity=$null
 $monitorWindowStart=$null
+function Convert-NativeResult([string]$Name,[string]$Text,[int]$ExitCode){
+  # A CLI response is one JSON object, never JSONL or a last-line fallback.
+  # Do not echo malformed output: it can contain native diagnostics or secrets.
+  $document=$null
+  try{
+    $document=[System.Text.Json.JsonDocument]::Parse($Text)
+    if($document.RootElement.ValueKind -ne [System.Text.Json.JsonValueKind]::Object){throw 'Object required'}
+    $value=$Text|ConvertFrom-Json
+  }catch{
+    if($ExitCode -ne 0){throw ('FAILED: '+$Name+' exit='+$ExitCode)}
+    throw ('INVALID_NATIVE_JSON: '+$Name)
+  }finally{if($null -ne $document){$document.Dispose()}}
+  if($ExitCode -ne 0 -or ($value.PSObject.Properties['ok'] -and $value.ok -eq $false)){
+    $code='NATIVE_FAILURE'
+    if($value.PSObject.Properties['error'] -and [string]$value.error -cmatch '^([A-Z][A-Z0-9_]{0,63})(?::|$)'){$code=$Matches[1]}
+    throw ('FAILED: '+$Name+' exit='+$ExitCode+' code='+$code)
+  }
+  return $value
+}
 function Native([string]$Name,[string[]]$Arguments){
   if($Arguments[0] -ceq $helper){
     if($Arguments.Count -eq 2){$Arguments+= '-'}
@@ -43,8 +62,8 @@ function Native([string]$Name,[string[]]$Arguments){
     if($ExpectedOldCommit){$Arguments+= $ExpectedOldCommit}
   }
   $raw=& $node @Arguments
-  if($LASTEXITCODE -ne 0){throw ('FAILED: '+$Name+' exit='+$LASTEXITCODE)}
-  return (($raw -join [Environment]::NewLine)|ConvertFrom-Json)
+  $exitCode=$LASTEXITCODE
+  return (Convert-NativeResult $Name ($raw -join [Environment]::NewLine) $exitCode)
 }
 function CurrentStatus(){
   return (Native 'manager status' @($manager,'status','--root',$root))
@@ -488,12 +507,19 @@ try{
   Write-Host ('Rollback snapshot: '+$snapshot)
 } catch {
   $failure=$_.Exception.Message
+  $rollbackOutcome='not-attempted'
+  $rollbackFailure=$null
   Write-Warning ('Production cutover failed: '+$failure)
   if($wasStopped -and $didInstall){
-    try{Restore-Old}catch{Write-Warning ('Automatic rollback requires attention: '+$_.Exception.Message)}
+    try{Restore-Old;$rollbackOutcome='recovered'}catch{
+      $rollbackOutcome='failed';$rollbackFailure=$_.Exception.Message
+      Write-Warning ('Automatic rollback requires attention: '+$rollbackFailure)
+    }
   }elseif($taskDisabled -and -not $didInstall){
     try{Restore-LoginAfterRejectedStop}catch{Write-Warning ('Old startup needs attention: '+$_.Exception.Message)}
   }
   if($snapshot){Write-Warning ('Evidence: '+$snapshot)}
+  if($rollbackOutcome -eq 'recovered'){throw ('UPGRADE_FAILED_OLD_VERSION_RECOVERED: '+$failure)}
+  if($rollbackOutcome -eq 'failed'){throw ('UPGRADE_FAILED_ROLLBACK_FAILED: '+$failure+'; rollback='+$rollbackFailure)}
   throw $failure
 }
