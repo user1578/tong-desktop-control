@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process';
 import {createTongTestDirectory} from './fixtures/TongTestDirectory.mjs';
 import {TongManagedCleanup,cleanupGuards} from '../scripts/TongManagedCleanup.mjs';
 import {prepareCleanupSelection,executeCleanupSelection} from '../scripts/TongCleanupSelection.mjs';
-import {closeCleanupNative} from '../scripts/TongCleanupNative.mjs';
+import {closeCleanupNative,cleanupHandleRead} from '../scripts/TongCleanupNative.mjs';
 const fixture=await createTongTestDirectory('tong-cleanup-recovery-');let passed=false;
 try{
  const root=join(fixture.path,'root'),store=join(fixture.path,'store');await mkdir(root);await mkdir(store);
@@ -45,10 +45,12 @@ try{
  await assert.rejects(prepareCleanupSelection(manager,{projectId:'synthetic',path:account,exact:true}),/CLEANUP_PROTECTED_PATH/);
  const single=join(root,'ordinary.txt');await writeFile(single,'remove this exact file');
  const one=await prepareCleanupSelection(manager,{projectId:'synthetic',path:single,exact:true});assert.equal((await executeCleanupSelection(manager,one,{journalPath:join(store,'one.jsonl')})).files,1);
+ const readGuard=join(root,'read-guard.pyc');await writeFile(readGuard,'before');const old=await lstat(readGuard);await writeFile(readGuard,'after mutation');
+ await assert.rejects(cleanupHandleRead(readGuard,{size:old.size,stamp:[old.dev,old.ino,old.size,old.mtimeMs,old.ctimeMs,old.nlink].join(':')}),/CLEANUP_TARGET_CHANGED/);
  // Swap a checked parent for a junction after intent, before native deletion.
- const race=join(root,'.pytest_cache'),old=join(root,'original-race-parent'),outside=join(fixture.path,'outside');await mkdir(race);await mkdir(outside);await writeFile(join(race,'a.pyc'),'same');await writeFile(join(outside,'a.pyc'),'same');
+ const race=join(root,'.pytest_cache'),oldParent=join(root,'original-race-parent'),outside=join(fixture.path,'outside');await mkdir(race);await mkdir(outside);await writeFile(join(race,'a.pyc'),'same');await writeFile(join(outside,'a.pyc'),'same');
  const racePlan=await prepareCleanupSelection(manager,{projectId:'synthetic',path:race}),raceJournal=join(store,'race.jsonl');let swapped=false;
- await assert.rejects(executeCleanupSelection(manager,racePlan,{journalPath:raceJournal,check:async()=>{if(swapped)return;let text='';try{text=await readFile(raceJournal,'utf8');}catch{}if(text.includes('delete_intent')){swapped=true;await rename(race,old);await symlink(outside,race,'junction');}}}),/CLEANUP_(?:UNSAFE_ITEM|REPARSE_PATH|TARGET_CHANGED)/);
- assert.equal(await readFile(join(outside,'a.pyc'),'utf8'),'same');assert.equal(await readFile(join(old,'a.pyc'),'utf8'),'same');
+ await assert.rejects(executeCleanupSelection(manager,racePlan,{journalPath:raceJournal,check:async()=>{if(swapped)return;let text='';try{text=await readFile(raceJournal,'utf8');}catch{}if(text.includes('delete_intent')){swapped=true;await rename(race,oldParent);await symlink(outside,race,'junction');}}}),/CLEANUP_(?:UNSAFE_ITEM|REPARSE_PATH|TARGET_CHANGED)/);
+ assert.equal(await readFile(join(outside,'a.pyc'),'utf8'),'same');assert.equal(await readFile(join(oldParent,'a.pyc'),'utf8'),'same');
  console.log('PASS: interrupted deletion and torn journal recovery, missing-root reconciliation, per-file revocation, exact paths, protected root and junction swap rejection.');passed=true;
 }finally{await closeCleanupNative();await fixture.finish(passed);}

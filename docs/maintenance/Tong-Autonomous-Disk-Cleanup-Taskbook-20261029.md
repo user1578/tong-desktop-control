@@ -88,9 +88,13 @@
 - pip cache（`pip cache dir / info / purge`）：https://pip.pypa.io/en/stable/cli/pip_cache/
 - pnpm store prune：https://pnpm.io/cli/store
 
-## 七、2026-10-29 本轮开发记录（未部署，未完成实际大目录清理验收）
+## 七、2026-10-29/30 本轮开发记录（0bfae12已部署，首次实删被保护规则拒绝）
 
-**正式切换已准备，待本人本机门禁：**发布代码 commit `0bfae1251e661e48fb68ad4b5753a4e32f915091` 已推送；575源码/23原生文件归档 build/verify、仅源码和三补丁的增量候选、旧版App/Manager各566源码回退快照均已核验。归档包装器真实 Preflight 输出 `PRECHECK PASS`，旧run `7b02c3f4-f393-4575-b3b5-078ce5cb592c` 健康且未改生产。确认入口：`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029142731706-9cc921a1\Open-Upgrade-Confirmation.cmd`；需由本人在Windows资源管理器双击，在独立控制台完成既有挑战。此入口只绑定 `5de2371 -> 0bfae12` 升级及必要回退，不包含新清理许可，不在窗口中删依赖。代码通过不能替代此门禁。
+**2026-10-30 JST 最新：**本人完成正式本机挑战，0bfae12双pin/Runner切换完成，窗口回执`ready-for-formal-autonomous-cleanup-mcp-test`，新run `ed658092-4b3d-43de-bf04-5d0f97f42035` READY、唯一Host27576，原清理许可未变。正式认证Gateway实测发现42工具，新run在1,380ms返回任务 `a723c80a-b1e1-4467-a6d1-949b73a0a8ef`；实物扫描后在归档验证阶段以`CLEANUP_PROTECTED_CONTENT`拒绝，**删除0字节**。根因是第三方原生依赖的`build/Release`被误当Tong发布目录，原合成用例没有覆盖该真实路径。
+
+开发版已将该目录名例外限定到已验证依赖内部，绝对Tong路径/当前pin、账户/Agent/密钥/配置保护仍生效，真实形状回归继续拒绝归档`.env`。完整实物只读核验已通过：36,323文件/592,590,773字节，735项保护/未知项保留，438,736ms，未删除。原生Read已在句柄内核对文件身份，现直接复用清单中的身份记录，省去每次哈希前后的重复stat/realpath，Execute和Delete重验保持；独立静态复核未见新增阻塞。该修正仍须新的版本绑定正式门禁，不得热改已安装0bfae12。
+
+**首轮切换记录（已完成，不重复运行旧入口）：**发布代码 commit `0bfae1251e661e48fb68ad4b5753a4e32f915091` 已推送；575源码/23原生文件归档 build/verify、仅源码和三补丁的增量候选、旧版App/Manager各566源码回退快照均已核验。归档包装器真实 Preflight 输出 `PRECHECK PASS`；`quick-trust-full-cutover-20261029142731706-9cc921a1`绑定`5de2371 -> 0bfae12`，本人随后完成该升级。此窗口没有扩大清理许可，也没有删除依赖。
 
 精确产物：`quick-trust-release-0bfae12` 23,811,877字节、`quick-trust-candidate-0bfae12` 6,159,483字节（跳过共享SDK junction）、上述回退快照12,560,464字节；另有追加Git保护修复前的未部署归档 `quick-trust-release-52b2bb1` 23,809,718字节。四处合计66,341,542字节（约63.27MiB），未复制600MB依赖，旧归档不部署也未擅删。
 

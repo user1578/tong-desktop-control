@@ -13,7 +13,10 @@ export function cleanupProtectedName(name,{dependency=false,directory=false,arch
  if(!dependency&&/(?:^|[._ -])(?:agents?|claude|rules?|skills?|workflows?)(?:[._ -]|$)/i.test(n))return true;
  if(/\.(?:db|db3|sqlite|sqlite3|mdb|accdb|sql|dump|pem|key|pfx|p12|cer|crt|kdbx|vhd|vhdx|vmdk|bak|backup|dmp|safetensors|gguf|pt|pth|ckpt|onnx|zip|7z|rar|tar|tgz)(?:-(?:wal|shm|journal))?$/i.test(n))return true;
  if(!dependency&&!archivedSource&&/^(?:package(?:-lock)?\.json|.*\.(?:json|xml|ya?ml|toml|ini|cfg|conf|lock|ps1|mjs|js|ts|py))$/i.test(n))return true;
- return directory&&/^(?:accounts?|auth|authentication|certificates?|backups?|runtime|releases?|staged(?:-.*)?)$/i.test(n);
+ if(directory&&/^(?:accounts?|auth|authentication|certificates?|backups?)$/i.test(n))return true;
+ // A verified third-party build/Release is package content. Tong production
+ // app/runtime/release roots are separately vetoed by absolute path and pins.
+ return !dependency&&directory&&/^(?:runtime|releases?|staged(?:-.*)?)$/i.test(n);
 }
 // A cache directory name is not proof that every child is disposable. Unknown
 // files stay untouched without reading their contents to guess what they are.

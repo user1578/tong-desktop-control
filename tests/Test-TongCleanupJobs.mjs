@@ -48,13 +48,13 @@ try{
  await mkdir(modules,{recursive:true});await mkdir(retained);
  const hash=b=>createHash('sha256').update(b).digest('hex'),files=[];
  const archived=async(path,body)=>{const p=join(release,...path.split('/'));await mkdir(dirname(p),{recursive:true});await writeFile(p,body);files.push({path,sha256:hash(body)});};
- await archived('code/source.tar','archive');await archived('code/source/package-lock.json','lock');for(let i=0;i<23;i++)await archived('native/node_modules/'+i+'.node','native'+i);
+ await archived('code/source.tar','archive');await archived('code/source/package-lock.json','lock');for(let i=0;i<23;i++)await archived('native/node_modules/native-pkg/build/Release/'+i+'.node','native'+i);
  await writeFile(join(release,'release-manifest.json'),JSON.stringify({commit:tag+'a'.repeat(33),files}));await writeFile(join(candidate,'package-lock.json'),'lock');await writeFile(join(candidate,'AGENTS.md'),'retain candidate rules');
  await writeFile(join(candidate,'release-restore-evidence.json'),JSON.stringify({commit:tag+'a'.repeat(33),patchChecked:true,sqliteNativeLoaded:true,nativeRestore:'exact archived hashes'}));
- for(const path of ['pkg/README.md','pkg/main.js']){for(const base of [modules,retained]){await mkdir(dirname(join(base,path)),{recursive:true});await writeFile(join(base,path),'third party '+path);}}
+ for(const path of ['pkg/README.md','pkg/main.js','native-pkg/build/Release/addon.node']){for(const base of [modules,retained]){await mkdir(dirname(join(base,path)),{recursive:true});await writeFile(join(base,path),'third party '+path);}}
  await writeFile(join(modules,'pkg','AGENTS.md'),'retain nested rules');
  const depsJobs=new TongCleanupJobs(new TongManagedCleanup({access:manager.access,stateDir:store,retainedDependencies:retained}));
- const deps=await depsJobs.start({projectId:'synthetic',path:modules});request={projectId:'synthetic',jobId:deps.jobId};const d=await wait(depsJobs);assert.equal(d.status,'completed',JSON.stringify(d));assert.equal(d.results[0].files,2);
+ const deps=await depsJobs.start({projectId:'synthetic',path:modules});request={projectId:'synthetic',jobId:deps.jobId};const d=await wait(depsJobs);assert.equal(d.status,'completed',JSON.stringify(d));assert.equal(d.results[0].files,3);
  await assert.rejects(stat(join(modules,'pkg','README.md')),{code:'ENOENT'});assert.equal(await readFile(join(modules,'pkg','AGENTS.md'),'utf8'),'retain nested rules');assert.ok((await stat(release)).isDirectory());assert.equal(await readFile(join(candidate,'AGENTS.md'),'utf8'),'retain candidate rules');
  await archived('native/node_modules/.env','synthetic credential');await writeFile(join(release,'release-manifest.json'),JSON.stringify({commit:tag+'a'.repeat(33),files}));
  const rejected=await depsJobs.start({projectId:'synthetic',path:modules});request={projectId:'synthetic',jobId:rejected.jobId};const r=await wait(depsJobs);assert.equal(r.status,'blocked');assert.equal(r.results[0].code,'CLEANUP_PROTECTED_CONTENT');assert.equal(await readFile(join(modules,'pkg','AGENTS.md'),'utf8'),'retain nested rules');

@@ -69,18 +69,20 @@ export async function cleanupInventory(target,{dependency=false,exact=false,prog
  files.sort((a,b)=>a.path.localeCompare(b.path));
  return {files,directories,protectedItems,bytes};
 }
-async function readWitness(path,witnesses,{body=true}={}){
- const before=await g.plain(path,'file');
- const value=await cleanupHandleRead(path,{size:before.size,stamp:fingerprint(before)},{body});const after=await g.plain(path,'file');
- if(fingerprint(before)!==fingerprint(after))g.fail('CLEANUP_TARGET_CHANGED');
- witnesses.set(path,{path,stamp:fingerprint(after)});return value;
+async function readWitness(path,witnesses,{body=true,expected}={}){
+ const record=expected??await g.plain(path,'file'),stamp=record.stamp??fingerprint(record);
+ // Native Read checks this exact identity under locked ancestor/file handles
+ // before opening the body. Execute checks the saved stamp again, so repeating
+ // path-based stat/realpath before and after every hash adds no protection.
+ const value=await cleanupHandleRead(path,{size:record.size,stamp},{body});
+ witnesses.set(path,{path,stamp});return value;
 }
 // Compare only the selected third-party dependency files. Source/Agent material
 // in the candidate is never opened or deleted. The retained release stays intact.
 async function verifyDependencies(target,inventory,retained,{progress,check,referenceCache=new Map()}){
  const candidate=dirname(target),tag=basename(candidate).replace(/^(?:quick-trust-)?candidate-/,''),
   release=join(dirname(candidate),basename(candidate).startsWith('quick-trust-')?'quick-trust-release-'+tag:'release-'+tag);
- const witnesses=new Map(),read=p=>readWitness(p,witnesses),digest=p=>readWitness(p,witnesses,{body:false});
+ const witnesses=new Map(),read=p=>readWitness(p,witnesses),digest=(p,expected)=>readWitness(p,witnesses,{body:false,expected});
  const manifest=JSON.parse(await read(join(release,'release-manifest.json'))),proof=JSON.parse(await read(join(candidate,'release-restore-evidence.json')));
  if(manifest.commit?.slice(0,tag.length)!==tag||proof.commit!==manifest.commit||proof.patchChecked!==true||proof.sqliteNativeLoaded!==true||proof.nativeRestore!=='exact archived hashes')g.fail('CLEANUP_ARCHIVE_INVALID');
  if(!Array.isArray(manifest.files))g.fail('CLEANUP_ARCHIVE_INVALID');
@@ -106,13 +108,13 @@ async function verifyDependencies(target,inventory,retained,{progress,check,refe
    const info=await g.plain(saved,'file').catch(()=>g.fail('CLEANUP_DEPENDENCY_MISMATCH'));if(info.size!==item.size)g.fail('CLEANUP_DEPENDENCY_MISMATCH');
    const stamp=fingerprint(info),cached=referenceCache.get(saved);
    let digest=cached?.stamp===stamp?cached.digest:null;
-   if(!digest){digest=await readWitness(saved,witnesses,{body:false});referenceCache.set(saved,{stamp,digest});}
+   if(!digest){digest=await readWitness(saved,witnesses,{body:false,expected:{size:info.size,stamp}});referenceCache.set(saved,{stamp,digest});}
    else witnesses.set(saved,{path:saved,stamp});
    expected=digest;
   }
   // Unknown files with no retained counterpart are rejected before their body
   // is opened; only a proven dependency path proceeds to content comparison.
-  const actual=await digest(p);
+  const actual=await digest(p,item);
   if(witnesses.get(p).stamp!==item.stamp)g.fail('CLEANUP_TARGET_CHANGED');
   witnesses.delete(p);
   if(actual!==expected)g.fail('CLEANUP_DEPENDENCY_MISMATCH');
