@@ -92,6 +92,8 @@
 
 **2026-10-30 JST 最新：**本人完成正式本机挑战，0bfae12双pin/Runner切换完成，窗口回执`ready-for-formal-autonomous-cleanup-mcp-test`，新run `ed658092-4b3d-43de-bf04-5d0f97f42035` READY、唯一Host27576，原清理许可未变。正式认证Gateway实测发现42工具，新run在1,380ms返回任务 `a723c80a-b1e1-4467-a6d1-949b73a0a8ef`；实物扫描后在归档验证阶段以`CLEANUP_PROTECTED_CONTENT`拒绝，**删除0字节**。根因是第三方原生依赖的`build/Release`被误当Tong发布目录，原合成用例没有覆盖该真实路径。
 
+修正版代码 `f81d1d0ddcc6da354cb475be628e6b79ca822516` 已提交推送；对应release/candidate（同后缀）build/verify、575源码/23原生归档与增量暂存核验通过。回退快照 `quick-trust-full-cutover-20261029150746835-47dc17a5` 保存当前0bfae12双端各575源码，归档包装器Preflight实测通过。**新的本人确认入口**为该快照内 `Open-Upgrade-Confirmation.cmd`，直接启动/保留窗口及`--check`均已验证；此入口只绑定`0bfae12 -> f81d1d0`和必要回退，原批准不能替代新源码摘要。批准后核对完成回执/双pin/健康/原许可，使用正式MCP `tong_disk_cleanup_job` 对同一任务a723c80a...执行resume，再核对单套真实结果。不能重复start同一幂等键却把旧blocked结果当成已恢复。网页宿主当前工具目录仍只有旧Plan/Execute；正式Gateway新42项已证实，网页新工具发现/一语请求仍需对应真实验收。
+
 开发版已将该目录名例外限定到已验证依赖内部，绝对Tong路径/当前pin、账户/Agent/密钥/配置保护仍生效，真实形状回归继续拒绝归档`.env`。完整实物只读核验已通过：36,323文件/592,590,773字节，735项保护/未知项保留，438,736ms，未删除。原生Read已在句柄内核对文件身份，现直接复用清单中的身份记录，省去每次哈希前后的重复stat/realpath，Execute和Delete重验保持；独立静态复核未见新增阻塞。该修正仍须新的版本绑定正式门禁，不得热改已安装0bfae12。
 
 **首轮切换记录（已完成，不重复运行旧入口）：**发布代码 commit `0bfae1251e661e48fb68ad4b5753a4e32f915091` 已推送；575源码/23原生文件归档 build/verify、仅源码和三补丁的增量候选、旧版App/Manager各566源码回退快照均已核验。归档包装器真实 Preflight 输出 `PRECHECK PASS`；`quick-trust-full-cutover-20261029142731706-9cc921a1`绑定`5de2371 -> 0bfae12`，本人随后完成该升级。此窗口没有扩大清理许可，也没有删除依赖。

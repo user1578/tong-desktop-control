@@ -2,6 +2,8 @@
 
 ## 2026-10-30 JST 最新：0bfae12正式升级已完成，首次大任务安全拒绝，修正已通过实物只读验证
 
+**接手直接使用：**修正代码 `f81d1d0ddcc6da354cb475be628e6b79ca822516` 已推送，release/candidate-f81d1d0核验与正式Preflight通过；当前0bfae12回退快照为`quick-trust-full-cutover-20261029150746835-47dc17a5`（双端各575源码）。本人双击此新快照内 `Open-Upgrade-Confirmation.cmd` 完成本机门禁；不要重跑旧5de2371基线入口。新窗口完成后核实回执和正式健康，再从正式MCP resume任务`a723c80a-b1e1-4467-a6d1-949b73a0a8ef`，不是start重复幂等键。已有正式Gateway认证验收脚本在首轮快照`quick-trust-full-cutover-20261029142731706-9cc921a1/Mcp-Cleanup-Acceptance.mjs`，`resume-first`模式已绑定f81d1d0并调用真实MCP resume；它只在内存处理认证，不输出或存储Owner/Token。真实回执`mcp-autonomous-cleanup-acceptance.json`也在首轮快照，现只有首次blocked证据；job-started原始控制台记录的启动耗时1380ms，不把旧脚本误标的整项时长当启动耗时。当前新品尚待此新门禁，依赖删除仍0字节。
+
 本人完成修复后的本机确认窗口；正式双pin为0bfae12，run `ed658092-4b3d-43de-bf04-5d0f97f42035` READY、唯一Host27576、原许可revision未变。正式认证Gateway实测42工具；新run在1,380ms返回真实job `a723c80a-b1e1-4467-a6d1-949b73a0a8ef`，扫描后因`build/Release`误分类在归档阶段拒绝，新增实际删除0。开发修正保留所有硬保护，仅允许已证明第三方依赖中的常规Release/runtime目录；真实全量只读核验36,323文件/592,590,773字节通过（438.736秒），并移除原生Read已覆盖的重复元数据读取。独立复核未见新增阻塞，修正尚须新版本绑定，不直接热改生产。准确说明见[任务书第七节](Tong-Autonomous-Disk-Cleanup-Taskbook-20261029.md#七2026-10-2930-本轮开发记录0bfae12已部署首次实删被保护规则拒绝)。下方首轮准备状态是历史，不要重跑旧5de2371基线入口。
 
 ## 2026-10-29 自主清理代码已实现，生产与实删仍待正式门禁
