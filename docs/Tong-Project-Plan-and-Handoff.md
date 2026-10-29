@@ -4,10 +4,10 @@
 
 ### 当前执行入口（2026-10-29，跨对话先读）
 
-**新决定：优先完成Tong通用自主缓存清理能力，而非再对10套历史候选打单点补丁。** 新专项任务书：[Tong通用磁盘清理能力：分类目录、持久任务与验收](maintenance/Tong-Autonomous-Disk-Cleanup-Taskbook-20261029.md)，按A/B/C级分类，受管长任务、断线查询/取消、真实C/D缓存授权，验收须用既有约38,108文件/600MB候选完成整套Plan→Execute。当前10套编译缓存5,310文件/13,199,400字节已删，**整套候选0/10**。本机既有`D:\Tong\state`持久许可不能覆盖C盘及其他根；新增权限须本人单独授权。后续若指定Codex，使用其原生Desktop会话按新任务书实施；当前阶段只制定任务与更新MD，未完成上线。
+**2026-10-29 用户最终清理规则（本段优先）：** 用户说“清理空间/清理缓存”即要求直接清理安全临时缓存，无须额外逐项确认；用户给出精确普通删除对象，直接按路径执行，不先全盘扫描。`AGENTS.md`/`agent.md`、其它Agent说明和MD、账号凭据/浏览器会话、Git、数据库、用户唯一文件、生产/事故证据为硬保护；旧候选含这些文件时只删除可恢复的重复`node_modules`等子树，保留父目录内受保护内容。**准确执行规则、A级白名单、限时与长任务设计、验收目标见[最新专项任务书](maintenance/Tong-Autonomous-Disk-Cleanup-Taskbook-20261029.md)。**不增加每次本机挑战；底层现有权限不足时不能绕过，只处理现有受管权限允许的对象并一次说明缺口。当前10套编译缓存已删5,310文件/13,199,400字节；十套约5.636GiB的主体重复依赖仍未清理；新能力尚未部署。
 
 
-**最新真实进度（2026-10-29）：**新生产升级窗口已返回exit 0，网页正式MCP独立Plan→Execute已通过。10套Quick Trust历史候选中的`temp/node-compile-cache`现已全部实际删除，共5,310文件、13,199,400逻辑字节；此前3项被运行引用核验拒绝，本次实时复核通过后才受管删除。**十套完整约5.636GiB候选仍未删（0/10）**。两次整套正式Plan超时、一个经并发优化的开发只读大候选测试仍超时并已撤回改动；下一步须完成受管长任务Plan（或经实物验证的性能修复），不重复删除小缓存或重做跨调用Plan持久化修复。详见[最终清理交接文档顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。本次本机MD已更新，GitHub连接写入返回403，尚未同步到远程分支；不要把本机修改丢弃。
+**最新真实进度（2026-10-29）：**新生产升级窗口已返回exit 0，网页正式MCP独立Plan→Execute已通过。10套Quick Trust历史候选中的`temp/node-compile-cache`现已全部实际删除，共5,310文件、13,199,400逻辑字节；此前3项被运行引用核验拒绝，本次实时复核通过后才受管删除。**十套完整约5.636GiB候选仍未删（0/10）**。两次整套正式Plan超时、一个经并发优化的开发只读大候选测试仍超时并已撤回改动；下一步须完成受管长任务Plan（或经实物验证的性能修复），不重复删除小缓存或重做跨调用Plan持久化修复。详见[最终清理交接文档顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。本次记录已通过受管本地Git提交推送，历史GitHub连接写入403不影响当前本地Git推送；最终以本分支HEAD为准。
 
 
 **本轮更新：**跨调用清理Plan持久化修复已绑定新发布commit `5de2371`；新release/candidate和旧版`9850cc4`回退快照已生成并通过归档包装器Preflight，生产仍维持9850cc4、ready。真实批准入口为 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029044748358-b9fdfe86\Open-Upgrade-Confirmation.cmd`，尚须用户在独立本机窗口双击完成哈希绑定。批准后确认新双pin，再对`quick-trust-candidate-d780561\temp\node-compile-cache`用网页**分离的正式MCP Plan→Execute**测试。详细证据/边界/后续十套清理清单见[维护交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。**目前没有部署新生产，也没有新增历史候选删除。**
