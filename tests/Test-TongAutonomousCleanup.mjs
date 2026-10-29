@@ -28,6 +28,8 @@ try{
   await assert.rejects(manager.plan({projectId:'synthetic',path:cache}),/CLEANUP_PROTECTED_CONTENT/);
   assert.equal(await readFile(join(cache,'AGENTS.md'),'utf8'),'synthetic protected bytes');
  }
+ const gitRoot=join(root,'git-project'),gitCache=join(gitRoot,'__pycache__');await mkdir(join(gitRoot,'.git'),{recursive:true});await mkdir(gitCache);await writeFile(join(gitCache,'uncommitted.pyc'),'retain Git state');
+ await assert.rejects(manager.plan({projectId:'synthetic',path:gitCache}),/CLEANUP_GIT_WORKTREE_PROTECTED/);assert.equal(await readFile(join(gitCache,'uncommitted.pyc'),'utf8'),'retain Git state');
  console.log('PASS: mixed caches protect Agent rules, identities, Git, databases and sessions.');
  passed=true;
 }finally{await fixture.finish(passed);}

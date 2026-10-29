@@ -35,6 +35,14 @@ async function checkAncestors(path){
     await plain(current);
   }
 }
+async function assertNoGitAncestor(target){
+  for(let dir=dirname(target);;dir=dirname(dir)){
+    for(const name of ['.git','.hg','.svn']){
+      try{await lstat(join(dir,name));fail('CLEANUP_GIT_WORKTREE_PROTECTED');}catch(e){if(e.code!=='ENOENT')throw e;}
+    }
+    if(dirname(dir)===dir)break;
+  }
+}
 async function safeRead(path,{dependency=false}={}){
   const parts=relative(parse(path).root,path).split(/[\\/]/);
   if(parts.some((name,i)=>cleanupProtectedName(name,{dependency,archivedSource:true,directory:i<parts.length-1})))fail('CLEANUP_PROTECTED_CONTENT');
@@ -280,6 +288,7 @@ export class TongManagedCleanup{
     const {root,revision}=await safeAuthorizedRoot(this.access,this.authorization,projectId,target);
     assertTarget(root,target);
     if(basename(target).toLowerCase()==='node_modules')fail('CLEANUP_USE_DURABLE_JOB');
+    await assertNoGitAncestor(target);
     await checkAncestors(target);
     await plain(target,'directory');
     // Veto protected names before historic verification can open a file body.
@@ -319,6 +328,7 @@ export class TongManagedCleanup{
     await audit('cleanup_begin');
     try{
       for(const item of next.inventory){
+        await assertNoGitAncestor(plan.target);
         await checkAncestors(item.path);
         const current=await plain(item.path,'file');
         if(current.size!==item.size||current.mtimeMs!==item.mtimeMs||current.ctimeMs!==item.ctimeMs||current.ino!==item.ino)fail('CLEANUP_TARGET_CHANGED');
