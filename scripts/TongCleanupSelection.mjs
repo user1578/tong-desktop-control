@@ -227,6 +227,7 @@ export async function executeCleanupSelection(manager,plan,{progress=async()=>{}
   try{await g.checkAncestors(p);await cleanupHandleDelete(p);}catch(e){if(!['ENOTEMPTY','EEXIST','ENOENT','EPERM','EACCES','CLEANUP_WIN32_145','CLEANUP_WIN32_2','CLEANUP_WIN32_3','CLEANUP_WIN32_5','CLEANUP_WIN32_32'].includes(e.code))throw e;}
  }
  const freeBytesAfter=await cleanupFreeBytes(dirname(plan.target));
- const result={path:plan.target,files,logicalBytes,freeBytesBefore,freeBytesAfter,protectedCount:current.protectedItems.length,protectedItems:current.protectedItems.slice(0,100),skipped,ambiguousMissing:ambiguous};
+ const restoreStamp=plan.dependency?plan.evidence.witnesses.find(w=>w.path===join(dirname(plan.target),'release-restore-evidence.json'))?.stamp:undefined;
+ const result={path:plan.target,files,logicalBytes,freeBytesBefore,freeBytesAfter,protectedCount:current.protectedItems.length,protectedItems:current.protectedItems.slice(0,100),skipped,ambiguousMissing:ambiguous,restoreStamp};
  await journal({event:'cleanup_result',...result});return result;
 }

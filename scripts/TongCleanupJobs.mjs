@@ -61,7 +61,7 @@ export class TongCleanupJobs{
      if(prior.requestedPath!==(path?g.safePath(path):undefined)||(prior.requestedMode??prior.mode)!==mode)g.fail('CLEANUP_IDEMPOTENCY_CONFLICT');return this.view(prior);
     }
    }
-   const targets=path?[g.safePath(path)]:await this.discover(projectId);
+   const targets=path?[g.safePath(path)]:await this.discover(projectId,previous);
    if(!targets.length)g.fail('CLEANUP_NO_AUTHORIZED_TARGETS');
    let outstanding=0;
    for(const prior of previous){
@@ -74,16 +74,21 @@ export class TongCleanupJobs{
   }finally{await release();}
   await this.launch(state);return this.view(state);
  }
- async discover(projectId){
+ async discover(projectId,previous=[]){
   const grant=(await this.manager.authorization.read()).grants.find(x=>x.id===projectId&&x.enabled);
   if(!grant)g.fail('CLEANUP_PERMISSION_REQUIRED');
   const paths=[];
+  const completed=new Map(previous.filter(s=>s.projectId===projectId).flatMap(s=>(s.results??[]).filter(r=>r.status==='completed'&&r.restoreStamp).map(r=>[r.path,r.restoreStamp])));
   // Existing Tong index, no disk-wide recursion and no already-removed temp cache.
   const group=join(grant.root,'p27-autonomy-candidate-20261017');
   try{
    await g.checkAncestors(group);
    for(const name of await readdir(group))if(/^quick-trust-candidate-[a-f0-9]{7}$/.test(name)){
-    const p=join(group,name,'node_modules');try{await g.plain(p,'directory');paths.push(p);}catch{}
+    const p=join(group,name,'node_modules');try{
+     await g.plain(p,'directory');const proof=await g.plain(join(group,name,'release-restore-evidence.json'),'file');
+     const stamp=[proof.dev,proof.ino,proof.size,proof.mtimeMs,proof.ctimeMs,proof.nlink].join(':');
+     if(completed.get(p)!==stamp)paths.push(p);
+    }catch{}
    }
   }catch{}
   // Only immediate known cache roots inside each pre-existing authorized scope.

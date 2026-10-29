@@ -137,6 +137,8 @@ async function pinnedProtected(target,productionRoot){
     const doc=JSON.parse(await readFile(join(productionRoot,'run',name),'utf8').catch(()=>fail('CLEANUP_PIN_UNAVAILABLE')));
     if(!doc?.releaseRoot||!isAbsolute(doc.releaseRoot))fail('CLEANUP_PIN_UNAVAILABLE');
     if(within(target,doc.releaseRoot)||within(doc.releaseRoot,target))fail('CLEANUP_PIN_PROTECTED');
+    const candidate=target.match(/[\\/](?:quick-trust-)?candidate-([a-f0-9]{7,12})(?=[\\/]|$)/i);
+    if(candidate&&typeof doc.commit==='string'&&doc.commit.toLowerCase().startsWith(candidate[1].toLowerCase()))fail('CLEANUP_PIN_PROTECTED');
   }
 }
 // An optional immutable legacy candidate may be deleted only when an adjacent

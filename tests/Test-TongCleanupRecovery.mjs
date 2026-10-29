@@ -3,7 +3,7 @@ import {mkdir,writeFile,readFile,stat,rename,symlink,readdir,lstat,appendFile,un
 import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {createTongTestDirectory} from './fixtures/TongTestDirectory.mjs';
-import {TongManagedCleanup} from '../scripts/TongManagedCleanup.mjs';
+import {TongManagedCleanup,cleanupGuards} from '../scripts/TongManagedCleanup.mjs';
 import {prepareCleanupSelection,executeCleanupSelection} from '../scripts/TongCleanupSelection.mjs';
 import {closeCleanupNative} from '../scripts/TongCleanupNative.mjs';
 const fixture=await createTongTestDirectory('tong-cleanup-recovery-');let passed=false;
@@ -11,6 +11,8 @@ try{
  const root=join(fixture.path,'root'),store=join(fixture.path,'store');await mkdir(root);await mkdir(store);
  const grant={id:'synthetic',root,enabled:true,revision:'initial',scopes:[{relativeRoot:'.',categories:['cache']}]},save=()=>writeFile(join(store,'disk-cleanup-grants.json'),JSON.stringify({schemaVersion:1,grants:[grant]}));await save();
  const access={listProjects:async()=>[{id:'synthetic',root,status:'enabled',available:true,effectiveCapabilities:['project.read','project.write']}]},manager=new TongManagedCleanup({access,stateDir:store});
+ const fakeRuntime=join(fixture.path,'synthetic-runtime');await mkdir(join(fakeRuntime,'run'),{recursive:true});for(const name of ['release-pin.json','manager-pin.json'])await writeFile(join(fakeRuntime,'run',name),JSON.stringify({commit:'abcdef0'+'a'.repeat(33),releaseRoot:join(root,'retained-archive')}));
+ await assert.rejects(cleanupGuards.pinnedProtected('D:\\Tong\\state\\synthetic\\quick-trust-candidate-abcdef0\\node_modules',fakeRuntime),/CLEANUP_PIN_PROTECTED/);
  const make=async name=>{const p=join(root,name);await mkdir(p);await writeFile(join(p,'a.pyc'),'a');await writeFile(join(p,'b.pyc'),'b');return p;};
  const cache=await make('__pycache__'),plan=await prepareCleanupSelection(manager,{projectId:'synthetic',path:cache}),journal=join(store,'interrupted.jsonl');
  const cancel=Error('stop');cancel.code='CLEANUP_CANCELLED';
