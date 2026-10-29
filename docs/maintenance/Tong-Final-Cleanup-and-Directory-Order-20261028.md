@@ -1,5 +1,15 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30 01:16 JST：网页ChatGPT接手剩余9套持久清理（最新）
+
+- 用户已刷新Tong插件连接；新`tong_disk_cleanup_run`、`tong_disk_cleanup_job`均在网页会话可调用。正式生产独立核对App/Manager双pin均`f81d1d0ddcc6da354cb475be628e6b79ca822516`，原run `1f5c6443-b05f-4459-a559-2b17e27f0015` READY，Task Running、唯一Host、端口7676/7677/18765均存在。持久授权`tong-state-cleanup`范围和revision未变。
+- 首套已完成任务`a723c80a-b1e1-4467-a6d1-949b73a0a8ef`正式回执：`d780561/node_modules`删除36,323文件、592,590,773字节，保留735受保护项。独立元数据核验匹配release、候选内`AGENTS.md`仍在，任务记录D盘空闲从122,497,609,728增加到123,132,186,624字节（期间净增，不将全部增量归因于任务）。
+- 剩余9项原有持久批任务ID `69e8a4f6-ac31-4bf2-906c-e641177c1a87`（idempotencyKey=`batch-20261029`）。**严禁重新发起同目标新清理任务或绕过受管删除接口**。第一个`024d5b0/node_modules`返回`CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN`已安全跳过。恢复原任务后第二个`0a2da3c/node_modules`正式完成：删除36,323文件、592,590,575逻辑字节；候选根`AGENTS.md`和匹配release仍在，保留735项保护内容。两套总删除**72,646文件、1,185,181,348逻辑字节（约1.10GiB）**。
+- 批任务继续到第三个`1a78e48/node_modules`时worker出现`CLEANUP_WORKER_INTERRUPTED`，先后两次被状态接口检测死亡，第二次恢复后仅核验113文件便再次中断；**本项未删除、进度需以持久记录为准**。该批任务目前`status=blocked`、`recoverable=true`、`index=2`、`workerAlive=false`，最后worker PID 32728。不能无限重复`resume`导致反复从头扫描。应先查本机spawn/worker进程退出原因、异常记录、子进程生命周期/Job对象、原子状态更新遗留.tmp；保持正式Gateway/生产，不清理事故取证。
+- 曾一次网页工具通信返回`McpServerError: Session terminated`，随后同一jobId可继续查询并证明原worker仍执行；不能把网页连接终止直接等同于worker终止。持久任务源码`scripts/TongCleanupJobs.mjs`使用`spawn(process.execPath,[...,'--worker'])`及`detached:true`、`stdio:'ignore'`，当前没有可靠worker退出原因与stderr；新增诊断应最小化且不记录敏感内容。Windows Application事件的最近错误查询未返回对应项，不足以证明没有崩溃。
+- 后续：先修复稳定的持久worker生命周期/退出码审计，隔离测试跨请求/多个候选连续运行、跨服务重启恢复，然后继续**同一个**批任务，逐套保存真实删除回执、检查AGENTS.md/release/staged、D盘空闲、生产健康；`024d5b0`被拒应单独定向复核引用，不绕过。未完成任务不是成功完成；正式生产变更仍按版本pin/回退门禁走。
+
+
 ## 2026-10-30 JST 最新：0bfae12正式升级已完成，首次大任务安全拒绝，修正已通过实物只读验证
 
 **接手直接使用：**修正代码 `f81d1d0ddcc6da354cb475be628e6b79ca822516` 已推送，release/candidate-f81d1d0核验与正式Preflight通过；当前0bfae12回退快照为`quick-trust-full-cutover-20261029150746835-47dc17a5`（双端各575源码）。本人双击此新快照内 `Open-Upgrade-Confirmation.cmd` 完成本机门禁；不要重跑旧5de2371基线入口。新窗口完成后核实回执和正式健康，再从正式MCP resume任务`a723c80a-b1e1-4467-a6d1-949b73a0a8ef`，不是start重复幂等键。已有正式Gateway认证验收脚本在首轮快照`quick-trust-full-cutover-20261029142731706-9cc921a1/Mcp-Cleanup-Acceptance.mjs`，`resume-first`模式已绑定f81d1d0并调用真实MCP resume；它只在内存处理认证，不输出或存储Owner/Token。真实回执`mcp-autonomous-cleanup-acceptance.json`也在首轮快照，现只有首次blocked证据；job-started原始控制台记录的启动耗时1380ms，不把旧脚本误标的整项时长当启动耗时。当前新品尚待此新门禁，依赖删除仍0字节。
