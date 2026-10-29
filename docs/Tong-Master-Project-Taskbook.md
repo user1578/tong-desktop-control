@@ -1,6 +1,8 @@
 # Tong Desktop Control — 全项目总任务书
 
-> **2026-10-28当前执行范围**：生产升级/回退、一次性限定清理许可与小型MCP验收、增量盘点及最终清理/迁移顺序；不提前进入其他Provider或Codex调度。当前实测及本机批准状态见[最终清理与目录归并交接](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)，本页较早的“本轮只读”范围为历史记录，不覆盖用户这次新授权。正式生产和真实删除仍以实际本机门禁与回执为准。
+> **2026-10-29新增最高优先专项**：用户要求Tong今后能从ChatGPT直接完成通用Windows与开发缓存清理，不再每次受困于几万文件同步Plan超时。分类白/灰/禁止清单、可撤销本机授权、受管持久扫描/Plan/Execute、进度/取消/恢复、真实单套38k文件验收、完整10套5.636GiB清理顺序和官方资料，统一见[通用磁盘清理开发任务书](maintenance/Tong-Autonomous-Disk-Cleanup-Taskbook-20261029.md)。当前仅已删十套候选内部编译缓存5,310文件/13,199,400字节，**完整候选仍0/10**，能力尚未上线。先完成这一专项再推进旧根归类和其他Provider，不能将现有D:\Tong\state许可扩成全C/D默认删除权。
+
+> **2026-10-28历史执行范围**：生产升级/回退、一次性限定清理许可与小型MCP验收、增量盘点及最终清理/迁移顺序；不提前进入其他Provider或Codex调度。当前实测及本机批准状态见[最终清理与目录归并交接](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)，本页较早的“本轮只读”范围为历史记录，不覆盖用户这次新授权。正式生产和真实删除仍以实际本机门禁与回执为准。
 
 > **2026-10-27用户最终产品决定**：[22项Grill-Me需求定稿](Tong-GrillMe-Final-Decisions-20261027.md)；跨新对话和新电脑维护参见[零长交接及修复指南](Tong-New-Chat-Repair-Guide.md)。本总任务书是全局规划，需求取舍以用户已确认的决定为准，不能把未来实现目标说成已上线。
 
@@ -32,7 +34,7 @@
 | F07 | 多Provider统一 | Codex、DeepSeek Harness、Claude、Zcode/Zode、Work Buddy等经过Tong统一调用 | Codex已用，其余多为开发/协议调研 |
 | F08 | 多Agent编排 | ChatGPT统筹多Agent依赖和结果交接、同项目冲突保护、单目标验收 | 合成/开发阶段 |
 | F09 | 资源观测 | C/D磁盘容量/目录、RAM/CPU/GPU、进程/启动项/服务、网络与系统日志快照 | C/D/RAM/Tong递归/进程已实测，其余待扩展 |
-| F10 | 电脑清理维护 | 查找垃圾与大文件、识别重复环境、精确删除、对比释放空间、长期整理 | Tong两处npm缓存清理实测，通用工作流待开发 |
+| F10 | 电脑清理维护 | 发现/分类临时文件及缓存、持久长任务Plan/Execute、撤权、断线续查、真实释放空间核验 | 两批历史缓存及十套编译缓存已实删；完整5.636GiB候选0/10，38k文件同步Plan超时；[新专项任务书](maintenance/Tong-Autonomous-Disk-Cleanup-Taskbook-20261029.md)待开发验收 |
 | F11 | 生产稳定性 | 原生进程监护、启动、故障诊断/恢复、版本pin/回滚、真实重启自动恢复 | 部分实现；native fast-fail及MONITOR_FAILED根因未解决 |
 | F12 | 开发与知识管理 | 合理目录、AGENTS/任务书、GitHub代码记录、证据分层、受控升级及测试 | 进行中，D盘四个旧根未归并 |
 
