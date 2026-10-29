@@ -1,5 +1,22 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30：worker退出原因捕捉开发补丁（隔离已验，未部署）
+
+**当前真实状态**：正式生产仍`f81d1d0ddcc6da354cb475be628e6b79ca822516`、原run `1f5c6443-b05f-4459-a559-2b17e27f0015` READY、唯一Host；持久任务`69e8a4f6-ac31-4bf2-906c-e641177c1a87`继续停在index 2的`1a78e48`，`workerPid=32728`已不存在，状态`CLEANUP_WORKER_INTERRUPTED`，已完成`d780561`和`0a2da3c`各36,323文件、合计1,185,181,348逻辑字节；`024d5b0`因运行引用不明保留。**本次没有再次resume，没有新增删除。**
+
+定向只读核对Windows Application/System相关时窗未发现可归因的异常事件；无法据此断言没有崩溃或已经查明根因。源码`TongCleanupJobs.mjs`现役Worker以`detached:true,stdio:'ignore'`启动，因此正常退出、可捕获的JS异常与非正常强杀缺乏区分证据。
+
+**开发树最小诊断补丁（尚待正式受控发布）：**
+
+- worker每次持久进度写入仅增加`workerStats`的PID、RSS、heapUsed、进程存活时间，不采集文件正文/凭据；
+- 每次Node正常或可捕获异常退出，写一份限量的`jobId.worker-PID.exit.json`，仅含退出码、脱敏错误代码、时间、PID、异常来源；崩溃或被强杀可能无此记录；
+- `tong_disk_cleanup_job(action=status)`对于已中断且PID不在的任务只读呈现`workerExit.recorded=true/false`和经校验的退出元信息；无记录时**不猜测**是Windows进程限制、OOM还是原生崩溃；
+- 新增真实独立Node worker退出证据检查，和同一个worker连续删除两个合成缓存的隔离回归；原核心/跨调用/Gateway/元数据/语法测试均通过。
+- 未改授权、保护规则、删除执行逻辑、MCP公开参数、其他Agent或用户文件；没有为本次重新复制大依赖。生产更改仍须绑定当前pin的正式release/candidate、预检、回退快照及本机挑战。不要以诊断补丁通过模拟测试宣布故障已修复。
+
+**继续处理顺序**：正式升级此诊断补丁后，不新建批任务，只恢复同一个`69e8a4f6-ac31-4bf2-906c-e641177c1a87`一次。若再中断，先读`workerExit`和`workerStats`与现役健康、进程事件，再定位最小修复并继续旧job，不无界重试。清理任务收尾后接历史根归类、生产长期稳定和Codex Desktop原生会话/Windows操作、多Agent工作。
+
+
 ## 2026-10-30 01:16 JST：网页ChatGPT接手剩余9套持久清理（最新）
 
 - 用户已刷新Tong插件连接；新`tong_disk_cleanup_run`、`tong_disk_cleanup_job`均在网页会话可调用。正式生产独立核对App/Manager双pin均`f81d1d0ddcc6da354cb475be628e6b79ca822516`，原run `1f5c6443-b05f-4459-a559-2b17e27f0015` READY，Task Running、唯一Host、端口7676/7677/18765均存在。持久授权`tong-state-cleanup`范围和revision未变。

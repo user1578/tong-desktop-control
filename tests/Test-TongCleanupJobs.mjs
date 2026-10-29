@@ -24,6 +24,15 @@ try{
  assert.ok(performance.now()-start<10000);assert.equal(job.status,'queued');
  request={projectId:'synthetic',jobId:job.jobId};
  const done=await wait(new TongCleanupJobs(manager));assert.equal(done.status,'completed',JSON.stringify(done));assert.equal(done.results[0].files,1);
+ assert.ok(done.workerStats?.rssBytes>0&&done.workerStats?.heapUsedBytes>0,'durable worker memory snapshot');
+ // Completion status can be written just before the worker exits.
+ let exitWitness=null;
+ for(let i=0;i<60;i++){
+  try{exitWitness=JSON.parse(await readFile(join(store,'disk-cleanup-jobs',job.jobId+'.worker-'+done.workerPid+'.exit.json'),'utf8'));break;}
+  catch{await new Promise(r=>setTimeout(r,100));}
+ }
+ assert.ok(exitWitness,'worker exit diagnostic must persist across process boundary');
+ assert.equal(exitWitness.exitCode,0);assert.equal(exitWitness.reason,'normal');
  await assert.rejects(stat(join(cache,'a.pyc')),{code:'ENOENT'});
  for(const rel of protectedPaths)assert.equal(await readFile(join(cache,rel),'utf8'),'protected synthetic value');
  assert.equal(await readFile(elsewhere,'utf8'),'unique');assert.ok((await lstat(join(cache,'junction'))).isSymbolicLink());
@@ -58,5 +67,33 @@ try{
  await assert.rejects(stat(join(modules,'pkg','README.md')),{code:'ENOENT'});assert.equal(await readFile(join(modules,'pkg','AGENTS.md'),'utf8'),'retain nested rules');assert.ok((await stat(release)).isDirectory());assert.equal(await readFile(join(candidate,'AGENTS.md'),'utf8'),'retain candidate rules');
  await archived('native/node_modules/.env','synthetic credential');await writeFile(join(release,'release-manifest.json'),JSON.stringify({commit:tag+'a'.repeat(33),files}));
  const rejected=await depsJobs.start({projectId:'synthetic',path:modules});request={projectId:'synthetic',jobId:rejected.jobId};const r=await wait(depsJobs);assert.equal(r.status,'blocked');assert.equal(r.results[0].code,'CLEANUP_PROTECTED_CONTENT');assert.equal(await readFile(join(modules,'pkg','AGENTS.md'),'utf8'),'retain nested rules');
- console.log('PASS: detached durable cache/dependency deletion, idempotency, mixed protection, links, mutation, revoked grants, retained release and third-party README deletion.');passed=true;
+ // One durable worker must complete multiple independent cache targets.
+ const batchRoot=join(fixture.path,'batch-root');await mkdir(batchRoot);
+ const batchGrants=JSON.parse(await readFile(join(store,'disk-cleanup-grants.json'),'utf8'));
+ batchGrants.grants.push({id:'batch-cache',root:batchRoot,enabled:true,revision:'batch-one',scopes:[{relativeRoot:'.',categories:['cache']}]});
+ await writeFile(join(store,'disk-cleanup-grants.json'),JSON.stringify(batchGrants));
+ for(const name of ['__pycache__','node-compile-cache']){await mkdir(join(batchRoot,name));await writeFile(join(batchRoot,name,'test.pyc'),'disposable');}
+ const batchJobs=new TongCleanupJobs(manager);
+ const batch=await batchJobs.start({projectId:'batch-cache',idempotencyKey:'two-caches'});
+ request={projectId:'batch-cache',jobId:batch.jobId};
+ const batchDone=await wait(batchJobs);assert.equal(batchDone.status,'completed',JSON.stringify(batchDone));
+ assert.equal(batchDone.results.length,2);assert.ok(batchDone.results.every(x=>x.status==='completed'));
+ for(const name of ['__pycache__','node-compile-cache'])await assert.rejects(stat(join(batchRoot,name,'test.pyc')),{code:'ENOENT'});
+ // Simulate a persisted nonterminal status after a worker has exited;
+ // the status interface must expose recorded exit evidence without guessing.
+ const batchStatePath=join(store,'disk-cleanup-jobs',batch.jobId+'.json');
+ let witness;
+ for(let i=0;i<60;i++){
+  try{witness=JSON.parse(await readFile(join(store,'disk-cleanup-jobs',batch.jobId+'.worker-'+batchDone.workerPid+'.exit.json'),'utf8'));break;}
+  catch{await new Promise(r=>setTimeout(r,100));}
+ }
+ assert.equal(witness?.exitCode,0);
+ const stale=JSON.parse(await readFile(batchStatePath,'utf8'));
+ stale.status='verifying';stale.phase='verifying';
+ await writeFile(batchStatePath,JSON.stringify(stale));
+ const statusWithExit=await batchJobs.control({projectId:'batch-cache',jobId:batch.jobId,action:'status'});
+ assert.equal(statusWithExit.code,'CLEANUP_WORKER_INTERRUPTED');
+ assert.equal(statusWithExit.workerExit?.recorded,true);
+ assert.equal(statusWithExit.workerExit?.exitCode,0);
+ console.log('PASS: detached durable multi-target cache cleanup, readable exit diagnostics, idempotency, protection, links, mutation, revocation and retained release.');passed=true;
 }finally{await fixture.finish(passed);}

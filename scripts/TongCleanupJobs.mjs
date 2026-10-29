@@ -1,4 +1,5 @@
 import {mkdir,readFile,unlink,readdir,open} from 'node:fs/promises';
+import {writeFileSync} from 'node:fs';
 import {join,dirname,basename,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
@@ -39,7 +40,25 @@ export class TongCleanupJobs{
   if(!terminal.has(state.status)&&Date.now()-Date.parse(state.updatedAt)>60000)return {...publicState,status:'blocked',code:'CLEANUP_NO_PROGRESS',recoverable:true,workerAlive:alive(state.workerPid)};
   return publicState;
  }
- async status({projectId,jobId}){return this.view(await this.load(projectId,jobId));}
+ async detailedView(state){
+  const view=this.view(state);
+  if(view.code!=='CLEANUP_WORKER_INTERRUPTED'||!state.workerPid)return view;
+  // An absent witness means the process did not reach JS normal/exception exit
+  // handling. Do not speculate about native crash, external kill or Job limits.
+  let witness=null;
+  try{
+   const p=join(this.dir,state.jobId+'.worker-'+state.workerPid+'.exit.json');
+   const candidate=await json(p);
+   if(candidate.schemaVersion===1&&candidate.jobId===state.jobId&&candidate.pid===state.workerPid&&
+      Number.isInteger(candidate.exitCode)&&candidate.exitCode>=0&&candidate.exitCode<=255&&
+      ['normal','uncaught-exception'].includes(candidate.reason)){
+    witness={recorded:true,pid:candidate.pid,exitCode:candidate.exitCode,reason:candidate.reason,
+      errorCode:typeof candidate.errorCode==='string'&&/^CLEANUP_[A-Z0-9_]+$/.test(candidate.errorCode)?candidate.errorCode:null,at:candidate.at};
+   }
+  }catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
+  return {...view,workerExit:witness??{recorded:false}};
+ }
+ async status({projectId,jobId}){return this.detailedView(await this.load(projectId,jobId));}
  async launch(state){
   const child=spawn(process.execPath,[fileURLToPath(import.meta.url),'--worker',this.manager.stateDir,state.jobId],{windowsHide:true,detached:true,stdio:'ignore',env:{SystemRoot:process.env.SystemRoot,PATH:process.env.PATH,TEMP:process.env.TEMP}});
   await new Promise((accept,reject)=>{child.once('spawn',accept);child.once('error',reject);});child.unref();
@@ -100,7 +119,7 @@ export class TongCleanupJobs{
  }
  async control({projectId,jobId,action='status'}){
   const state=await this.load(projectId,jobId);
-  if(action==='status')return this.view(state);
+  if(action==='status')return this.detailedView(state);
   if(action==='cancel'){
    const release=await acquireCleanupLock(join(this.dir,'admission.lock'));
    try{
@@ -135,7 +154,10 @@ export class TongCleanupJobs{
   let lastWrite=0,writeQueue=Promise.resolve(),lastCheck=0;
   const persist=async(force=false)=>{
    if(!force&&Date.now()-lastWrite<500)return;
-   lastWrite=Date.now();state.updatedAt=new Date().toISOString();const value=structuredClone(state);
+   lastWrite=Date.now();state.updatedAt=new Date().toISOString();
+   const memory=process.memoryUsage();
+   state.workerStats={pid:process.pid,rssBytes:memory.rss,heapUsedBytes:memory.heapUsed,uptimeSeconds:Math.round(process.uptime())};
+   const value=structuredClone(state);
    writeQueue=writeQueue.then(()=>atomic(path,value));await writeQueue;
   };
   const progress=async value=>{Object.assign(state,value);state.status=value.phase;await persist();};
@@ -173,8 +195,23 @@ export class TongCleanupJobs{
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)&&process.argv[2]==='--worker'){
  const [stateDir,jobId]=process.argv.slice(3);
+ // The parent intentionally detaches workers. Keep a bounded, content-free
+ // exit witness so a vanished PID is not always an unexplained interruption.
+ // If no witness exists after termination, suspect a forced/native process kill.
+ let exitReason='normal',exitErrorCode=null,exitOrigin=null;
+ let witnessPath=null;
+ process.on('uncaughtExceptionMonitor',(error,origin)=>{
+  exitReason='uncaught-exception';exitErrorCode=safeError(error);exitOrigin=origin==='unhandledRejection'?'unhandled-rejection':'exception';
+ });
+ process.on('exit',code=>{
+  if(!witnessPath)return;
+  try{
+   writeFileSync(witnessPath,JSON.stringify({schemaVersion:1,jobId,pid:process.pid,at:new Date().toISOString(),exitCode:code,reason:exitReason,errorCode:exitErrorCode,origin:exitOrigin})+'\n',{flag:'wx',mode:0o600});
+  }catch{}
+ });
  const temporary=new TongManagedCleanup({access:{listProjects:async()=>[]},stateDir});
  const jobs=new TongCleanupJobs(temporary),state=await jobs.load((await json(join(jobs.dir,jobId+'.json'))).projectId,jobId);
+ witnessPath=join(jobs.dir,jobId+'.worker-'+process.pid+'.exit.json');
  const access=new TongProjectAccess({...state.config,scanRoots:[]});
  jobs.manager=new TongManagedCleanup({access,stateDir,...state.config});
  await jobs.work(jobId);
