@@ -4,7 +4,23 @@
 
 ## 1. 当前生产与升级通道
 
-### 54f3072已上线并获持久许可；正式MCP引用预检修复（2026-10-29，最新）
+### 9850cc4正式上线，MCP小缓存删除验收通过（2026-10-29 11:46 JST，最新）
+
+本人完成新版本本机哈希挑战后，04:30 JST控制台输出`PRODUCTION-UPGRADE-OK`；App/Manager均为`9850cc45abd812156d59d16808f20c97bdfdc035`，run `d20966d1-26ad-4854-a435-2ae135d1096a`。新快照`quick-trust-full-cutover-20261028191510376-62cbbcf1`的窗口回执为`ready-for-formal-mcp-cache-test`，原持久清理许可revision及69字节缓存均核对复用，没有重新授权、覆盖缓存或自动反复升级。安装后实际`verify-installed`再次核对App/Manager源码、补丁、pin/profile和Runner，通过。
+
+**中途登录监测故障必须保留：**11:42 JST续验时虽然三端口、Gateway和Supervisor仍READY，但Host为0、Task Ready，独立监测healthy=false。实际日志表明04:51:43 JST Runner35216调用doctor遇原生退出`0xC0000409`（-1073740791、stdout为空），随后Runner退出；不是本次清理Plan/Execute造成。现有证据不能证明该原生崩溃根因已解决。当前直接doctor healthy=true后，沿用本机已颁发的恢复许可，仅启动一次既有TongLoginRuntime Task，11:44:35记录runtime_healthy；没有重启Supervisor、切换run、修改Task定义/许可/恢复预算或另做升级。
+
+恢复后唯一Host **41336**、PS7 Runner **32844**，Task实例`f2e99c78-b12f-4c3e-9322-04f1e7d7fc0b`；使用归档包装器同一真实身份函数核验Task实例、Host真实路径、唯一子进程、PS7真实路径、完整参数和创建时间，通过。Supervisor20520、Guardian12764仍属于同一run。7676 Gateway/PID56100、7677 upstream/PID19452、18765 AgentDock/PID43456全部监听；gate不存在。
+
+**11:45 JST正式MCP实际验收：**SDK通过正式Gateway7676的OAuth/PKCE认证连接执行，而非直接调用清理模块或Shell删除。tools/list实测40项，项目查询12项、cleanupScopes有效。`tong_disk_cleanup_plan`返回planId **`7be98004-b089-409f-9ce9-b4f75567f0cc`**，projectId `tong-state-cleanup`，目标`D:\Tong\state\cleanup-acceptance-20261028\npm-cache`，category=cache、deletionAuthorized=true、1文件/1目录/69字节；计划仅有已批准的受保护SYSTEM任务警告。客户端逐项核对后在同一连接调用`tong_disk_cleanup_execute`，返回`status=deleted`、files=1、logicalBytes=69。
+
+删除后目标ENOENT、父目录仍存在；App runtime的`disk-cleanup-audit.jsonl`有相同planId的`cleanup_begin`和`cleanup_deleted`，路径、计数、原因及`referenceWarnings`完整一致。凭据脱敏回执保留在上述新快照的`mcp-cleanup-acceptance-20261029024507334.json`；没有将OAuth/Owner凭据写入回执或Git。授权状态复查仍enabled=true、revision `c4da4b91-5d4a-42ff-9877-70eadadc8629`，三种原有scope保持不变，持续到本人撤销。
+
+删除后实际doctor healthy=true，AgentDock认证MCP工具7项、Tong discovery及未认证拒绝均通过；独立监测11:45:36、11:45:47 JST连续healthy=true、同run、HostCount1、Task Running、三端口及Gateway正常、checkErrors为空。`rollback-preflight`只读核验54f3072旧App/Manager各561源码和快照绑定，返回rollbackPrepared=true；**未执行实际生产回退**，既有隔离回退证据复用。以上仅证明观察窗口与本次小缓存验收通过，不能宣称原生崩溃已根治或长期稳定验收通过。
+
+下一步交给ChatGPT处理大规模清理：先刷新Tong宿主工具目录（当前静态目录仍旧38项，服务新认证目录40项），再在新对话选Tong，按保留清单逐目录Plan核对后Execute。刷新入口及官方说明见后文。**十套5.636GiB历史候选及其他目录本轮未删除，也未重新扫描磁盘。**此处验收不自动批准新的删除对象；继续时先确认健康监测仍更新并审阅每个精确计划。
+
+### 54f3072上线、持久许可与COM引用预检修复（历史）
 
 本人完成本机确认后，App/Manager正式双pin为`54f307282dedd00a48d942154645e95a9f3d11a6`，run `b3529663-aaf3-4c35-89aa-fb84d5323685`。唯一Host PID9572，Task Running、7676/7677/18765、READY及doctor healthy=true已核验；独立监测持续更新，04:12 JST样本仍healthy=true、同run且无检查错误。旧e0eb933及更早失败快照完整保留。
 

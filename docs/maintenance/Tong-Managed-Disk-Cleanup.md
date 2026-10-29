@@ -2,7 +2,7 @@
 
 > 2026-10-28最新入口：[最终清理与目录归并交接](Tong-Final-Cleanup-and-Directory-Order-20261028.md)。已增加独立、可撤销的持久清理许可，普通project.write不再隐含递归删除。下文“可写项目”的旧开发合同已被新许可分离规则取代；生产部署/许可/小缓存MCP删除仍须分别以真实回执为准。
 
-2026-10-29：正式54f3072已部署，受保护策略目录的持久许可已启用，正式认证MCP可发现两个清理工具。小缓存实际Plan因COM任务引用检查失败而拒绝，尚未Execute。新增修复按任务类型解析COM注册及打包路径；用户批准的受保护SYSTEM任务未知实现仅记审计警告，已知引用和其他unknown仍拒绝。警告通过Plan的`referenceWarnings`返回，Execute重新检查并写入审计；新修复上线仍需本机哈希挑战。准确状态以交接页最新记录为准。
+2026-10-29 11:46 JST：正式App/Manager为9850cc4，受保护策略目录的持久许可已启用并复用。正式Gateway MCP已实际Plan→Execute删除1文件69字节缓存，planId `7be98004-b089-409f-9ce9-b4f75567f0cc`；目标目录消失、父目录保留、审计完整，删除后同run健康。用户批准的受保护SYSTEM任务未知实现仅记审计警告，已知引用和其他unknown仍拒绝；Plan的`referenceWarnings`及Execute重查审计均已实测。中途登录Runner原生doctor崩溃后已接回监测，根因未修复。大候选未删除，准确状态以交接页最新记录为准。
 
 ## 问题来源
 
@@ -20,7 +20,7 @@
 
 ## 授权边界
 
-现有`D:\Tong\state`**不是可写的Tong登记项目**。尽管`tong_scan_directory`能在既有安全边界内读C/D元数据，`tong_disk_cleanup_execute`不会据此授予state删除权限。要实现用户期望的“首次授权，后续ChatGPT直接清理”，必须通过本机受信任的授权入口对目标管理根建立可撤销的持久写入范围，之后才能从网页端使用`plan → execute`，无须每次编写并让用户运行PowerShell删除脚本。首次本机授权本身仍是必须的，不能由聊天文字替代。正式生产升级单独管理，不借这次开发测试重启现役服务。
+普通项目read/write和`tong_scan_directory`不隐含state递归删除权限。正式本机入口已为`D:\Tong\state`颁发独立可撤销的持久清理许可，projectId `tong-state-cleanup`，仅cache/historical-candidate/quick-trust-candidate类别，revision `c4da4b91-5d4a-42ff-9877-70eadadc8629`，持续至本人撤销。ChatGPT每次仍须通过短时只读Plan核对精确对象，再Execute；MCP不能自行颁发或扩大许可。正式升级使用另外的版本绑定本机挑战。首次授权及新版本挑战不能由聊天文字替代，也不自动授权新的真实删除对象。
 
 ## 验证
 

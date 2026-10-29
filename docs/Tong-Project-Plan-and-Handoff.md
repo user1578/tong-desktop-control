@@ -4,7 +4,7 @@
 
 ### 当前执行入口（2026-10-28）
 
-**2026-10-29最新：**正式54f3072已成功上线，run `b3529663-aaf3-4c35-89aa-fb84d5323685` READY，doctor、双pin、三端口、唯一Host及独立监测已实测；持久清理许可已启用。正式认证MCP tools/list为40项、包含两个清理工具，但实际Plan在COM任务字段检查拒绝，Execute尚未调用。已修复COM引用识别，并按用户明确批准的受保护SYSTEM任务规则保留可审计警告，针对性测试及实际只读引用检查通过。新版本仍需绑定候选、Preflight及本人哈希挑战；缓存与十套历史候选未删除。宿主旧38项工具目录需Refresh后在新对话验证。准确回执和边界见[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+**2026-10-29 11:46 JST最新：**本人确认后正式App/Manager已升级为9850cc4，run `d20966d1-26ad-4854-a435-2ae135d1096a`。正式Gateway MCP已实际Plan→Execute删除1文件69字节验收缓存，planId `7be98004-b089-409f-9ce9-b4f75567f0cc`；目录消失、父目录保留、审计完整、原持久许可继续有效。删除后doctor、READY、三端口、唯一Host41336、Task及独立监测healthy=true，54f3072回退只读预检通过。须保留已知问题：04:51原生doctor以0xC0000409导致登录Runner退出，11:44仅启动既有Task接回原run，根因未修复，不能宣称长期稳定。大候选未删除、未重复盘点；ChatGPT接手前Refresh宿主旧工具目录，再审阅精确Plan。准确回执和边界见[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
 **最新：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。单JSON协议及回退结果表达已修复，commit `e0eb933`已推送；隔离回归、新候选/release/快照和归档包装器只读预检通过。本次未重新Deploy，启动器仅准备，等新一轮本人明确确认。独立监测日志停在13:46 JST，进入下一维护窗口前需由本机Shell恢复监测。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
 
