@@ -90,6 +90,10 @@
 
 ## 七、2026-10-29 本轮开发记录（未部署，未完成实际大目录清理验收）
 
+**正式切换已准备，待本人本机门禁：**发布代码 commit `0bfae1251e661e48fb68ad4b5753a4e32f915091` 已推送；575源码/23原生文件归档 build/verify、仅源码和三补丁的增量候选、旧版App/Manager各566源码回退快照均已核验。归档包装器真实 Preflight 输出 `PRECHECK PASS`，旧run `7b02c3f4-f393-4575-b3b5-078ce5cb592c` 健康且未改生产。确认入口：`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029142731706-9cc921a1\Open-Upgrade-Confirmation.cmd`；需由本人在Windows资源管理器双击，在独立控制台完成既有挑战。此入口只绑定 `5de2371 -> 0bfae12` 升级及必要回退，不包含新清理许可，不在窗口中删依赖。代码通过不能替代此门禁。
+
+精确产物：`quick-trust-release-0bfae12` 23,811,877字节、`quick-trust-candidate-0bfae12` 6,159,483字节（跳过共享SDK junction）、上述回退快照12,560,464字节；另有追加Git保护修复前的未部署归档 `quick-trust-release-52b2bb1` 23,809,718字节。四处合计66,341,542字节（约63.27MiB），未复制600MB依赖，旧归档不部署也未擅删。
+
 - 新增 `tong_disk_cleanup_run({projectId,path?,mode?,idempotencyKey?})` 与 `tong_disk_cleanup_job({projectId,jobId,action?})`。默认 `clean` 直接启动执行任务；无 path 使用现有清理许可内的固定缓存位置和 Quick Trust 索引，不扫全盘。`plan` 只核验；`exact` 必须带用户指定路径，复用现有可写项目权限，仍拒绝生产/身份/Agent/Git/数据库等硬保护对象；不会扩大 state 清理许可。
 - 大目录在本机独立 worker 执行，状态和选择清单存于原受保护清理策略目录下的 `disk-cleanup-jobs`。支持跨连接查询、取消、同任务恢复、幂等和重叠任务互斥；逐文件 intent/结果审计，半行日志和已删根目录可核对恢复。不把无法确认的中断缺失量计入已确认删除。
 - 只选择特定历史候选的 `node_modules` 子树；核验保留 release、锁文件、原生归档和逐文件来源。保护规则先于正文读取；保留候选及依赖内部的 Agent 规则、身份文件和未知内容。经来源证明的第三方 README 可随依赖删除。执行使用必要的元数据防变更检查，未变化的文件不重算内容哈希，同批复用保留依赖哈希。
