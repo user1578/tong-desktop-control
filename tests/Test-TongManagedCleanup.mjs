@@ -23,8 +23,8 @@ try {
   let now=Date.now();
   const cleanup=new TongManagedCleanup({access,stateDir:audits,now:()=>now});
   const cache=join(root,'npm-cache');
-  await mkdir(join(cache,'_cacache'),{recursive:true});
-  await writeFile(join(cache,'_cacache','blob'),'disposable synthetic cache');
+  await mkdir(join(cache,'_cacache','content-v2','sha512'),{recursive:true});
+  await writeFile(join(cache,'_cacache','content-v2','sha512','aabbccdd'),'disposable synthetic cache');
   let p=await cleanup.plan({projectId:'synthetic-project',path:cache});
   assert.equal(p.requiresExecute,true);
   assert.equal(p.files,1);

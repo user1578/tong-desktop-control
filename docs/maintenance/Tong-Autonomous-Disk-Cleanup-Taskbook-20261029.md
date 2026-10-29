@@ -87,3 +87,13 @@
 - npm cache（`npm cache verify`与按需要回收的`npm cache clean --force`）：https://docs.npmjs.com/cli/v11/commands/npm-cache/
 - pip cache（`pip cache dir / info / purge`）：https://pip.pypa.io/en/stable/cli/pip_cache/
 - pnpm store prune：https://pnpm.io/cli/store
+
+## 七、2026-10-29 本轮开发记录（未部署，未完成实际大目录清理验收）
+
+- 新增 `tong_disk_cleanup_run({projectId,path?,mode?,idempotencyKey?})` 与 `tong_disk_cleanup_job({projectId,jobId,action?})`。默认 `clean` 直接启动执行任务；无 path 使用现有清理许可内的固定缓存位置和 Quick Trust 索引，不扫全盘。`plan` 只核验；`exact` 必须带用户指定路径，复用现有可写项目权限，仍拒绝生产/身份/Agent/Git/数据库等硬保护对象；不会扩大 state 清理许可。
+- 大目录在本机独立 worker 执行，状态和选择清单存于原受保护清理策略目录下的 `disk-cleanup-jobs`。支持跨连接查询、取消、同任务恢复、幂等和重叠任务互斥；逐文件 intent/结果审计，半行日志和已删根目录可核对恢复。不把无法确认的中断缺失量计入已确认删除。
+- 只选择特定历史候选的 `node_modules` 子树；核验保留 release、锁文件、原生归档和逐文件来源。保护规则先于正文读取；保留候选及依赖内部的 Agent 规则、身份文件和未知内容。经来源证明的第三方 README 可随依赖删除。执行使用必要的元数据防变更检查，未变化的文件不重算内容哈希，同批复用保留依赖哈希。
+- Windows 原生句柄核验/枚举/读取/删除拒绝 reparse 和多硬链接，并在操作期间锁住祖先目录；状态原子替换复用现有 `TongStartupPreflight.AtomicReplace`。清理锁使用可随进程死亡释放的本机 mutex；辅助进程失联后停止，不能无锁重连继续删除。每个新文件删除前检查取消和授权撤销。
+- 隔离实删测试覆盖 Python/Node 缓存、混合保护内容、普通精确路径、第三方 README、release 保留、真实锁定文件后续续删、撤权、目标变化、junction 替换、断点和审计恢复、取消后重叠任务拒绝及跨进程 Plan/Execute。MCP 注册、补丁哈希绑定和 Gateway 检查通过。合成夹具结果不计入用户磁盘清理收益。
+- 指定 `d780561/node_modules` 首次定向只读核验完成：188,378ms，选中35,996文件/589,390,384逻辑字节，662项保护或未识别项保留；这是本轮早期校验器的实物证据，后续原生句柄版本未冒充同一耗时实测。没有复制600MB依赖。生产双pin仍为 `5de2371`，现有清理许可 revision 未改。
+- **仍待完成**：正式生产升级的本机哈希门禁、新工具网页发现与实际执行；先清指定单套、核对审计/AGENTS/release/磁盘与健康，再处理另外9套。**本轮十套主体新增实际删除0字节，不能报已释放5.636GiB。** 当前生产仍只有旧 Plan/Execute。C盘 Temp/npm/pip、浏览器与系统官方清理入口尚未接入本次受管执行范围，不能用开发 Shell 绕过权限，也不能称通用 Windows 清理已经完成。

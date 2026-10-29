@@ -11,6 +11,7 @@ import { inspectWindows } from './TongWindowsInspect.mjs';
 import { inspectDevEnvironment } from './TongDevEnvironment.mjs';
 import { isAbsolute, join, dirname } from "node:path";
 import { TongManagedCleanup } from './TongManagedCleanup.mjs';
+import { TongCleanupJobs } from './TongCleanupJobs.mjs';
 
 let defaultTaskManager;
 let defaultGoalSupervisor;
@@ -192,10 +193,11 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
   }, safe((input) => access.scanDirectory(input)));
 
   const cleanup = new TongManagedCleanup({access,stateDir:stateDir??dirname(access.registryPath)});
+  const cleanupJobs = new TongCleanupJobs(cleanup);
   const cleanupHandler = handler => async input=>{
     try { return success(await handler(input)); }
     catch(error){
-      const message = typeof error?.code==='string' && /^CLEANUP_[A-Z_]{3,50}$/.test(error.code)
+      const message = typeof error?.code==='string' && /^CLEANUP_[A-Z0-9_]{3,50}$/.test(error.code)
         ? error.code : 'CLEANUP_OPERATION_FAILED';
       return {content:[{type:'text',text:message}],isError:true};
     }
@@ -218,6 +220,18 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
     },
     annotations:{readOnlyHint:false,destructiveHint:true},_meta:{},
   },cleanupHandler(input=>cleanup.execute(input)));
+  registerTool(server,'tong_disk_cleanup_run',{
+    title:'Clean authorized safe caches with durable progress',
+    description:'A cleanup request is an execution request: start managed selective deletion without another confirmation. With path, inspect only that exact authorized cache or archived candidate node_modules subtree. Without path, use known authorized cache roots and the Tong candidate index, never scan whole drives. Return a durable jobId promptly; protected Agent/identity/Git/database content stays in place. No new OS permissions or grants are issued.',
+    inputSchema:{projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),path:z.string().min(4).max(2048).optional(),mode:z.enum(['clean','plan','exact']).optional().describe('exact requires a user-specified ordinary path in an existing writable project; safe-cache discovery still requires a cleanup grant.'),idempotencyKey:z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/).optional()},
+    annotations:{readOnlyHint:false,destructiveHint:true},_meta:{},
+  },cleanupHandler(input=>cleanupJobs.start(input)));
+  registerTool(server,'tong_disk_cleanup_job',{
+    title:'Query, cancel or resume a persistent cleanup job',
+    description:'Read real stage, counts, audit and disk-space results across connections; request cancellation or resume the same job after interruption. Resume rechecks authorization, references, archives and changed files. Cancellation stops new deletes; deleted disposable cache files cannot be undeleted.',
+    inputSchema:{projectId:z.string().regex(/^[a-z][a-z0-9-]{1,39}$/),jobId:z.string().uuid(),action:z.enum(['status','cancel','resume']).optional()},
+    annotations:{readOnlyHint:false,destructiveHint:true},_meta:{},
+  },cleanupHandler(input=>cleanupJobs.control(input)));
 
   registerTool(server, "tong_list_projects", {
     title: "List locally registered projects",

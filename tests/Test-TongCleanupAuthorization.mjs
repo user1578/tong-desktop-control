@@ -7,9 +7,9 @@ import {TongManagedCleanup} from '../scripts/TongManagedCleanup.mjs';
 const tmp=await createTongTestDirectory('cleanup-authorization-');let passed=false;
 try{
   const root=join(tmp.path,'state'),store=join(tmp.path,'policy');
-  const cache=join(root,'accepted-test','npm-cache');
+  const cache=join(root,'accepted-test','__pycache__');
   await mkdir(cache,{recursive:true});await mkdir(store);
-  await writeFile(join(cache,'blob'),'rebuildable');
+  await writeFile(join(cache,'blob.pyc'),'rebuildable');
   const access={listProjects:async()=>[{id:'cleanup-state',root,status:'enabled',available:true,effectiveCapabilities:['project.read','project.write']}]};
   const cleanup=new TongManagedCleanup({access,stateDir:store});
   const unapproved=await cleanup.plan({projectId:'cleanup-state',path:cache});

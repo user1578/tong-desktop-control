@@ -11,10 +11,10 @@ let passed=false;
 try {
   const root=join(fixture.path,'registered');
   const stateDir=join(fixture.path,'state');
-  const cache=join(root,'npm-cache');
+  const cache=join(root,'__pycache__');
   await mkdir(cache,{recursive:true});
   await mkdir(stateDir);
-  await writeFile(join(cache,'fixture.txt'),'disposable test cache');
+  await writeFile(join(cache,'fixture.pyc'),'disposable test cache');
   await writeFile(join(stateDir,'disk-cleanup-grants.json'),JSON.stringify({schemaVersion:1,grants:[{
     id:'fixture',root,enabled:true,revision:'rev1',scopes:[{relativeRoot:'.',categories:['cache']}]
   }]}));

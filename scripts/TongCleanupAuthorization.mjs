@@ -1,6 +1,7 @@
 import {readFile,lstat,realpath} from 'node:fs/promises';
 import {isAbsolute,resolve,relative,sep,join,parse,dirname} from 'node:path';
 import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
+import {cleanupHandleRead} from './TongCleanupNative.mjs';
 
 export const cleanupCategories=Object.freeze(['cache','historical-candidate','quick-trust-candidate']);
 const fail=code=>{const e=Error(code);e.code=code;throw e;};
@@ -47,5 +48,15 @@ export class TongCleanupAuthorization{
     if(!g.scopes.some(s=>cleanupContains(resolve(g.root,s.relativeRoot),target)&&s.categories.includes(category)))return null;
     await cleanupOrdinaryPath(g.root);
     return {root:resolve(g.root),revision:g.revision};
+  }
+  // Between full ACL checks, observe revocation before EACH delete without
+  // spawning two PowerShell ACL inspectors for every dependency file.
+  async assertCurrent({projectId,target,category,root,revision}){
+    const info=await lstat(this.path);
+    if(!info.isFile()||info.isSymbolicLink()||info.nlink!==1||(await realpath(this.path)).toLowerCase()!==resolve(this.path).toLowerCase())fail('CLEANUP_AUTHORIZATION_UNSAFE');
+    const body=await cleanupHandleRead(this.path,{size:info.size,stamp:[info.dev,info.ino,info.size,info.mtimeMs,info.ctimeMs,info.nlink].join(':')},{body:true});
+    const doc=validateCleanupGrants(JSON.parse(body));
+    const grant=doc.grants.find(g=>g.id===projectId&&g.enabled);
+    if(!grant||grant.revision!==revision||resolve(grant.root).toLowerCase()!==resolve(root).toLowerCase()||!grant.scopes.some(s=>cleanupContains(resolve(root,s.relativeRoot),target)&&s.categories.includes(category)))fail('CLEANUP_PERMISSION_CHANGED');
   }
 }
