@@ -2,7 +2,20 @@
 
 本轮由 Codex Desktop 执行；不开发其他Provider、不改Codex调度、不搬外部项目、不删除十套大型候选。以下开发、测试、生产和删除状态分别记录。
 
-## 0. 2026-10-29 最新执行交接：直接删除阻塞与修复（先读本节）
+## 2026-10-29：跨调用清理修复正式发布已准备（尚待本机批准）
+
+用户要求“先修然后试一下”。开发分支已包含 `1233d8f` 的持久化清理计划修复及 `5de2371` 的交接文档。本轮**没有再次修改清理逻辑，也没有调用旧版正式MCP去删除历史缓存**；已直接走已有发布归档/快照门禁准备下一个固定版本。
+
+- 正式生产只读核对：App/Manager 双pin仍为 `9850cc45abd812156d59d16808f20c97bdfdc035`，run `d20966d1-26ad-4854-a435-2ae135d1096a`、phase `ready`、Task Running、Host 1，独立健康监测最新样本healthy=true；持久 `tong-state-cleanup`许可及revision保持不变。未运行危险的故障注入。
+- 新目标commit `5de2371614cf5987dcea68c37b3f9848537ea48a`，归档 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-release-5de2371` 已用原 `TongRuntimeRelease.buildRelease` 构建并自带verify通过，566源码/23 native/590归档条目。Git CMD可执行程序因有硬链接被发布器拒绝，改用安装中已有的单链接 `C:\Program Files\Git\bin\git.exe`；未放松安全校验。
+- 增量 `quick-trust-candidate-5de2371` 从经过验证的release源码分阶段暂存。历史证据文件存在Windows长路径，使用 `\\?\` 扩展路径复制，随后逐项校验566源码、23 native和三份DevSpace补丁哈希；SDK只建立到既有共享开发依赖的junction，没有再安装整套node_modules。
+- 新快照 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029044748358-b9fdfe86`，保存当前 App/Manager 各565源码和既有pin/profile/Runner，状态 `snapshotted`。从**新候选内的正式归档包装器** `Invoke-TongQuickTrustFullProduction.ps1 -Mode Preflight` 已真实输出 `PRECHECK PASS`，新commit与旧 `9850cc4` 基线绑定通过，无生产改变。
+- 正式本机确认入口已生成在上述快照内：`Open-Upgrade-Confirmation.cmd`（双击后在本人独立Windows控制台调用`Run-Approved-Upgrade.ps1`）；确认脚本PS7 parser通过。它固定新/旧提交、release/candidate/snapshot路径，先检查已有cleanup grant范围和revision，再按原正式 `-Mode Deploy` 走真实本机哈希挑战、升级或回退；不会重发许可、不会删除5.636GiB大候选，窗口结果记录 `native-window-result.json`。
+- **本轮尚未启动正式批准窗口，生产没有升级，新增历史实际删除0字节。** 用户下一步自行从文件资源管理器双击上述cmd，完成本机哈希挑战并保留控制台回执；不得由Tong受管MCP子进程代替这个独立控制台，否则服务停机可能终止自己的升级控制器。
+- 若回执为 `PRODUCTION-UPGRADE-OK`，下一次ChatGPT先核双pin到 `5de2371`、run/Task/Host/端口和监测稳定，再调用**两个独立正式MCP工具调用**对`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-candidate-d780561\temp\node-compile-cache` 执行Plan→Execute：实时计划须 `deletionAuthorized=true` 且路径精确，成功后验证审计和目标不存在。如果此步仍返回PLAN_EXPIRED或健康异常，停止大候选清理并保留失败证据。
+- 通过后依旧按本MD第4节10套名单先清候选内明确可重建缓存、再重新Plan候选整体并逐套Execute，配对release/staged/生产pin和事故证据原位保留；随后处理历史目录归类与Codex原生会话整合，不重扫258万文件。
+
+## 0. 2026-10-29 执行交接：直接删除阻塞与修复（已完成开发阶段）
 
 **结论：目前不是清理授权不足，而是现役MCP的跨调用Plan状态缺陷。开发补丁已提交和测试，尚未部署到正式生产；本轮10套历史候选实际删除0字节。** 不再用原生产版本反复试验Execute，也不绕过受管删除接口用Shell删除。
 

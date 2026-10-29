@@ -4,6 +4,8 @@
 
 ### 当前执行入口（2026-10-29，跨对话先读）
 
+**本轮更新：**跨调用清理Plan持久化修复已绑定新发布commit `5de2371`；新release/candidate和旧版`9850cc4`回退快照已生成并通过归档包装器Preflight，生产仍维持9850cc4、ready。真实批准入口为 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029044748358-b9fdfe86\Open-Upgrade-Confirmation.cmd`，尚须用户在独立本机窗口双击完成哈希绑定。批准后确认新双pin，再对`quick-trust-candidate-d780561\temp\node-compile-cache`用网页**分离的正式MCP Plan→Execute**测试。详细证据/边界/后续十套清理清单见[维护交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。**目前没有部署新生产，也没有新增历史候选删除。**
+
 **当前最高优先级：部署跨MCP调用Plan持久化修复，随后直接清理，不再重复磁盘盘点。** 生产仍为`9850cc45`，现役清理工具虽已授权且曾成功在同连接删除69字节缓存，但网页ChatGPT对旧版清理器的分离Plan→Execute实测立即报`CLEANUP_PLAN_EXPIRED`。开发版已于`1233d8f`修复为受控文件计划、原子一次性领取，跨进程/清理核心/Quick Trust/MCP/Gateway共6项验证通过，已推送，**尚未部署正式生产**；最新一轮10套历史候选新增实际删除0字节。第一项历史候选引用现可读到0 references/0 unknown，但10套均须先处理可重建Node编译缓存、再重新Plan完整候选。需使用正式升级本机哈希授权，不能越权Shell删除。
 
 **唯一完整执行交接入口：**[生产升级、最终清理与目录归并交接第0节](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。按它的既有十项名单、受管计划、逐条审计及健康检查执行；后续按旧目录归类→Codex原生会话→实际问题→其他Agent顺序推进。用户希望积极删除已证明无用重复内容，不再反复清几MB缓存，也不反复要求复制脚本。以下各段为历史过程证据，不能覆盖此最新状态。
