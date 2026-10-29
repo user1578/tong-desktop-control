@@ -1,5 +1,14 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30：worker退出诊断补丁已准备正式升级（**尚待本机确认**）
+
+- 代码commit `635397252a9884862e47ad8ce42cd2016d80ee57` 已推送`codex/024-maintenance-adapter-20261024`，改动只涉及`scripts/TongCleanupJobs.mjs`诊断、`tests/Test-TongCleanupJobs.mjs`和交接MD。测试通过：Node语法、清理核心、跨MCP进程、worker多目标/退出诊断、MCP Gateway与元数据。**这是诊断能力，非worker崩溃根因修复。**
+- 新release `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-release-6353972`：归档575源码、23 native校验通过；新增量候选`quick-trust-candidate-6353972`的575源码、23 native、3个DevSpace补丁逐项hash相符。SDK复用现有只指向本机既有开发依赖的junction，不重装600MB依赖。初次复制native因源候选内目录已存在而拒绝，按原`dirs_exist_ok`合并和每项hash校验后完成，没有删除原内容。
+- 绑定旧生产双pin `f81d1d0ddcc6da354cb475be628e6b79ca822516`，正式只读`Invoke-TongQuickTrustFullProduction.ps1 -Mode Preflight`输出`PRECHECK PASS`，run `1f5c6443-b05f-4459-a559-2b17e27f0015`健康；旧App/Manager各575文件回退快照`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029171354604-a9ba92e9`处于`snapshotted`。
+- 本机批准入口为上述快照内`Open-Upgrade-Confirmation.cmd`，配套`Run-Approved-Upgrade.ps1`固定commit `f81d1d0 -> 6353972`及snapshot，先后核对既有`tong-state-cleanup`grant/revision，不授予其它权限。PS7 Parser通过，CMD存在。**未实际打开确认窗口、未Deploy，正式仍为f81d1d0，原批job保持blocked且未新增清理。**
+- 下一步必须由用户本人在独立Windows窗口双击该CMD，完成原本机哈希门禁。若返回成功，网页ChatGPT核双pin、READY、Task、唯一Host、端口、原持久许可后，仅针对现有`69e8a4f6-ac31-4bf2-906c-e641177c1a87`调用`tong_disk_cleanup_job(action=resume)`**一次**，核对`workerStats`、下次中断时`workerExit`与退出代码。拒绝另起重叠批次、复制依赖、Shell强删，`024d5b0`原引用拒绝仍保留。诊断收集后再定向修复长期稳定性并受控发布，最后再恢复清理与历史目录收尾。
+
+
 ## 2026-10-30：worker退出原因捕捉开发补丁（隔离已验，未部署）
 
 **当前真实状态**：正式生产仍`f81d1d0ddcc6da354cb475be628e6b79ca822516`、原run `1f5c6443-b05f-4459-a559-2b17e27f0015` READY、唯一Host；持久任务`69e8a4f6-ac31-4bf2-906c-e641177c1a87`继续停在index 2的`1a78e48`，`workerPid=32728`已不存在，状态`CLEANUP_WORKER_INTERRUPTED`，已完成`d780561`和`0a2da3c`各36,323文件、合计1,185,181,348逻辑字节；`024d5b0`因运行引用不明保留。**本次没有再次resume，没有新增删除。**

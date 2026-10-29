@@ -4,6 +4,9 @@
 
 ### 当前执行入口（2026-10-30，跨对话先读）
 
+**最新发布准备（仅候选与回退，正式未切换）：**诊断补丁 `6353972` 已准备新release/candidate、Hash校验通过；`f81d1d0`回退快照 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029171354604-a9ba92e9` 已生成且正式Preflight PASS。用户本人须打开快照内`Open-Upgrade-Confirmation.cmd`完成正式本机哈希确认；升级后继续原批job `69e8a4f6-ac31-4bf2-906c-e641177c1a87`一次，读取新增退出诊断。**补丁尚未Deploy、并未修好worker崩溃根因、新增真实删除0。**详见[最终清理与目录归并交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+
+
 **本次开发推进（诊断已验，非生产修复）**：已确认`69e8a4f6-ac31-4bf2-906c-e641177c1a87`仍因index 2的worker意外退出而blocked；正式生产仍f81d1d0/READY，已删除2套依赖共1,185,181,348逻辑字节。开发版新增持久worker内存/退出码/异常标记及跨调用状态读取，连续两个缓存的worker回归、核心和Gateway相关测试通过。**尚未正式部署，也没有确定崩溃根因或新增真实删除**。下一步绑定当前正式pin做受控升级，之后原jobId只恢复一次、遇中断读取新诊断；完整路线见[最终清理交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
 
