@@ -1,5 +1,5 @@
 import {randomUUID, createHash} from 'node:crypto';
-import {lstat, realpath, readdir, rm, appendFile, readFile} from 'node:fs/promises';
+import {lstat, realpath, readdir, rm, appendFile, readFile, writeFile, mkdir, rename, unlink} from 'node:fs/promises';
 import {isAbsolute, resolve, relative, sep, parse, basename, dirname, join} from 'node:path';
 import {TongCleanupAuthorization} from './TongCleanupAuthorization.mjs';
 import {spawn} from 'node:child_process';
@@ -189,11 +189,71 @@ async function verifyHistoric(target,retainedDependencies) {
   const actual=createHash('sha256').update(await readFile(join(target,'package-lock.json'))).digest('hex');
   if(actual!==lock.sha256)fail('CLEANUP_ARCHIVE_MISMATCH');
 }
+const PLAN_ID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+function validateStoredPlan(value,planId) {
+  if(value?.schemaVersion!==1||value.planId!==planId||typeof value.projectId!=='string'||
+    typeof value.root!=='string'||typeof value.target!=='string'||
+    !same(safePath(value.root),value.root)||!same(safePath(value.target),value.target)||
+    !within(value.root,value.target)||!supportedTarget(value.target)||
+    !Number.isSafeInteger(value.expiresAt)||value.expiresAt<=0||
+    !value.stats||typeof value.stats.signature!=='string'||!/^[0-9a-f]{64}$/i.test(value.stats.signature)||
+    !Number.isSafeInteger(value.stats.files)||value.stats.files<0||
+    !Number.isSafeInteger(value.stats.directories)||value.stats.directories<1||
+    !Number.isSafeInteger(value.stats.bytes)||value.stats.bytes<0||
+    !(value.revision===null||typeof value.revision==='string')||
+    !Array.isArray(value.referenceWarnings)||value.referenceWarnings.length>16)fail('CLEANUP_PLAN_INVALID');
+  return value;
+}
 export class TongManagedCleanup{
-  #plans=new Map();
+  async #ensurePlanStore(){
+    await checkAncestors(this.stateDir);
+    try{await plain(this.planDir,'directory');}
+    catch(e){
+      if(e.code!=='CLEANUP_PATH_MISSING')throw e;
+      try{await mkdir(this.planDir,{recursive:false,mode:0o700});}
+      catch(error){if(error.code!=='EEXIST')fail('CLEANUP_PLAN_STORE_FAILED');}
+      await plain(this.planDir,'directory');
+    }
+  }
+  async #savePlan(record){
+    await this.#ensurePlanStore();
+    // Cap abandoned short-lived records; only our own expired UUID plan files
+    // may be pruned (never candidate content, grants or the cleanup audit).
+    let outstanding=0;
+    for(const name of await readdir(this.planDir)){
+      if(!PLAN_ID.test(name.slice(0,-5))||!name.endsWith('.json'))continue;
+      const path=join(this.planDir,name);
+      const info=await plain(path,'file');
+      if(this.now()-info.mtimeMs>24*60*60*1000){
+        await unlink(path).catch(()=>{});
+      }else outstanding++;
+    }
+    if(outstanding>=128)fail('CLEANUP_PLAN_STORE_FULL');
+    try{await writeFile(join(this.planDir,record.planId+'.json'),JSON.stringify(record)+'\n',{flag:'wx',mode:0o600});}
+    catch{fail('CLEANUP_PLAN_STORE_FAILED');}
+  }
+  async #claimPlan(planId){
+    if(typeof planId!=='string'||!PLAN_ID.test(planId))fail('CLEANUP_PLAN_INVALID');
+    await this.#ensurePlanStore();
+    const source=join(this.planDir,planId+'.json');
+    const claim=join(this.planDir,planId+'.claimed');
+    try{await rename(source,claim);}
+    catch(e){
+      if(e.code==='ENOENT')fail('CLEANUP_PLAN_NOT_FOUND');
+      fail('CLEANUP_PLAN_STORE_FAILED');
+    }
+    try{
+      await plain(claim,'file');
+      return validateStoredPlan(JSON.parse(await readFile(claim,'utf8')),planId);
+    }catch(e){
+      if(e?.code?.startsWith('CLEANUP_'))throw e;
+      fail('CLEANUP_PLAN_INVALID');
+    }finally{await unlink(claim).catch(()=>{});}
+  }
   constructor({access,stateDir,productionRoot='D:\\Tong\\runtime',retainedDependencies='D:\\Tong\\app\\node_modules',now=()=>Date.now()}={}){
     if(!access||!isAbsolute(stateDir??''))throw Error('CLEANUP_INVALID_CONFIGURATION');
     this.access=access;this.stateDir=stateDir;this.productionRoot=productionRoot;this.now=now;
+    this.planDir=join(stateDir,'disk-cleanup-plans');
     this.authorization=new TongCleanupAuthorization(stateDir);
     this.retainedDependencies=retainedDependencies;
   }
@@ -208,14 +268,13 @@ export class TongManagedCleanup{
     await verifyHistoric(target,this.retainedDependencies);
     const stats=await snapshot(target);
     const planId=randomUUID(),expiresAt=this.now()+ttl;
-    this.#plans.set(planId,{projectId,root,target,stats,expiresAt,revision,referenceWarnings});
-    if(this.#plans.size>64)this.#plans.delete(this.#plans.keys().next().value);
+    await this.#savePlan({schemaVersion:1,planId,projectId,root,target,stats,expiresAt,revision,referenceWarnings});
     return {planId,projectId,path:target,category:supportedTarget(target),files:stats.files,directories:stats.directories,bytes:stats.bytes,expiresAt:new Date(expiresAt).toISOString(),requiresExecute:true,deletionAuthorized:revision!==null,referenceWarnings};
   }
   async execute({planId,projectId}){
-    const plan=this.#plans.get(planId);
-    this.#plans.delete(planId);
-    if(!plan||plan.projectId!==projectId||this.now()>plan.expiresAt)fail('CLEANUP_PLAN_EXPIRED');
+    const plan=await this.#claimPlan(planId);
+    if(plan.projectId!==projectId)fail('CLEANUP_PLAN_PROJECT_MISMATCH');
+    if(this.now()>plan.expiresAt)fail('CLEANUP_PLAN_EXPIRED');
     const auditPath=join(this.stateDir,'disk-cleanup-audit.jsonl');
     const category=supportedTarget(plan.target),reason=category==='cache'?'locally-authorized-rebuildable-cache':'verified-preserved-release';
     let referenceWarnings=plan.referenceWarnings??[];

@@ -35,7 +35,7 @@ try {
   const audit=await readFile(join(audits,'disk-cleanup-audit.jsonl'),'utf8');
   assert.equal(audit.split('\n').filter(Boolean).length,2);
   assert.ok(audit.includes('cleanup_deleted'));
-  await assert.rejects(cleanup.execute({projectId:'synthetic-project',planId:p.planId}),/CLEANUP_PLAN_EXPIRED/);
+  await assert.rejects(cleanup.execute({projectId:'synthetic-project',planId:p.planId}),/CLEANUP_PLAN_NOT_FOUND/);
   // Ordinary source directories cannot be recursively erased.
   await mkdir(join(root,'src'));
   await writeFile(join(root,'src','work.js'),'important');

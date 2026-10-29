@@ -4,6 +4,16 @@
 
 2026-10-29 11:46 JST：正式App/Manager为9850cc4，受保护策略目录的持久许可已启用并复用。正式Gateway MCP已实际Plan→Execute删除1文件69字节缓存，planId `7be98004-b089-409f-9ce9-b4f75567f0cc`；目标目录消失、父目录保留、审计完整，删除后同run健康。用户批准的受保护SYSTEM任务未知实现仅记审计警告，已知引用和其他unknown仍拒绝；Plan的`referenceWarnings`及Execute重查审计均已实测。中途登录Runner原生doctor崩溃后已接回监测，根因未修复。大候选未删除，准确状态以交接页最新记录为准。
 
+## 2026-10-29：正式历史候选清理阻塞及跨调用修复（开发版，未部署）
+
+真实正式MCP对`quick-trust-candidate-d780561/temp/node-compile-cache`生成已授权Plan（531文件、1,319,916字节），随后Execute立即`CLEANUP_PLAN_EXPIRED`。本次ChatGPT在同一工具编排内再次复现，排除正常五分钟超时。原因是旧`TongManagedCleanup.mjs`将Plan放在实例内存`Map`，不同MCP请求/实例不共享，原错误还把“计划不存在”误报为“到期”。
+
+开发源码现改为将每个计划写入受限本机`stateDir/disk-cleanup-plans/<UUID>.json`，独立MCP进程可以按ID读取。Execute先以同目录原子重命名领取一次性计划并消费，过期返回`CLEANUP_PLAN_EXPIRED`，不存在/重放返回`CLEANUP_PLAN_NOT_FOUND`，仍核验持久许可revision、目标路径、重解析点、当前pin、任务/服务/进程引用、完整归档和文件快照，审计保持在原位置。孤立计划限期清理，拒绝无限积累计划文件。
+
+新增`tests/Test-TongCleanupCrossClient.mjs`用两个**独立Node进程**实测Plan→Execute、目标消失、审计两条、重复执行拒绝；原核心、Quick Trust和MCP元数据测试仍需作为发布门禁。**本项仅在开发工作树修复，未升级生产，尚不能直接删正式state候选。**
+
+对第一套`quick-trust-candidate-5362210`重新执行真实只读Windows引用核验：references=0、unknown=0、1项受信系统COM警告；再调用正式MCP Plan，当前返回`CLEANUP_UNARCHIVED_TEMP`而非之前的引用未知。此前`CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN`可能是瞬时状态，并未随意放宽引用检查。其他9套同样因为历史`temp/node-compile-cache`非空被拒，须待新版Plan/Execute发布、正式MCP小缓存复测后，精确清除可重建缓存，再重做父候选Plan。**当前仍无新增历史候选删除。**
+
 ## 问题来源
 
 此前五处项目根目录统计逻辑容量43.622GiB，约35.117GiB归类为node_modules及其在发布候选、历史恢复/测试副本中的依赖。约37,197,184,309字节（34.64GiB）集中在state，不能把逻辑大小直接当成NTFS的独立物理占用或全量可回收容量。多份历史候选各自带约600MB完整依赖，反复测试/打包放大体积。正常生产运行环境没有必要保留几十份，但精简后的正式部署目标1–2GB仍需实际构建测量，不能作为未经验证的承诺。
