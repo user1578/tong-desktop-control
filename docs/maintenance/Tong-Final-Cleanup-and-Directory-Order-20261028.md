@@ -2,6 +2,39 @@
 
 本轮由 Codex Desktop 执行；不开发其他Provider、不改Codex调度、不搬外部项目、不删除十套大型候选。以下开发、测试、生产和删除状态分别记录。
 
+## 0. 2026-10-29 最新执行交接：直接删除阻塞与修复（先读本节）
+
+**结论：目前不是清理授权不足，而是现役MCP的跨调用Plan状态缺陷。开发补丁已提交和测试，尚未部署到正式生产；本轮10套历史候选实际删除0字节。** 不再用原生产版本反复试验Execute，也不绕过受管删除接口用Shell删除。
+
+### 精确状态
+
+- 当前正式App/Manager仍为`9850cc45abd812156d59d16808f20c97bdfdc035`（基于最近已验升级回执；重新部署前须由Codex核实双pin）；正式run最近为`d20966d1-26ad-4854-a435-2ae135d1096a`。2026-10-29本轮网页Tong只读调用确认唯一LoginHost PID41336、`tong_list_projects`返回12项目及现有持久清理许可，未重新运行生产doctor，不能借此宣称已根治`0xC0000409`。
+- `tong-state-cleanup`持久授权仍有效，根为`D:\Tong\state`，类别仅cache、historical-candidate、quick-trust-candidate，revision `c4da4b91-5d4a-42ff-9877-70eadadc8629`。此前**正式Gateway同一连接**的69字节缓存Plan→Execute验收成功，这与网页ChatGPT**跨调用**失败不矛盾。
+- 旧版`TongManagedCleanup.mjs`的`#plans=new Map()`只存当前server实例内存；网页工具先Plan再Execute可能落到不同实例，导致Plan创建后马上以`CLEANUP_PLAN_EXPIRED`拒绝。此轮在同一次ChatGPT编排内实测：`quick-trust-candidate-d780561\temp\node-compile-cache`Plan授权成功（531文件/2目录、1,319,916字节，planId `ba726b21-b712-417c-86ac-0757970aac87`），紧接的Execute立即报`CLEANUP_PLAN_EXPIRED`；目标未删。**不是用户等待太久，也不能通过延长TTL来根治。**
+- 此前`quick-trust-candidate-5362210`曾报`CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN`；2026-10-29重新执行只读Windows引用检查，结果references=0、unknown=0、1条已批准受信COM任务警告，再调生产Plan得到`CLEANUP_UNARCHIVED_TEMP`。当前没有持续的引用阻塞证据，但执行前必须重新检查，不能自动忽略已知引用。
+- 其他九套候选同样被非空`temp\node-compile-cache`挡住；缓存属可重建类别，先删精确缓存目录，再对整个候选重新Plan，不要直接放宽候选归档一致性要求。
+- 前两批已删逻辑1,584,629,549字节，正式MCP另已成功删69字节；**本轮新增历史候选实际删除0，剩余第三批10套历史候选6,051,846,951字节（5.636GiB）**。不把预计释放当实际空闲空间增量。
+
+### 开发修复与验收
+
+- 修复commit **`1233d8f9c711cb510a862594dda1ec55d7d84043`**，branch `codex/024-maintenance-adapter-20261024`，已推送并与origin同步；**没有修改正式App/Manager、Task、pin、gate、授权或历史候选**。
+- `scripts/TongManagedCleanup.mjs`现将一次性计划写入受控`stateDir/disk-cleanup-plans/<UUID>.json`，Execute通过同目录原子rename领取并消费，跨进程可读取，重放返回`CLEANUP_PLAN_NOT_FOUND`，真实过期才为`CLEANUP_PLAN_EXPIRED`。既有持久授权revision、目标快照、归档SHA、任务/进程引用、审计保持重验，不改删除类别。
+- 新增`tests/Test-TongCleanupCrossClient.mjs`，两个**独立Node进程**分别调用Plan与Execute并验证实际夹具消失、审计两条和重放拒绝；此外`Test-TongManagedCleanup.mjs`、`Test-TongQuickTrustCleanup.mjs`、`Test-TongMcpMetadataTools.mjs`、`Test-TongMcpGateway.mjs`、Node语法检查全部通过。模拟夹具不是生产验收。
+- 仅提交本任务的4个文件：清理器、两份测试、`docs/maintenance/Tong-Managed-Disk-Cleanup.md`；`docs/maintenance/Tong-Five-Root-Consolidation-ChatGPT-Review-20261027.md`是用户原有未提交修改，未碰也未暂存。
+
+### 下一次直接执行顺序：不重新扫描、不重做旧测试
+
+1. **部署一次修复：**Codex在本地基于`1233d8f`核对现役9850cc4、READY、Task、独立监控、无未知gate及现有回退快照；仅为新增修复重新构建并绑定正式release、candidate、回退快照，使用既有受控升级入口及用户本人真实本机哈希确认。不要覆盖旧release、篡改许可或绕过原切换门禁；失败立即停在回退验收。
+2. **先验网页跨调用：**正式升级READY且40项MCP工具可见后，从ChatGPT网页的两个独立`tong_disk_cleanup_plan`和`tong_disk_cleanup_execute`调用开始，以`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-candidate-d780561\temp\node-compile-cache`作为真实受管小缓存验收对象（历史测得531文件、1,319,916字节，重新Plan以实时值为准）；必须有`deletionAuthorized=true`及精确路径、审计`cleanup_begin/cleanup_deleted`、目标目录不存在、健康不退化才继续。**不要再让用户每批手动运行删除脚本。**
+3. **第三批清理：**沿用本文件第4节10个精确候选清单。对各候选先用受管Plan清理其内部可重建`temp\node-compile-cache`（只处理存在且获批者），保留空temp可直接按受管候选清理流程处理；再重新对该候选Plan核实当下pin、完整release、依赖及引用，授权真才Execute。单项失败就标记跳过继续其他安全项，绝不Shell强删。
+4. **批末核对：**逐条保存Plan/Execute回执、对象消失、配对release仍在、staged仍在、事故证据未动；核对审计、Host/Runner、Task、doctor只读健康、三个端口及D盘前后空闲差，逻辑大小与实际NTFS空间分别报告。
+5. **进入下一阶段：**对其他大历史state根（`b23-switch`、`native-codex-acceptance`等）沿用旧容量索引做精确核查、重复依赖清理；四个旧独立根`D:\tong-codex-acceptance-20261010`、`D:\tong-desktop-control`、`D:\agentdock-poc-20261010`、`D:\tong-agentdock-local`先保护Git dirty/untracked、原生会话cwd、项目注册引用，再迁移到`D:\Tong`统一管理。随后打通ChatGPT—Codex Desktop原生可见/可续会话，解决真实使用问题，最后再接其他Agent。
+6. **减少重复交接开销：**后续对话只须先读本节及第4/5/6节清单、核对生产版本/授权/工具目录；不用重扫五根258万文件，不重复创建600MB整套依赖，不重新读取前两批完整取证。
+
+### 操作原则
+
+用户已经明确同意积极清理经过审查的可重建重复依赖、历史候选和旧目录；**不需要为每个安全缓存重复征询**。真正的限制是当前生产代码未部署跨调用修复，及具体对象的受管计划和本机生产升级授权。禁止用开发工作区Shell、任意删除或停机操作绕过这些实际限制。保持当下正在运行的9850cc4，直到下一次受控升级入口具备完整回退。
+
 ## 1. 当前生产与升级通道
 
 ### 9850cc4正式上线，MCP小缓存删除验收通过（2026-10-29 11:46 JST，最新）

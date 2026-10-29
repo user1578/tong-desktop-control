@@ -2,15 +2,19 @@
 
 > **项目最高层完整任务书**：[Tong-Master-Project-Taskbook.md](Tong-Master-Project-Taskbook.md)。本页作为当前状态与快速交接导航；覆盖所有Agent、统筹MCP、系统/磁盘/RAM维护和长期里程碑的完整规划以总任务书为准。
 
-### 当前执行入口（2026-10-28）
+### 当前执行入口（2026-10-29，跨对话先读）
+
+**当前最高优先级：部署跨MCP调用Plan持久化修复，随后直接清理，不再重复磁盘盘点。** 生产仍为`9850cc45`，现役清理工具虽已授权且曾成功在同连接删除69字节缓存，但网页ChatGPT对旧版清理器的分离Plan→Execute实测立即报`CLEANUP_PLAN_EXPIRED`。开发版已于`1233d8f`修复为受控文件计划、原子一次性领取，跨进程/清理核心/Quick Trust/MCP/Gateway共6项验证通过，已推送，**尚未部署正式生产**；最新一轮10套历史候选新增实际删除0字节。第一项历史候选引用现可读到0 references/0 unknown，但10套均须先处理可重建Node编译缓存、再重新Plan完整候选。需使用正式升级本机哈希授权，不能越权Shell删除。
+
+**唯一完整执行交接入口：**[生产升级、最终清理与目录归并交接第0节](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。按它的既有十项名单、受管计划、逐条审计及健康检查执行；后续按旧目录归类→Codex原生会话→实际问题→其他Agent顺序推进。用户希望积极删除已证明无用重复内容，不再反复清几MB缓存，也不反复要求复制脚本。以下各段为历史过程证据，不能覆盖此最新状态。
 
 **2026-10-29 11:46 JST最新：**本人确认后正式App/Manager已升级为9850cc4，run `d20966d1-26ad-4854-a435-2ae135d1096a`。正式Gateway MCP已实际Plan→Execute删除1文件69字节验收缓存，planId `7be98004-b089-409f-9ce9-b4f75567f0cc`；目录消失、父目录保留、审计完整、原持久许可继续有效。删除后doctor、READY、三端口、唯一Host41336、Task及独立监测healthy=true，54f3072回退只读预检通过。须保留已知问题：04:51原生doctor以0xC0000409导致登录Runner退出，11:44仅启动既有Task接回原run，根因未修复，不能宣称长期稳定。大候选未删除、未重复盘点；ChatGPT接手前Refresh宿主旧工具目录，再审阅精确Plan。准确回执和边界见[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
-**最新：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。单JSON协议及回退结果表达已修复，commit `e0eb933`已推送；隔离回归、新候选/release/快照和归档包装器只读预检通过。本次未重新Deploy，启动器仅准备，等新一轮本人明确确认。独立监测日志停在13:46 JST，进入下一维护窗口前需由本机Shell恢复监测。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
+**历史（2026-10-28）：**2fcea75在复合CLI多JSON输出处升级失败，已自动回退；现场逐文件确认旧b9fe801恢复，当前run `1c07a229-806c-4795-b418-b401c847cfbf` READY。单JSON协议及回退结果表达已修复，commit `e0eb933`已推送；隔离回归、新候选/release/快照和归档包装器只读预检通过。本次未重新Deploy，启动器仅准备，等新一轮本人明确确认。独立监测日志停在13:46 JST，进入下一维护窗口前需由本机Shell恢复监测。以下Runner失败说明是前一轮历史，准确状态以[交接页顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)为准。
 
 cb0355b正式升级在旧PS5 Runner匹配条件处失败，原生产仍READY；本次续修当前FullProduction/独立Rollback共用身份验证，先隔离测试、新候选/快照绑定与正式只读预检，再走真实本机授权。旧失败快照和授权审计保留，不重新盘点或清理历史大候选。详见下述交接页顶部最新记录。
 
-最新优先级为生产升级/回退→持久清理授权与小型实测→增量盘点/最终清单；不推进其他Agent或Codex调度，不删十套大候选。本轮代码、实测、精确路径及下一ChatGPT工具顺序统一见[最终清理与目录归并交接](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。针对性与隔离测试通过不能替代正式部署、本机许可和实际删除；继续时先核对该页最新生产回执。
+旧阶段优先级为生产升级/回退→持久清理授权与小型实测→增量盘点/最终清单；当前具体进度以上方2026-10-29入口为准。本轮代码、实测、精确路径及下一ChatGPT工具顺序统一见[最终清理与目录归并交接](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。针对性与隔离测试通过不能替代正式部署、本机许可和实际删除；继续时先核对该页最新生产回执。
 
 更新：2026-10-27。**本文件是未来对话与Codex接手时优先阅读的当前导航，不把历史已验收和未来目标混为一谈。**
 
