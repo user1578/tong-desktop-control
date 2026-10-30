@@ -4,7 +4,7 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'TongCleanupTaskTrust.ps1')
 try {
     $target=[IO.Path]::GetFullPath([Console]::In.ReadToEnd().Trim())
-    if(-not $target.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase)){throw 'scope'}
+    if(-not $target.StartsWith('D:\Tong\state\',[StringComparison]::OrdinalIgnoreCase) -and $target -notmatch '^[CD]:\\.+\\AppData\\Local\\(?:Temp|npm-cache|pip\\Cache)$'){throw 'scope'}
     $references=0;$unknown=0;$comPaths=@{};$unknownComClasses=[Collections.Generic.HashSet[string]]::new();$warnings=[Collections.Generic.List[object]]::new()
     $referenceCounts=@{task=0;service=0;process=0}
     $unknownKinds=@{task_action=0;com=0;process_command_line=0}

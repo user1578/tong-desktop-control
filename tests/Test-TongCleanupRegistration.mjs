@@ -11,8 +11,8 @@ const guardStart=next.indexOf('const TONG_ALLOWED_TOOLS = new Set('),guardEnd=ne
 assert.ok(guardStart>=0&&guardEnd>guardStart);
 const registered=[];
 const register=new Function('process','registerBaseAppTool',next.slice(guardStart,guardEnd)+'\nreturn registerAppTool;')({env:{TONG_RESTRICTED_MCP:'1'}},(_,name)=>registered.push(name));
-for(const name of ['open_workspace','tong_disk_cleanup_plan','tong_disk_cleanup_execute','tong_disk_cleanup_run','tong_disk_cleanup_job','exec_command'])register({},name,{},()=>{});
-assert.deepEqual(registered,['open_workspace','tong_disk_cleanup_plan','tong_disk_cleanup_execute','tong_disk_cleanup_run','tong_disk_cleanup_job']);
+for(const name of ['open_workspace','tong_disk_cleanup_plan','tong_disk_cleanup_execute','tong_disk_cleanup_run','tong_disk_cleanup_job','tong_disk_cleanup_analyze','exec_command'])register({},name,{},()=>{});
+assert.deepEqual(registered,['open_workspace','tong_disk_cleanup_plan','tong_disk_cleanup_execute','tong_disk_cleanup_run','tong_disk_cleanup_job','tong_disk_cleanup_analyze']);
 assert.equal(transform(next),next,'Applying the patch again must be idempotent');
 const expected=patch.match(/name:\s*"server.js"[\s\S]*?patchedHash:\s*"([a-f0-9]{64})"/)[1];
 assert.equal(createHash('sha256').update(next).digest('hex'),expected,'The archived server patch must bind the actual transformed bytes');

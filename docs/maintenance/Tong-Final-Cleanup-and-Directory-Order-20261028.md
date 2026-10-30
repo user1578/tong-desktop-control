@@ -1,5 +1,27 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30：历史批次结束本轮尝试；通用Windows清理开发验收
+
+**历史批次新增删除0：**正式App/Manager仍f81d1d0，原job `69e8a4f6-ac31-4bf2-906c-e641177c1a87`仍停在index6、updatedAt=`2026-10-30T11:41:57.849Z`。正式版没有a73ae10的selection复用/安全跳过逻辑，现有resume会重新验证5362210，违反本轮不重扫约束；也没有直接投递376a328旧selection的正式入口。本轮没有resume/cancel/重建此job、没有生成新Plan或扫描历史依赖。`024d5b0/5362210/7d11382/d9983bb`缺完整selection，`376a328`有证明但缺已部署的受管复用入口，5套均保留。按用户要求不再延伸专用清理修复，原blocked证据保留；不把“结束本批次尝试”写成已删/已完成job。
+
+**通用清理已在开发区实现，未部署：**复用TongProjectAccess、TongManagedCleanup、TongCleanupJobs、原生HANDLE、独立本机确认和原v1清理许可；不创建平行清理/审批框架，不新增依赖。新增`TongDiskCleanupAnalysis.mjs`、`TongWindowsCleanup.mjs`和固定PS7 KnownFolder元数据助手；MCP/Gateway/DevSpace补丁注册同步。已安装SDK未改动，补丁输出仅在内存中验证新hash。
+
+- `tong_disk_cleanup_analyze({drive:'C'|'D'})`查看卷容量、根目录有界元数据及当前用户已知缓存；`{path}`做指定路径分析。只读元数据、不打开用户文件正文、不全盘递归；普通路径沿用既有保护，Windows缓存仅当前用户精确Temp/npm-cache/pip Cache三根例外。未知/保护/不可用项保留，部分大小明确`complete=false/logicalBytesObserved`；Windows结构最多2,000项、8层、约1.5秒遍历预算。分析快照持久复用5分钟，`refresh:true`明确重查；复用不代表当前授权或删除证明。
+- 删除沿用`tong_disk_cleanup_run({projectId,path?,mode:'plan'})`预览，返回原jobId、选中文件/逻辑字节、保护数及授权revision；用同一job的`resume`执行。中断/撤权/锁定/身份变更仍受原规则约束，按原审计续接，记录真实逻辑删除量和卷空闲前后值，不把全卷变化全部归因于本工具。恢复queued状态清掉旧workerPid/Stats/code，避免退出的预览worker被误报成新任务中断；旧退出见证保留。
+- Windows许可是新增范围，必须部署后由本人在正式Manager运行`TongCleanupControl.mjs grant-windows-cache`完成已有本机挑战，ID=`tong-windows-cache`；覆盖当前用户LocalAppData下精确`Temp`、`npm-cache`、`pip/Cache`三个scope，不包括其它AppData。可用`revoke-windows-cache`撤销；MCP无grant/approved入口，开发源码入口拒绝正式授权。许可仍用原`category:'cache'`，已用真实旧f81验证器确认旧版可解析整份v1 policy、原state许可不受影响；旧版AppData硬保护仍拒绝删除，不因回退放宽范围。
+- Temp只选择顶层至少24小时的`.tmp/.temp`，所有子目录、近期文件和未知内容保留；npm只选固定_cacache内容/索引结构，pip只选http/http-v2/wheels缓存结构，未知空目录也保留。三根缓存目录本身不删除。Git、Agent规则/配置、账户、浏览器、数据库、链接/多硬链接等硬保护保留；Windows缓存禁止走旧整目录Plan/Execute，必须走持久selective job。缺失pip/npm根跳过，不阻塞已有Temp；现有项目Python/Node缓存路径继续沿用原规则。
+
+**验证边界：**核心、MCP注册/Gateway、项目元数据权限、scope/撤权、v1旧版解析、引用拒绝、selection/审计恢复、DevSpace注册及精确输出hash均做针对性验证。真实C/D自建小样本使用隔离MCP、独立真实worker、原生文件核对和独立测试policy；不是正式生产许可或正式网页验收。已有一次两盘各1文件/4096字节实删、AGENTS.md/近期文件保留，前后卷空闲观测各增加4096。最终兼容格式的再验收出现一次`process_command_line unknown=1`，准确记录PID49472并拒绝；只读确认该PID已退出后，仅续接同一个自建样本job，不绕过拒绝。事故及失败夹具保持为小型证据，无全依赖副本或新发布包。
+
+最终v1兼容格式的隔离真实回执如下，均保留AGENTS.md/近期文件并含delete_intent/deleted/cleanup_result审计；生产/现有个人缓存删除为0。C项复用被拒的同一job成功续接，D项从预览到同job执行成功。完整本地证据在`D:\Tong\development\test-temp\tong-desktop-control\tong-windows-acceptance-OPtpw9\store\disk-cleanup-jobs`，仅小型自建样本及事故证据，不上传原始运行日志。
+
+| 自建样本 | jobId | 实删 | freeBytes前 → 后 |
+| --- | --- | --- | --- |
+| C盘 | `85fbdb42-747d-471b-8e47-5fc57c2f71cc` | 1文件 / 4096字节 | 385999536128 → 385999540224 |
+| D盘 | `b7b3b5fb-a365-4314-bb29-0685ce31cf69` | 1文件 / 4096字节 | 125454749696 → 125454753792 |
+
+**部署与下一步：**开发提交/推送不等于上线。正式双pin、服务、任务、ACL、恢复预算、原清理job和生产许可均未改；新工具发现、正式Windows许可、真实个人缓存清理须在独立正式部署/授权后再验收。剩余历史5套本轮保持原样，不把通用功能验收的合成样本收益计入历史清理成果。
+
 ## 2026-10-30：历史依赖拒绝、selection复用与原job收尾（本轮未删除）
 
 **最新实况优先于下方旧进度：**原job `69e8a4f6-ac31-4bf2-906c-e641177c1a87` 主记录停在index6 / `5362210` / verifying-dependencies，PID12816已不存在。已核对正式回执：本job的`0a2da3c`、`1a78e48`、`37dc649`、`4ebdbc3`完成，加上原单项job的`d780561`，共5套。本轮只读任务/selection/审计及系统元数据，**没有枚举或读取真实node_modules树、计算其文件哈希、resume、新建生产job或生产改动**。

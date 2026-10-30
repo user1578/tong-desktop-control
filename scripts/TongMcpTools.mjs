@@ -12,6 +12,7 @@ import { inspectDevEnvironment } from './TongDevEnvironment.mjs';
 import { isAbsolute, join, dirname } from "node:path";
 import { TongManagedCleanup } from './TongManagedCleanup.mjs';
 import { TongCleanupJobs } from './TongCleanupJobs.mjs';
+import { TongDiskCleanupAnalysis } from './TongDiskCleanupAnalysis.mjs';
 
 let defaultTaskManager;
 let defaultGoalSupervisor;
@@ -194,6 +195,7 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
 
   const cleanup = new TongManagedCleanup({access,stateDir:stateDir??dirname(access.registryPath)});
   const cleanupJobs = new TongCleanupJobs(cleanup);
+  const cleanupAnalysis = new TongDiskCleanupAnalysis(cleanup);
   const cleanupHandler = handler => async input=>{
     try { return success(await handler(input)); }
     catch(error){
@@ -202,6 +204,12 @@ export function registerTongMcpTools(server, registerTool, z, access, tasks, age
       return {content:[{type:'text',text:message}],isError:true};
     }
   };
+  registerTool(server,'tong_disk_cleanup_analyze',{
+    title:'Analyze C/D disk metadata and safe cleanup categories',
+    description:'Bounded metadata only: analyze an explicit C/D path or discover current-user Temp/npm/pip cache roots and drive space. Reuse a dated snapshot for five minutes unless refresh=true. Unknown/partial sizes remain explicit; analysis never grants deletion. Use existing cleanup_run mode=plan for an authorized durable preview, then cleanup_job resume for audited deletion.',
+    inputSchema:{path:z.string().min(3).max(2048).optional(),drive:z.enum(['C','D']).optional(),refresh:z.boolean().optional()},
+    annotations:{readOnlyHint:true,destructiveHint:false},_meta:{},
+  },cleanupHandler(input=>cleanupAnalysis.analyze(input)));
   registerTool(server,'tong_disk_cleanup_plan',{
     title:'Prepare bounded disk cleanup without deleting',
     description:'Plan an exact disposable cache or verified archived candidate inside a readable project or a locally approved cleanup scope. Reports deletionAuthorized separately. Broad metadata scanning remains with tong_scan_directory.',

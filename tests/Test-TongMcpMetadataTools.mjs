@@ -36,13 +36,17 @@ try {
   await server.connect(serverTransport);
   await client.connect(clientTransport);
   assert.deepEqual((await client.listTools()).tools.map((tool) => tool.name),
-    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_disk_cleanup_plan", "tong_disk_cleanup_execute", "tong_disk_cleanup_run", "tong_disk_cleanup_job", "tong_list_projects", "tong_project_prepare", "tong_agent_start", "tong_agent_sessions", "tong_agent_status", "tong_agent_wait",
+    ["tong_list_drives", "tong_dev_environment", "tong_windows_inspect", "tong_scan_directory", "tong_disk_cleanup_analyze", "tong_disk_cleanup_plan", "tong_disk_cleanup_execute", "tong_disk_cleanup_run", "tong_disk_cleanup_job", "tong_list_projects", "tong_project_prepare", "tong_agent_start", "tong_agent_sessions", "tong_agent_status", "tong_agent_wait",
       "tong_agent_list", "tong_agent_logs", "tong_agent_cancel", "tong_agent_resume", "tong_agent_result",
       "tong_goal_start", "tong_goal_status", "tong_goal_result", "tong_goal_cancel", "tong_goal_resume",
       "tong_goal_wait", "tong_goal_review", "tong_goal_list"]);
   const disposable=join(registered,'__pycache__');
   await mkdir(disposable,{recursive:true});
   await writeFile(join(disposable,'fixture.pyc'),'temporary synthetic cache');
+  const analysis=await client.callTool({name:'tong_disk_cleanup_analyze',arguments:{path:scanRoot}});
+  assert.equal(analysis.isError,undefined);assert.equal(analysis.structuredContent.files,1);assert.equal(analysis.structuredContent.deletionAuthorized,false);
+  assert.equal((await client.callTool({name:'tong_disk_cleanup_analyze',arguments:{path:scanRoot}})).structuredContent.reused,true);
+  assert.ok(!JSON.stringify(analysis).includes('SYNTHETIC_FILE_BODY'));
   const plan=await client.callTool({name:'tong_disk_cleanup_plan',arguments:{projectId:'registered',path:disposable}});
   assert.equal(plan.isError,undefined);
   assert.equal(plan.structuredContent.category,'cache');

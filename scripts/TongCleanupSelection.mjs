@@ -5,6 +5,7 @@ import {spawn} from 'node:child_process';
 import {cleanupGuards as g} from './TongManagedCleanup.mjs';
 import {cleanupProtectedName,cleanupCacheFile} from './TongCleanupProtection.mjs';
 import {cleanupHandleDelete,cleanupHandleRead,cleanupHandleList} from './TongCleanupNative.mjs';
+import {windowsCacheKind,windowsCacheFile,windowsCacheDirectory} from './TongWindowsCleanup.mjs';
 
 const fingerprint=s=>[s.dev,s.ino,s.size,s.mtimeMs,s.ctimeMs,s.nlink].join(':');
 const hash=b=>createHash('sha256').update(b).digest('hex');
@@ -57,9 +58,12 @@ export async function cleanupInventory(target,{dependency=false,exact=false,prog
    }
    let info;
    try{info=await g.plain(p);}catch(e){protectedItems.push({path:rel,reason:e.code??'CLEANUP_UNSAFE_ITEM'});continue;}
-   if(info.isDirectory())stack.push(p);
+   if(info.isDirectory()){
+    if(windowsCacheKind(target)&&!windowsCacheDirectory(windowsCacheKind(target),rel)){protectedItems.push({path:rel,reason:'unrecognized-cache-subtree'});continue;}
+    stack.push(p);
+   }
    else{
-    if(!dependency&&!exact&&!cleanupCacheFile(basename(target).toLowerCase(),rel)){protectedItems.push({path:rel,reason:'not-proven-disposable'});continue;}
+    if(!dependency&&!exact&&!(windowsCacheKind(target)?windowsCacheFile(windowsCacheKind(target),rel,info):cleanupCacheFile(basename(target).toLowerCase(),rel))){protectedItems.push({path:rel,reason:'not-proven-disposable'});continue;}
     files.push({path:rel,size:info.size,stamp:fingerprint(info)});bytes+=info.size;
    }
    if(bytes>4*1024**3)g.fail('CLEANUP_TOO_LARGE');
@@ -257,6 +261,7 @@ export async function executeCleanupSelection(manager,plan,{progress=async()=>{}
  await progress({phase:'verifying_result'});
  // Only remove empty directories; protected/new content always keeps its parent.
  for(const rel of current.directories.sort((a,b)=>b.length-a.length)){
+  if(rel===''&&windowsCacheKind(plan.target))continue;
   await check(true);if(Date.now()-permissionAt>10000){await livePermission(manager,plan);permissionAt=Date.now();}
   if(await pins(manager,plan.target)!==pinIdentity)g.fail('CLEANUP_PIN_CHANGED');
   if(plan.revision==='project-write')await livePermission(manager,plan);

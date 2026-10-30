@@ -5,26 +5,31 @@ import {randomUUID} from 'node:crypto';
 import {TongCleanupAuthorization,validateCleanupGrants,cleanupOrdinaryPath,cleanupCategories} from './TongCleanupAuthorization.mjs';
 import {confirmLocally} from './TongLocalConfirmation.mjs';
 import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
+import {windowsCleanupRoots,windowsCacheBase} from './TongWindowsCleanup.mjs';
 
-const id='tong-state-cleanup',root='D:\\Tong\\state';
+let id='tong-state-cleanup',root='D:\\Tong\\state';
 const policy=new TongCleanupAuthorization('D:\\Tong\\app\\runtime'),state=dirname(policy.path),[command,...extra]=process.argv.slice(2);
 try{
-  if(extra.length||!['status','grant-state','revoke-state'].includes(command))throw Error('Usage: status | grant-state | revoke-state');
+  if(extra.length||!['status','grant-state','revoke-state','grant-windows-cache','revoke-windows-cache'].includes(command))throw Error('Usage: status | grant-state | revoke-state | grant-windows-cache | revoke-windows-cache');
   await assertProtectedPaths([state]);await cleanupOrdinaryPath(state);
   if(command==='status'){console.log(JSON.stringify(await policy.read()));}
   else{
     if(fileURLToPath(import.meta.url).toLowerCase()!=='d:\\tong\\runtime\\releases\\manager\\scripts\\tongcleanupcontrol.mjs')throw Error('Use the installed formal Manager entry');
-    const enabled=command==='grant-state';
-    await confirmLocally({action:enabled?'启用受管历史缓存与已核验候选的持久递归删除许可':'撤销受管历史清理许可',targets:root,
-      scope:'本次任务已批准的清理能力；仅缓存类别和具有完整匹配保留release的两种历史候选，读写/命令执行权限不随之扩大',
-      risk:'获准目录内的可重建文件会被永久删除；误判可能丢失文件',recovery:'仅从匹配保留release或锁文件重建；原数据删除不可撤销。可运行 revoke-state 立即阻止后续删除',
-      duration:'持续到本人撤销；每次执行仍核对短时计划、精确路径、当前pin、链接和保留归档；不包含生产、凭据、真实数据库、Git及独有用户文件'});
+    const windows=command.endsWith('windows-cache');
+    const roots=windows?await windowsCleanupRoots():[];
+    if(windows){id='tong-windows-cache';root=windowsCacheBase(roots[0].path);if(roots.some(r=>windowsCacheBase(r.path).toLowerCase()!==root.toLowerCase()))throw Error('Windows cache roots mismatch');}
+    const enabled=command.startsWith('grant-');
+    const scopes=windows?roots.map(r=>({relativeRoot:r.kind==='temporary'?'Temp':r.kind==='npm'?'npm-cache':'pip/Cache',categories:['cache']})):[{relativeRoot:'.',categories:[...cleanupCategories]}];
+    await confirmLocally({action:windows?(enabled?'启用当前用户Windows缓存清理许可':'撤销当前用户Windows缓存清理许可'):(enabled?'启用受管历史缓存与已核验候选的持久递归删除许可':'撤销受管历史清理许可'),targets:windows?roots.map(r=>r.path).join('\n'):root,
+      scope:windows?'新增Windows缓存范围：只含当前用户Temp顶层超过24小时的.tmp/.temp、npm内容缓存、pip下载缓存；保留目录及其它所有文件，不包含系统/浏览器/Agent/账户/Git/数据库':'本次任务已批准的清理能力；仅缓存类别和具有完整匹配保留release的两种历史候选，读写/命令执行权限不随之扩大',
+      risk:'获准目录内的可重建文件会被永久删除；误判可能丢失文件',recovery:windows?'npm/pip缓存可按需重新下载；Temp文件删除不可撤销。可运行 revoke-windows-cache 阻止后续删除':'仅从匹配保留release或锁文件重建；原数据删除不可撤销。可运行 revoke-state 立即阻止后续删除',
+      duration:'持续到本人撤销；每次执行仍实时核对授权、精确选择、文件身份及保护规则；不包含后续生产升级、凭据、真实数据库、Git及独有用户文件'});
     await cleanupOrdinaryPath(root);
     const lock=await open(policy.path+'.lock','wx');
     try{
       const value=await policy.read();
       value.grants=value.grants.filter(g=>g.id!==id);
-      value.grants.push({id,root,enabled,revision:randomUUID(),scopes:[{relativeRoot:'.',categories:[...cleanupCategories]}]});
+      value.grants.push({id,root,enabled,revision:randomUUID(),scopes});
       validateCleanupGrants(value);
       const temp=policy.path+'.'+randomUUID()+'.tmp';
       await writeFile(temp,JSON.stringify(value,null,2)+'\n',{flag:'wx',mode:0o600});

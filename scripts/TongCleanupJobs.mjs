@@ -8,6 +8,7 @@ import {TongManagedCleanup,cleanupGuards as g} from './TongManagedCleanup.mjs';
 import {TongProjectAccess} from './TongProjectAccess.mjs';
 import {prepareCleanupSelection,executeCleanupSelection} from './TongCleanupSelection.mjs';
 import {cleanupAtomicReplace,closeCleanupNative,acquireCleanupLock} from './TongCleanupNative.mjs';
+import {windowsCacheKind} from './TongWindowsCleanup.mjs';
 
 const idPattern=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const terminal=new Set(['completed','blocked','cancelled','failed','ready']);
@@ -112,7 +113,12 @@ export class TongCleanupJobs{
   }catch{}
   // Only immediate known cache roots inside each pre-existing authorized scope.
   for(const scope of grant.scopes){
-   const root=resolve(grant.root,scope.relativeRoot);await g.checkAncestors(root);
+   const root=resolve(grant.root,scope.relativeRoot);
+   if(scope.categories.includes('cache')&&windowsCacheKind(root)){
+    try{await g.checkAncestors(root);await g.plain(root,'directory');paths.push(root);}catch{ /* Independent unavailable roots remain untouched. */ }
+    continue;
+   }
+   await g.checkAncestors(root);
    for(const entry of (await readdir(root,{withFileTypes:true})).slice(0,256))if(entry.isDirectory()&&g.supportedTarget(join(root,entry.name))==='cache')paths.unshift(join(root,entry.name));
   }
   return [...new Set(paths)].slice(0,32);
@@ -140,7 +146,11 @@ export class TongCleanupJobs{
   }
   const cancel=join(this.dir,jobId+'.cancel');
   try{await g.plain(cancel,'file');await unlink(cancel);}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
-  state.status='queued';state.updatedAt=new Date().toISOString();if(state.mode==='plan')state.mode='clean';
+  state.status='queued';state.phase='queued';state.stage='queued';state.updatedAt=new Date().toISOString();
+  // A resumed worker has not claimed the job yet. The exited preview worker
+  // must not make this new queued run appear interrupted to status clients.
+  delete state.workerPid;delete state.workerStats;delete state.code;
+  if(state.mode==='plan')state.mode='clean';
   // Revisit refused selections without throwing away completed receipts or
   // restarting verification of an unprepared historical dependency tree.
   state.selectionOnly=true;
@@ -184,7 +194,7 @@ export class TongCleanupJobs{
       selection=await prepareCleanupSelection(this.manager,{projectId:state.projectId,path:target,exact:state.mode==='exact'},{progress,check,referenceCache});await atomic(selectionPath,selection);
      }
      if(selection.schemaVersion!==1||selection.projectId!==state.projectId||!g.same(selection.target,target))g.fail('CLEANUP_SELECTION_INVALID');
-     if(state.mode==='plan'){state.status='ready';state.phase='ready';await persist(true);return;}
+     if(state.mode==='plan'){state.preview={path:target,category:selection.category,files:selection.inventory.files.length,logicalBytes:selection.inventory.bytes,protectedCount:selection.inventory.protectedItems.length,revision:selection.revision};state.status='ready';state.phase='ready';await persist(true);return;}
      const result=await executeCleanupSelection(this.manager,selection,{progress,check,journalPath:join(this.dir,jobId+'.'+state.index+'.audit.jsonl')});
      state.results[state.index]={...result,status:result.skipped.length||result.ambiguousMissing.length?'partial':'completed'};
     }catch(e){

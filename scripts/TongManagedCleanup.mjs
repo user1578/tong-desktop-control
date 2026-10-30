@@ -6,6 +6,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {cleanupProtectedName,cleanupCacheFile} from './TongCleanupProtection.mjs';
 import {cleanupHandleDelete,cleanupHandleRead,cleanupHandleList} from './TongCleanupNative.mjs';
+import {windowsCacheKind,windowsCacheBase,windowsCachePublicPath} from './TongWindowsCleanup.mjs';
 
 const CACHE_NAMES=new Set(['npm-cache','.npm-cache','node-compile-cache','.pytest_cache','__pycache__','.mypy_cache','.ruff_cache','.cache']);
 const PRIVATE_PARTS=new Set(['.git','.hg','.svn','.ssh','.codex','.claude','.cursor','.continue','.windsurf','.config','.kube','.azure','.docker','skills','sessions','profiles','.devspace','appdata','program files','program files (x86)','windows','system volume information','$recycle.bin','.aws','.gnupg','credentials','secrets','state-backups','state-restores','oauth','runtime']);
@@ -63,6 +64,7 @@ function blockPath(p){
 // Conservative targeted categories only; explicitly reject arbitrary source
 // projects, personal folders and broad root-directory removal.
 function supportedTarget(p){
+  if(windowsCacheKind(p))return 'cache';
   const base=basename(p).toLowerCase();
   if(CACHE_NAMES.has(base))return 'cache';
   if(base==='node_modules')return supportedTarget(dirname(p));
@@ -100,7 +102,7 @@ async function snapshot(target){
   return {files,directories:dirs,bytes:total,signature:lastSha.digest('hex'),inventory,paths:directories};
 }
 async function assertNoRuntimeReferences(target){
-  if(!within('D:\\Tong\\state',target))return [];
+  if(!within('D:\\Tong\\state',target)&&!windowsCacheKind(target))return [];
   const refuse=(code,detail)=>{try{fail(code);}catch(error){error.referenceCheck=detail;throw error;}};
   const helper=fileURLToPath(new URL('./TongCleanupReferences.ps1',import.meta.url));
   const result=await new Promise((accept,reject)=>{
@@ -143,6 +145,10 @@ async function safeAuthorizedRoot(access,authorization,projectId,target,{execute
   return {root,revision:grant?.revision??(exact&&p?.effectiveCapabilities?.includes('project.write')?'project-write':null)};
 }
 function assertTarget(root,target){
+  if(windowsCacheKind(target)){
+    if(!same(root,windowsCacheBase(target))||blockPath(windowsCachePublicPath(root))||blockPath(windowsCachePublicPath(target)))fail('CLEANUP_PROTECTED_PATH');
+    return;
+  }
   if(blockPath(target)||blockPath(root))fail('CLEANUP_PROTECTED_PATH');
   if(!supportedTarget(target))fail('CLEANUP_CATEGORY_NOT_ALLOWED');
   if(target.toLowerCase().includes('\\node_modules\\')||basename(target).toLowerCase()==='node_modules'&&!['historical-candidate','quick-trust-candidate'].includes(supportedTarget(dirname(target))))fail('CLEANUP_SHARED_DEPENDENCY_DENIED');
@@ -304,6 +310,7 @@ export class TongManagedCleanup{
   }
   async plan({projectId,path}){
     const target=safePath(path);
+    if(windowsCacheKind(target))fail('CLEANUP_USE_DURABLE_JOB');
     const {root,revision}=await safeAuthorizedRoot(this.access,this.authorization,projectId,target);
     assertTarget(root,target);
     if(basename(target).toLowerCase()==='node_modules')fail('CLEANUP_USE_DURABLE_JOB');
@@ -325,6 +332,7 @@ export class TongManagedCleanup{
     if(this.now()>plan.expiresAt)fail('CLEANUP_PLAN_EXPIRED');
     const auditPath=join(this.stateDir,'disk-cleanup-audit.jsonl');
     const category=supportedTarget(plan.target),reason=category==='cache'?'locally-authorized-rebuildable-cache':'verified-preserved-release';
+    if(windowsCacheKind(plan.target))fail('CLEANUP_USE_DURABLE_JOB');
     let referenceWarnings=plan.referenceWarnings??[];
     const audit=async(event,details={})=>{
       if(within(plan.target,this.stateDir))fail('CLEANUP_AUDIT_TARGET');

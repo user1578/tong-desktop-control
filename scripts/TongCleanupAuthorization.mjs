@@ -2,6 +2,7 @@ import {readFile,lstat,realpath} from 'node:fs/promises';
 import {isAbsolute,resolve,relative,sep,join,parse,dirname} from 'node:path';
 import {assertProtectedPaths} from './TongRuntimeSecurity.mjs';
 import {cleanupHandleRead} from './TongCleanupNative.mjs';
+import {windowsCacheKind,windowsCacheBase} from './TongWindowsCleanup.mjs';
 
 export const cleanupCategories=Object.freeze(['cache','historical-candidate','quick-trust-candidate']);
 const fail=code=>{const e=Error(code);e.code=code;throw e;};
@@ -18,6 +19,10 @@ export function validateCleanupGrants(value){
     ids.add(g.id);
     for(const s of g.scopes){
       if(typeof s.relativeRoot!=='string'||!s.relativeRoot||isAbsolute(s.relativeRoot)||s.relativeRoot.split(/[\\/]/).some(p=>p==='..'||p.includes(':')||!p)||!cleanupContains(g.root,resolve(g.root,s.relativeRoot))||!Array.isArray(s.categories)||!s.categories.length||s.categories.some(c=>!cleanupCategories.includes(c)))fail('CLEANUP_AUTHORIZATION_INVALID');
+      const target=resolve(g.root,s.relativeRoot);
+      if(s.categories.includes('cache')&&(windowsCacheKind(target)||/\\AppData\\Local$/i.test(resolve(g.root)))){
+        if(!windowsCacheKind(target)||resolve(g.root).toLowerCase()!==windowsCacheBase(target).toLowerCase())fail('CLEANUP_AUTHORIZATION_INVALID');
+      }
     }
   }
   return value;

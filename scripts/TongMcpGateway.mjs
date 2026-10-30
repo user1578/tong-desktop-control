@@ -16,7 +16,7 @@ const INBOUND_KEEP_ALIVE_TIMEOUT_MS = 15_000;
 const PROJECT_ROOT = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(PROJECT_ROOT, "..", "demo-workspace");
 const METADATA_TOOLS = new Set(["tong_list_drives", "tong_scan_directory", "tong_list_projects", "tong_windows_inspect", "tong_dev_environment"]);
-const DISK_CLEANUP_TOOLS = new Set(['tong_disk_cleanup_plan','tong_disk_cleanup_execute','tong_disk_cleanup_run','tong_disk_cleanup_job']);
+const DISK_CLEANUP_TOOLS = new Set(['tong_disk_cleanup_analyze','tong_disk_cleanup_plan','tong_disk_cleanup_execute','tong_disk_cleanup_run','tong_disk_cleanup_job']);
 const AGENT_TOOLS = new Set([
   "tong_agent_start", "tong_agent_status", "tong_agent_wait", "tong_agent_list", "tong_agent_logs",
   "tong_agent_cancel", "tong_agent_resume", "tong_agent_result", "tong_agent_sessions", "tong_project_prepare",
@@ -328,6 +328,10 @@ export async function validateAllowedToolCall(request, workspaceRoot = WORKSPACE
   // The authenticated DevSpace tool handler owns metadata path and project policy.
   if (METADATA_TOOLS.has(name)) return null;
   if (DISK_CLEANUP_TOOLS.has(name)){
+    if(name==='tong_disk_cleanup_analyze'){
+      if(Object.keys(args).some(k=>!['path','drive','refresh'].includes(k))||args.path!==undefined&&(typeof args.path!=='string'||args.path.length>2048||!isAbsolute(args.path))||args.drive!==undefined&&!['C','D'].includes(args.drive)||args.path!==undefined&&args.drive!==undefined||args.refresh!==undefined&&typeof args.refresh!=='boolean')return {code:-32602,message:'Invalid cleanup analysis'};
+      return null;
+    }
     if(name==='tong_disk_cleanup_run'||name==='tong_disk_cleanup_job'){
       const run=name==='tong_disk_cleanup_run',allowed=run?['projectId','path','mode','idempotencyKey']:['projectId','jobId','action'];
       if(Object.keys(args).some(k=>!allowed.includes(k))||!/^[a-z][a-z0-9-]{1,39}$/.test(args.projectId??''))return {code:-32602,message:'Invalid cleanup request'};

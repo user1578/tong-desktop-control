@@ -279,13 +279,18 @@ export class TongProjectAccess {
     }));
   }
 
+  async authorizeScanPath(path) {
+    if (!(await this.authorize("disk.metadata"))) denied();
+    const root=validateSyntax(path);
+    if(!this.scanRoots.some(drive=>within(drive,root)))denied();
+    return checkedDirectory(root);
+  }
+
   async scanDirectory({ path, maxDepth = 0, limit = 100, cursor } = {}) {
     if (!(await this.authorize("disk.metadata"))) denied();
     if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > MAX_DEPTH) throw new Error("Invalid maxDepth");
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_RESULTS) throw new Error("Invalid limit");
-    const root = validateSyntax(path);
-    if (!this.scanRoots.some((drive) => within(drive, root))) denied();
-    await checkedDirectory(root);
+    const root = await this.authorizeScanPath(path);
     const offset = decodeCursor(cursor, root, maxDepth);
     const deadline = this.now() + this.scanBudgetMs;
     const all = [];
