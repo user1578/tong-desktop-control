@@ -1,5 +1,15 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-31：用户明确改用独立PS7，5个完整node_modules已删除
+
+用户明确选择“改用独立PS7，删除五个完整目录”，本批次替代此前仅走Tong正式接口/保留内部保护项的限制；仅含024d5b0、376a328、5362210、7d11382、d9983bb各自完整node_modules（含376a328残留），不涉及目录外文件、release、staged、生产和事故证据。没有修改清理器或伪造selection。
+
+删除前以已部署的只读引用检查器逐项检查候选父目录。首次024d5b0/7d11382有powershell.exe PID48912/35864元数据未知；只读确认两PID退出后仅定向复查这两项，最终5项均references=0/unknown=0。另核对5根普通目录/canonical path、正式双pin及App/Manager依赖根和四个主要包实际路径，均无目标重叠；未扫描依赖文件正文或计算其哈希。
+
+5条独立、精确LiteralPath的PS7 Remove-Item -Recurse -Force均exit 0。事后确认`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-candidate-<tag>\node_modules`在上述5个tag下全部不存在，候选父目录、配对release根和release-manifest.json均存在。D卷空闲123754635264 → 126405693440，观测增加2,651,058,176字节（约2.47GiB）；未另枚举文件计算逻辑大小，全卷波动不能精确归因于删除。
+
+原生产run df9e7581-177b-4795-9669-747ead7c00e1/8655ffab继续ready，任务Running；独立监测连续healthy=true、hostCount=1、checkErrors=[]，正式网页MCP容量查询成功。原job 69e8a4f6-ac31-4bf2-906c-e641177c1a87及selection/审计/事故记录保留，updatedAt仍2026-10-30T17:20:53.932Z；旧blocked状态未手改成本次原生删除回执，不再resume或新建历史任务。下节“4套保留”属于此前受管批次历史，当前以上述5根均不存在为准。未修改源码、生产部署、main或原用户dirty文档，仅更新现有交接入口。
+
 ## 2026-10-31：8655ffab正式部署与真实MCP验收
 
 **已正式部署：**用户在可见PS7窗口完成版本绑定、新版恢复与Windows范围挑战；`native-window-result.json.stage=deployed-and-windows-granted`（2026-10-31 02:12:03 JST）。App/Manager双pin=`8655ffab397eba0b6ed7c02982398ac37db5aacc`，新run=`df9e7581-177b-4795-9669-747ead7c00e1`；正式doctor实测`healthy=true,phase=ready`，upgrade-gate/backup.freeze均释放。旧Monitor在10月30日21:53 JST再次因doctor `0xC0000409`退出，本次先经已审查RecoverMonitor恢复原run，再走正常部署；不宣称native fast-fail已定位或根治。

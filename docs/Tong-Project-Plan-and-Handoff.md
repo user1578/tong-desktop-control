@@ -4,6 +4,8 @@
 
 ### 当前执行入口（2026-10-31，跨对话先读）
 
+**剩余5根完整目录已删除（最新）：**用户明确改为独立PS7删除024d5b0/376a328/5362210/7d11382/d9983bb的完整node_modules，含此前内部保护项；实时引用最终均0/0、生产依赖实际路径无重叠后，5条精确删除均exit 0，事后5根均不存在，候选父目录/配对release/事故证据保留。D卷观测增加2,651,058,176字节（约2.47GiB），生产同run仍ready/监测健康/任务Running。原job保留旧结果，不伪造selection或改写blocked状态，无依赖正文扫描、哈希重算或清理器开发。[精确执行边界和核验结果](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。下段“4套保留”仅为此前正式受管批次历史。
+
 **通用Windows清理已正式部署：**8655ffab App/Manager双pin、新run `df9e7581-177b-4795-9669-747ead7c00e1` ready，正式doctor healthy=true，本人已完成Windows精确范围许可。C/D真实网页MCP各实删自建样本1文件/4096字节，保护文件保留；D同job安全拒绝后恢复成功，分析快照复用已验。原历史job只resume一次，376a328复用selection实删36,323文件/592,590,618逻辑字节，D卷观测增加634,589,184字节；735保护项与骨架保留。024d5b0/5362210/7d11382/d9983bb均CLEANUP_SELECTION_REQUIRED，4项保留，本批次不再自动重试；无历史树重扫、无新历史任务、无个人缓存删除。[本次正式部署/审计/空间与最终历史结果](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
 ### 2026-10-30历史记录（当前状态以上方为准）
