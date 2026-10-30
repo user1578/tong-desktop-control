@@ -1,5 +1,26 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30：历史依赖拒绝、selection复用与原job收尾（本轮未删除）
+
+**最新实况优先于下方旧进度：**原job `69e8a4f6-ac31-4bf2-906c-e641177c1a87` 主记录停在index6 / `5362210` / verifying-dependencies，PID12816已不存在。已核对正式回执：本job的`0a2da3c`、`1a78e48`、`37dc649`、`4ebdbc3`完成，加上原单项job的`d780561`，共5套。本轮只读任务/selection/审计及系统元数据，**没有枚举或读取真实node_modules树、计算其文件哈希、resume、新建生产job或生产改动**。
+
+| 对象 | 历史拒绝/中断阶段与现存证据 | 当前结论 |
+| --- | --- | --- |
+| index0 `024d5b0` | `CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN`；无`.0.selection`/删除审计，对应prepare首次引用检查 | 最后只读references=0/unknown=0，但无可复用完整selection；禁止全量验证时仍应保留 |
+| index3 `376a328` | `.3.selection`完整：36,323选中文件、2,473目录、735保护项、36,348 witness；首次引用检查通过并保留1个受信系统COM warning；无audit，对应predelete-references拒绝 | 最后references=0/unknown=0，28个归档/控制文件witness身份均未变，grant revision匹配；有复用基础，正式执行仍须重验必要身份/授权/pin/实时引用 |
+| index6 `5362210` | 主JSON 11:41:57.849Z记录verifiedFiles=183。`.json.197cbcaf-3e22-4f9a-a27a-b725afcd5ab9.tmp`为有效JSON，11:42:08.033Z已到index7并保存index6 blocked / **CLEANUP_NATIVE_TIMEOUT**，verifiedFiles=198/6,277,469字节 | 仅部分验证，无完整selection；不得提升tmp为正式状态，不得按部分进度删除 |
+| index7 `7d11382`、index8 `d9983bb` | 当前任务存储无完整selection/本轮删除回执 | 保留，不能套用别套目录的证明 |
+
+**为何以前不能删：**两次拒绝只存统一错误码，没有保存references/unknown来源，不能回填到底是真实引用还是临时未知。按原实现，20秒引用检查子进程超时/失败会报`CLEANUP_REFERENCE_CHECK_FAILED`，不能把这两次拒绝直接说成超时。本轮中间一次`376a328`快照曾references=0/unknown=1；最后带来源诊断的开发版只读检查两套均0/0，不能据此否定历史未知或宣称已证明检查器误判。受信SYSTEM COM warning只作警告，其它未知仍拒绝。
+
+**worker退出证据：**上述tmp明确记录原生助手10秒请求超时，更早PID59340、32728的保留tmp也有同一代码。助手超时被终止后原锁及后续原子提交会失效，可解释主状态滞留；但超时请求到底是read、replace还是其它操作、为何超过10秒，现有记录不足。对应时窗Application 1000/1001/1026无匹配事件。正式双pin仍f81d1d0，现役源码未包含6353972的workerStats/exit witness，因此没有`.worker-12816.exit.json`**不能据此推断Node native crash、强杀或OOM**。本轮不延长超时、不重复大依赖复现，所有事故原件保留。
+
+**开发区最小修正（未部署）：**完整依赖selection执行不再调用cleanupInventory整树重扫或重新内容hash；仅按保存列表核验选中文件、archive/reference witness身份和已选父路径的Git标记，元数据检查有界8并发。native HANDLE身份、逐项授权/pin、硬保护和实时引用拒绝保留；新增/未选内容不触及，非空目录保留，缓存仍维持原inventory变更拒绝。原job resume保留已完成回执并跳过完成项，重试已有selection；历史依赖缺selection明确报`CLEANUP_SELECTION_REQUIRED`，不自动全量重验。审计重放保留restoreStamp。拒绝结果新增prepare/predelete阶段、实际计数、固定来源、最多8项缺命令行PID/进程名，以及helper timeout/child-exit/invalid-proof分类，不存原始命令行或秘密，不放宽拒绝条件。
+
+**实际验证：**`Test-TongCleanupSelectionReuse.mjs`、`Test-TongCleanupReferenceProof.mjs`、`Test-TongCleanupReferences.ps1`、`Test-TongCleanupRecovery.mjs`、`Test-TongCleanupJobs.mjs`通过；均为小合成夹具。覆盖不重枚举、身份/归档改变拒绝、prepare后新增Git保护、未选内容保留、诊断脱敏/阶段持久化、缺selection保留、完成回执不重做、撤权/锁定文件/中断审计/重解析竞态。独立只读复核提出的Git保护遗漏已补回并测试。未重跑大规模测试、安装依赖或发布打包。
+
+**可执行剩余方案：**先按正常受控流程部署本轮开发提交，另需正式批准，不复用旧升级CMD。之后只对原job调用正式`tong_disk_cleanup_job({projectId:'tong-state-cleanup',jobId:'69e8a4f6-ac31-4bf2-906c-e641177c1a87',action:'resume'})`一次：跳过已完成项，保留缺selection的`024d5b0/5362210/7d11382/d9983bb`，只尝试`376a328`原选中文件。任何身份变化、真实引用或unknown均拒绝并保存具体证据；不新建job、不手改状态/tmp、不绕过受管接口。**现有证据加上禁止重扫的约束，只足以继续已有完整selection的剩余项，不能承诺直接清完其它4套。**本轮实际新增删除0，生产未部署此修正。
+
 ## 2026-10-30 19:48（本机）：旧版Login Monitor已通过正式受控入口恢复（最新）
 
 **真实操作结果**：用户在独立PS7 ConsoleHost运行已审查`Invoke-TongQuickTrustFullProduction.ps1 -Mode RecoverMonitor`，绑定旧commit `f81d1d0ddcc6da354cb475be628e6b79ca822516`、原run `1f5c6443-b05f-4459-a559-2b17e27f0015`、Host SHA256 `28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718`。受控入口返回`monitorRecovered:true`，hostPid=**9264**、runnerPid=**10460**，没有改变旧双pin。

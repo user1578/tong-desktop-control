@@ -141,7 +141,11 @@ export class TongCleanupJobs{
   const cancel=join(this.dir,jobId+'.cancel');
   try{await g.plain(cancel,'file');await unlink(cancel);}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
   state.status='queued';state.updatedAt=new Date().toISOString();if(state.mode==='plan')state.mode='clean';
-  if(state.index===state.targets.length&&state.results.some(x=>x.status!=='completed')){state.index=state.results.findIndex(x=>x.status!=='completed');state.results=state.results.slice(0,state.index);}
+  // Revisit refused selections without throwing away completed receipts or
+  // restarting verification of an unprepared historical dependency tree.
+  state.selectionOnly=true;
+  state.index=state.targets.findIndex((target,index)=>state.results[index]?.status!=='completed'||state.results[index]?.path!==target);
+  if(state.index<0)state.index=state.targets.length;
   await atomic(join(this.dir,jobId+'.json'),state);
   }finally{await release();}
   await this.launch(state);return this.view(state);
@@ -170,17 +174,22 @@ export class TongCleanupJobs{
    state.workerPid=process.pid;await progress({phase:'scanning'});await persist(true);
    while(state.index<state.targets.length){
     await check();const target=state.targets[state.index];state.currentPath=target;
+    if(state.results[state.index]?.status==='completed'&&state.results[state.index].path===target){state.index++;await persist(true);continue;}
     const selectionPath=join(this.dir,jobId+'.'+state.index+'.selection');
     try{
      let selection;
      try{selection=await json(selectionPath);}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
-     if(!selection){selection=await prepareCleanupSelection(this.manager,{projectId:state.projectId,path:target,exact:state.mode==='exact'},{progress,check,referenceCache});await atomic(selectionPath,selection);}
+     if(!selection){
+      if(state.selectionOnly&&basename(target)==='node_modules'&&['historical-candidate','quick-trust-candidate'].includes(g.supportedTarget(target)))g.fail('CLEANUP_SELECTION_REQUIRED');
+      selection=await prepareCleanupSelection(this.manager,{projectId:state.projectId,path:target,exact:state.mode==='exact'},{progress,check,referenceCache});await atomic(selectionPath,selection);
+     }
+     if(selection.schemaVersion!==1||selection.projectId!==state.projectId||!g.same(selection.target,target))g.fail('CLEANUP_SELECTION_INVALID');
      if(state.mode==='plan'){state.status='ready';state.phase='ready';await persist(true);return;}
      const result=await executeCleanupSelection(this.manager,selection,{progress,check,journalPath:join(this.dir,jobId+'.'+state.index+'.audit.jsonl')});
-     state.results.push({...result,status:result.skipped.length||result.ambiguousMissing.length?'partial':'completed'});
+     state.results[state.index]={...result,status:result.skipped.length||result.ambiguousMissing.length?'partial':'completed'};
     }catch(e){
      if(e.code==='CLEANUP_CANCELLED')throw e;
-     state.results.push({path:target,status:'blocked',code:safeError(e)});
+     state.results[state.index]={path:target,status:'blocked',code:safeError(e),...(e.cleanupStage?{stage:e.cleanupStage}:{}),...(e.referenceCheck?{referenceCheck:e.referenceCheck}:{})};
      // A rejected item never blocks the next independently authorized target.
     }
     state.index++;await persist(true);

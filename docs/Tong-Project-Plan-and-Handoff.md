@@ -4,6 +4,8 @@
 
 ### 当前执行入口（2026-10-30，跨对话先读）
 
+**清理收尾专项最新：**正式已完成5套，原job `69e8a4f6-ac31-4bf2-906c-e641177c1a87`停在index6。`024d5b0`首次引用检查拒绝、无selection；`376a328`完整selection后删除前引用检查拒绝，历史具体计数缺失，最后只读两者0引用/0unknown。index6保留tmp明确记录`CLEANUP_NATIVE_TIMEOUT`，底层请求/超时原因仍未知，不能称为已证实Node崩溃。开发修正复用selection而不重扫依赖、保留完成回执、缺证明保留并记录拒绝来源；5个小型针对性测试通过，未部署、未resume、未新增删除。下一次受控部署后，原job只继续有完整selection的`376a328`；缺selection的4项仍保留，禁止为追求清完而全量重扫。[证据和实际收尾方案](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。以下较早“index2/两套完成”均为历史。
+
 **2026-10-30 19:48真实恢复结果：**用户正式PS7受控执行`RecoverMonitor`成功，返回Host PID9264/Runner PID10460、`monitorRecovered:true`；ChatGPT独立验证Task Running、COM=1、Host/Runner对应、runtime_healthy匹配原run、双pin仍`f81d1d0`、三端口监听和连续健康监测`healthy=true`。**监控已恢复，不等于doctor原生`0xC0000409`根因已修复或新版已部署**。原9套清理job`69e8a4f6-ac31-4bf2-906c-e641177c1a87`仍blocked/index2，不新建或恢复；准备最新版诊断发布须新正式预检和单独本机确认。见[维护交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
 

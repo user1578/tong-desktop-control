@@ -101,18 +101,35 @@ async function snapshot(target){
 }
 async function assertNoRuntimeReferences(target){
   if(!within('D:\\Tong\\state',target))return [];
+  const refuse=(code,detail)=>{try{fail(code);}catch(error){error.referenceCheck=detail;throw error;}};
   const helper=fileURLToPath(new URL('./TongCleanupReferences.ps1',import.meta.url));
   const result=await new Promise((accept,reject)=>{
     const child=spawn('C:\\Program Files\\PowerShell\\7\\pwsh.exe',['-NoLogo','-NoProfile','-NonInteractive','-File',helper],{windowsHide:true,stdio:['pipe','pipe','ignore']});
-    let out='';const timer=setTimeout(()=>child.kill(),20000);
+    let out='',timedOut=false,overflow=false;const started=Date.now();
+    const detail=kind=>({kind,...(Number.isInteger(child.pid)?{helperPid:child.pid}:{}),elapsedMs:Date.now()-started});
+    const timer=setTimeout(()=>{timedOut=true;child.kill();reject(detail('timeout'));},20000);
     child.stdin.on('error',()=>{});child.stdin.end(target);
-    child.stdout.on('data',b=>{out+=b;if(out.length>4096)child.kill();});
-    child.once('error',()=>{clearTimeout(timer);reject(Error('CLEANUP_REFERENCE_CHECK_FAILED'));});
-    child.once('close',code=>{clearTimeout(timer);try{if(code!==0)throw Error();accept(JSON.parse(out));}catch{reject(Error('CLEANUP_REFERENCE_CHECK_FAILED'));}});
-  }).catch(()=>fail('CLEANUP_REFERENCE_CHECK_FAILED'));
-  if(result.readOnly!==true||result.references!==0||result.unknown!==0)fail('CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN');
+    child.stdout.on('data',b=>{out+=b;if(out.length>4096){overflow=true;out='';child.kill();}});
+    child.once('error',()=>{clearTimeout(timer);reject(detail('spawn_failed'));});
+    child.once('close',code=>{
+      clearTimeout(timer);
+      if(timedOut||overflow||code!==0){reject({...detail(timedOut?'timeout':overflow?'output_limit':'child_exit'),...(Number.isInteger(code)?{nativeExitCode:code}:{})});return;}
+      try{accept(JSON.parse(out));}catch{reject(detail('invalid_output'));}
+    });
+  }).catch(detail=>refuse('CLEANUP_REFERENCE_CHECK_FAILED',
+    ['timeout','spawn_failed','output_limit','child_exit','invalid_output'].includes(detail?.kind)?detail:{kind:'spawn_failed'}));
+  if(result?.readOnly!==true||!Number.isSafeInteger(result.references)||result.references<0||!Number.isSafeInteger(result.unknown)||result.unknown<0)refuse('CLEANUP_REFERENCE_CHECK_FAILED',{kind:'invalid_proof'});
+  if(result.references!==0||result.unknown!==0){
+    const detail={kind:result.references?'live_reference':'unknown',readOnly:true,references:result.references,unknown:result.unknown};
+    for(const key of ['referenceCounts','unknownKinds']){
+      const fields=key==='referenceCounts'?['task','service','process']:['task_action','com','process_command_line'];
+      if(result[key]&&typeof result[key]==='object')detail[key]=Object.fromEntries(fields.filter(name=>Number.isSafeInteger(result[key][name])&&result[key][name]>=0).map(name=>[name,result[key][name]]));
+    }
+    if(Array.isArray(result.unknownProcesses))detail.unknownProcesses=result.unknownProcesses.slice(0,8).filter(p=>Number.isSafeInteger(p?.pid)&&p.pid>0&&['node.exe','pwsh.exe','powershell.exe','TongLoginHost.exe'].includes(p.name)).map(p=>({pid:p.pid,name:p.name}));
+    refuse('CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN',detail);
+  }
   const warnings=result.warnings??[];
-  if(!Array.isArray(warnings)||warnings.length>16||warnings.some(w=>w?.code!=='TRUSTED_SYSTEM_COM_UNRESOLVED'||!/^\{[a-f0-9-]{36}\}$/i.test(w.classId??'')||typeof w.task!=='string'||!w.task.toLowerCase().startsWith('\\microsoft\\windows\\')||w.task.length>1024))fail('CLEANUP_REFERENCE_CHECK_FAILED');
+  if(!Array.isArray(warnings)||warnings.length>16||warnings.some(w=>w?.code!=='TRUSTED_SYSTEM_COM_UNRESOLVED'||!/^\{[a-f0-9-]{36}\}$/i.test(w.classId??'')||typeof w.task!=='string'||!w.task.toLowerCase().startsWith('\\microsoft\\windows\\')||w.task.length>1024))refuse('CLEANUP_REFERENCE_CHECK_FAILED',{kind:'invalid_proof'});
   return warnings;
 }
 async function safeAuthorizedRoot(access,authorization,projectId,target,{execute=false,exact=false}={}){

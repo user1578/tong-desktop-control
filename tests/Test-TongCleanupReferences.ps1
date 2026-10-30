@@ -98,7 +98,8 @@ if((Check).unknown -ne 1){throw 'Incomplete Exec metadata must fail closed'}
 $script:actions=@([pscustomobject]@{CimClass=[pscustomobject]@{CimClassName='MSFT_TaskUnknownAction'}})
 if((Check).unknown -ne 1){throw 'Unknown action type must fail closed'}
 $script:actions=@();$script:processes=@([pscustomobject]@{ProcessId=1;Name='node.exe';CommandLine=$null;ExecutablePath=$null})
-if((Check).unknown -ne 1){throw 'Unknown relevant process metadata must fail closed'}
+$result=Check
+if($result.unknown -ne 1 -or $result.unknownKinds.process_command_line -ne 1 -or $result.unknownProcesses[0].pid -ne 1){throw 'Unknown relevant process metadata must fail closed with bounded evidence'}
 $script:taskFailure=$true;$rejected=$false
 try{$null=Check}catch{$rejected=$true}
 if(-not $rejected){throw 'Task enumeration failure must not produce an accepted proof'}

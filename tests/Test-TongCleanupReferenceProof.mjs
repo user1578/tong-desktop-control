@@ -20,12 +20,22 @@ proof={readOnly:true,references:0,unknown:0,warnings:[warning]};
 assert.deepEqual(await check('D:\\Tong\\state\\synthetic\\npm-cache'),[warning]);
 for(const field of ['references','unknown']){
  proof={readOnly:true,references:0,unknown:0,warnings:[warning],[field]:1};
- await assert.rejects(check('D:\\Tong\\state\\synthetic\\npm-cache'),/CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN/);
+ await assert.rejects(check('D:\\Tong\\state\\synthetic\\npm-cache'),error=>{
+  assert.match(error.message,/CLEANUP_RUNTIME_REFERENCE_OR_UNKNOWN/);
+  assert.equal(error.referenceCheck?.[field],1,'refusal must retain actual counts');
+  assert.equal(error.referenceCheck.kind,field==='references'?'live_reference':'unknown');return true;
+ });
 }
+proof={readOnly:true,references:0,unknown:1,unknownKinds:{process_command_line:1,secret:'FAKE_PRIVATE_COMMAND'},unknownProcesses:[{pid:123,name:'node.exe',command:'FAKE_PRIVATE_COMMAND'}]};
+await assert.rejects(check('D:\\Tong\\state\\synthetic\\npm-cache'),error=>{
+ assert.deepEqual(error.referenceCheck.unknownKinds,{process_command_line:1});
+ assert.deepEqual(error.referenceCheck.unknownProcesses,[{pid:123,name:'node.exe'}]);
+ assert.ok(!JSON.stringify(error.referenceCheck).includes('FAKE_PRIVATE_COMMAND'));return true;
+});
 for(const warnings of [[{...warning,code:'OTHER'}],[{...warning,classId:'invalid'}],[{...warning,task:'\\UserTask'}],Array(17).fill(warning)]){
  proof={readOnly:true,references:0,unknown:0,warnings};
  await assert.rejects(check('D:\\Tong\\state\\synthetic\\npm-cache'),/CLEANUP_REFERENCE_CHECK_FAILED/);
 }
 exit=2;proof={readOnly:true,references:0,unknown:0,warnings:[]};
-await assert.rejects(check('D:\\Tong\\state\\synthetic\\npm-cache'),/CLEANUP_REFERENCE_CHECK_FAILED/);
+await assert.rejects(check('D:\\Tong\\state\\synthetic\\npm-cache'),error=>{assert.equal(error.referenceCheck.kind,'child_exit');assert.equal(error.referenceCheck.nativeExitCode,2);return true;});
 console.log(JSON.stringify({passed:true,approvedWarningsPreserved:true,knownReferencesRejected:true,unknownRejected:true,malformedWarningsRejected:true,childFailureRejected:true,deletionExecuted:false}));

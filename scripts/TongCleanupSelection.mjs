@@ -130,7 +130,7 @@ export async function prepareCleanupSelection(manager,{projectId,path,exact=fals
  await progress({phase:'verifying',stage:'references'});await check();
  await g.pinnedProtected(target,manager.productionRoot);
  const referenceTarget=basename(target)==='node_modules'?dirname(target):target;
- const referenceWarnings=await g.assertNoRuntimeReferences(referenceTarget);
+ const referenceWarnings=await checkReferences(referenceTarget,'prepare-references');
  const dependency=basename(target)==='node_modules'&&['historical-candidate','quick-trust-candidate'].includes(category);
  // Broad historic parents are deliberately not deletion targets in this path.
  if(!exact&&category!=='cache'&&!dependency)g.fail('CLEANUP_SELECT_DEPENDENCY_SUBTREE');
@@ -148,6 +148,42 @@ async function pins(manager,target){
  if(!g.within('D:\\Tong\\state',target))return '';
  const records=[];for(const name of ['release-pin.json','manager-pin.json'])records.push(fingerprint(await g.plain(join(manager.productionRoot,'run',name),'file')));return records.join('|');
 }
+async function checkReferences(target,stage){
+ try{return await g.assertNoRuntimeReferences(target);}catch(error){error.cleanupStage=stage;throw error;}
+}
+async function selectedDependencyInventory(plan,{check}){
+ // A saved selection already proves the disposable subset. Re-enumerating the
+ // whole tree adds no content proof. Check only saved file identities; native
+ // delete checks them again under locked ancestor/file handles. New/unselected
+ // content is never visited and prevents empty-directory removal naturally.
+ if(!['historical-candidate','quick-trust-candidate'].includes(g.supportedTarget(plan.target))||basename(plan.target)!=='node_modules'||
+    !Array.isArray(plan.inventory?.files)||!Array.isArray(plan.inventory.directories)||!Array.isArray(plan.inventory.protectedItems))g.fail('CLEANUP_SELECTION_INVALID');
+ const seen=new Set(),present=new Set(),parents=new Set();
+ for(const item of plan.inventory.files){
+  if(!validRel(item.path)||seen.has(item.path)||typeof item.stamp!=='string'||!Number.isSafeInteger(item.size)||item.size<0)g.fail('CLEANUP_SELECTION_INVALID');
+  const parts=item.path.split('/');
+  if(parts.some((name,i)=>cleanupProtectedName(name,{dependency:true,directory:i<parts.length-1})))g.fail('CLEANUP_PROTECTED_CONTENT');
+  seen.add(item.path);
+  for(let dir=dirname(join(plan.target,...parts));;dir=dirname(dir)){parents.add(dir);if(dirname(dir)===dir)break;}
+ }
+ if(plan.inventory.directories.some(p=>p!==''&&!validRel(p)))g.fail('CLEANUP_SELECTION_INVALID');
+ // A package may have become a Git/workspace after selection without changing
+ // its file identities. Inspect only these known ancestors' marker metadata;
+ // never enumerate a dependency directory or open Git contents.
+ await parallel([...parents],async dir=>{
+  await check();
+  for(const marker of ['.git','.hg','.svn']){
+   try{await lstat(join(dir,marker));}catch(error){if(error.code==='ENOENT')continue;throw error;}
+   g.fail('CLEANUP_GIT_WORKTREE_PROTECTED');
+  }
+ });
+ await parallel(plan.inventory.files,async item=>{
+  await check();let info;
+  try{info=await g.plain(join(plan.target,...item.path.split('/')),'file');}catch(error){if(error.code==='CLEANUP_PATH_MISSING')return;throw error;}
+  if(fingerprint(info)!==item.stamp)g.fail('CLEANUP_TARGET_CHANGED');present.add(item.path);
+ });
+ return {...plan.inventory,files:plan.inventory.files.filter(item=>present.has(item.path)),directories:[...plan.inventory.directories]};
+}
 export async function executeCleanupSelection(manager,plan,{progress=async()=>{},check=async()=>{},journalPath}={}){
  if(!journalPath||g.within(plan.target,journalPath))g.fail('CLEANUP_AUDIT_TARGET');
  let records=[];
@@ -160,7 +196,7 @@ export async function executeCleanupSelection(manager,plan,{progress=async()=>{}
   }
  }catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
  const finished=records.findLast(x=>x.event==='cleanup_result');
- if(finished&&!finished.skipped.length&&!finished.ambiguousMissing.length)return {path:finished.path,files:finished.files,logicalBytes:finished.logicalBytes,freeBytesBefore:finished.freeBytesBefore,freeBytesAfter:finished.freeBytesAfter,protectedCount:finished.protectedCount,protectedItems:finished.protectedItems,skipped:finished.skipped,ambiguousMissing:finished.ambiguousMissing};
+ if(finished&&!finished.skipped.length&&!finished.ambiguousMissing.length)return {path:finished.path,files:finished.files,logicalBytes:finished.logicalBytes,freeBytesBefore:finished.freeBytesBefore,freeBytesAfter:finished.freeBytesAfter,protectedCount:finished.protectedCount,protectedItems:finished.protectedItems,skipped:finished.skipped,ambiguousMissing:finished.ambiguousMissing,restoreStamp:finished.restoreStamp};
  const deleted=new Map(records.filter(x=>x.event==='deleted').map(x=>[x.path,x.bytes]));
  const intents=new Set(records.filter(x=>x.event==='delete_intent').map(x=>x.path));
  try{await g.plain(plan.target);}catch(e){
@@ -172,17 +208,17 @@ export async function executeCleanupSelection(manager,plan,{progress=async()=>{}
  await livePermission(manager,plan);
  if(await pins(manager,plan.target)!==pinIdentity)g.fail('CLEANUP_PIN_CHANGED');
  await progress({phase:'verifying',stage:'predelete-references'});
- const referenceWarnings=await g.assertNoRuntimeReferences(plan.dependency?dirname(plan.target):plan.target);
- for(const item of plan.evidence.witnesses){
+ const referenceWarnings=await checkReferences(plan.dependency?dirname(plan.target):plan.target,'predelete-references');
+ await parallel(plan.evidence.witnesses,async item=>{
   await check();
   if(fingerprint(await g.plain(item.path,'file'))!==item.stamp)g.fail('CLEANUP_ARCHIVE_OR_REFERENCE_CHANGED');
- }
+ });
  const journal=async value=>{
   await g.checkAncestors(dirname(journalPath));
   try{await g.plain(journalPath,'file');}catch(e){if(e.code!=='CLEANUP_PATH_MISSING')throw e;}
   const h=await open(journalPath,'a',0o600);try{await h.writeFile(JSON.stringify({at:new Date().toISOString(),...value})+'\n');if(value.event==='delete_intent'||value.event==='cleanup_result')await h.sync();}finally{await h.close();}
  };
- const current=await cleanupInventory(plan.target,{dependency:plan.dependency,exact:plan.exact,progress,check});
+ const current=plan.dependency?await selectedDependencyInventory(plan,{check}):await cleanupInventory(plan.target,{dependency:plan.dependency,exact:plan.exact,progress,check});
  const expected=new Map(plan.inventory.files.map(x=>[x.path,x]));
  for(const file of current.files){if(!expected.has(file.path)||expected.get(file.path).stamp!==file.stamp||deleted.has(file.path))g.fail('CLEANUP_TARGET_CHANGED');}
  const existing=new Set(current.files.map(x=>x.path));
@@ -203,7 +239,7 @@ export async function executeCleanupSelection(manager,plan,{progress=async()=>{}
   await check();
   if(Date.now()-permissionAt>10000){await livePermission(manager,plan);permissionAt=Date.now();}
   const p=join(plan.target,...file.path.split('/'));
-  if(cleanupProtectedName(basename(p),{dependency:plan.dependency})||fingerprint(await g.plain(p,'file'))!==file.stamp)g.fail('CLEANUP_TARGET_CHANGED');
+  if(cleanupProtectedName(basename(p),{dependency:plan.dependency})||!plan.dependency&&fingerprint(await g.plain(p,'file'))!==file.stamp)g.fail('CLEANUP_TARGET_CHANGED');
   await journal({event:'delete_intent',path:file.path,bytes:file.size});
   // Observe cancellation/revocation immediately before each new unlink batch.
   await check(true);
