@@ -2,7 +2,11 @@
 
 > **项目最高层完整任务书**：[Tong-Master-Project-Taskbook.md](Tong-Master-Project-Taskbook.md)。本页作为当前状态与快速交接导航；覆盖所有Agent、统筹MCP、系统/磁盘/RAM维护和长期里程碑的完整规划以总任务书为准。
 
-### 当前执行入口（2026-10-30，跨对话先读）
+### 当前执行入口（2026-10-31，跨对话先读）
+
+**通用Windows清理已正式部署：**8655ffab App/Manager双pin、新run `df9e7581-177b-4795-9669-747ead7c00e1` ready，正式doctor healthy=true，本人已完成Windows精确范围许可。C/D真实网页MCP各实删自建样本1文件/4096字节，保护文件保留；D同job安全拒绝后恢复成功，分析快照复用已验。原历史job只resume一次，376a328复用selection实删36,323文件/592,590,618逻辑字节，D卷观测增加634,589,184字节；735保护项与骨架保留。024d5b0/5362210/7d11382/d9983bb均CLEANUP_SELECTION_REQUIRED，4项保留，本批次不再自动重试；无历史树重扫、无新历史任务、无个人缓存删除。[本次正式部署/审计/空间与最终历史结果](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+
+### 2026-10-30历史记录（当前状态以上方为准）
 
 **通用Windows磁盘清理最新（开发已实现、生产未部署）：**本轮历史剩余5套新增删除0：正式仍f81，无法通过现有原job接口复用a73的selection而不重扫，故按用户要求保留并结束本批次尝试，不再修专用逻辑。随后已接入C/D有界分析与日期快照复用、Temp/npm/pip分类、持久预览/授权删除/审计/空间/恢复；复用原架构和v1 cache许可，新增Windows范围仍须正式Manager本机授权。真实C/D自建样本通过过隔离MCP及worker实删，保留Agent/近期文件；不等于生产上线或个人缓存已清理。[完整功能范围、测试/回执及部署边界](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。以下历史升级/清理动作不可直接照旧执行。
 

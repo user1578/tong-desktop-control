@@ -1,5 +1,28 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-31：8655ffab正式部署与真实MCP验收
+
+**已正式部署：**用户在可见PS7窗口完成版本绑定、新版恢复与Windows范围挑战；`native-window-result.json.stage=deployed-and-windows-granted`（2026-10-31 02:12:03 JST）。App/Manager双pin=`8655ffab397eba0b6ed7c02982398ac37db5aacc`，新run=`df9e7581-177b-4795-9669-747ead7c00e1`；正式doctor实测`healthy=true,phase=ready`，upgrade-gate/backup.freeze均释放。旧Monitor在10月30日21:53 JST再次因doctor `0xC0000409`退出，本次先经已审查RecoverMonitor恢复原run，再走正常部署；不宣称native fast-fail已定位或根治。
+
+发布物`quick-trust-release-8655ffa`经原发布器build/verify通过（588源码、23 native，归档条目约23.9MB）。candidate仅源码/三份独立补丁与共享SDK，无依赖安装或整套依赖副本；原回退逻辑、生产数据与事故证据保留。正式快照/本机入口/原生回执在`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261030170015087-1a017231`，不要重试旧6353972入口。此处执行脚本/回执为实际操作所需，没有新增重复总结报告。源码未另改，生产精确绑定8655ffab。
+
+原`tong-state-cleanup` revision仍为`c4da4b91-5d4a-42ff-9877-70eadadc8629`；新增`tong-windows-cache` revision=`342b07b5-73e0-4169-8c60-3b4172a4d7c7`，仅当前用户LocalAppData的Temp/npm-cache/pip Cache，持续至本人撤销。未修改OS权限、Windows任务定义、main或原用户dirty文档，未重置恢复预算；任务启停仅由原正式切换包装器控制。收尾已确认任务Running、COM实例恰好1、三端口监听，任务XML与部署前original-task.xml完全一致，独立监测连续healthy=true。
+
+**真实MCP：**网页连接器实际调用run/job，新增analyze通过正式认证7676 Gateway发现和调用，不是InMemory MCP。C/D按需分析成功，C重复请求复用同analysisId=`02b550df-0b1f-4f22-93b7-a017fa18167f`；卷/根分析明确complete=false，不是全盘递归。实际Temp仅元数据分析，27个年龄符合tmp共130,094,751逻辑字节均未删除；未知/不可用项保留。
+
+| 自建样本 | 正式jobId与流程 | 实删/卷空闲前后 |
+| --- | --- | --- |
+| C盘`C:\Users\Rune\TongDiskCleanupAcceptance-20261031` | `e3c2de0b-ef5b-44f4-8ed1-08f9847f87e9`；MCP元数据预览后对明确自建单文件走mode:exact；样本根仅临时project.write，无agent.execute/Git许可，验收后正式CLI revoke | 1文件/4096字节；386641969152 → 386641129472 |
+| D盘`D:\Tong\state\windows-cleanup-acceptance-20261031\node-compile-cache` | `61a65e36-4bd6-4b91-a2b4-a096c3213348`；plan预览1文件/4096字节及2保护项，同job resume执行/恢复 | 1文件/4096字节；123120730112 → 123120734208 |
+
+两项均核对样本消失、规则文件及父目录保留、delete_intent/deleted/cleanup_result配对审计、真实worker正常exit 0。D首次predelete被references=0/unknown=1（powershell.exe PID16324缺命令行）安全拒绝；只读确认PID退出后，仅resume同job一次成功，不放宽拒绝或重建任务。D的AGENTS.md/unknown.txt均保留。C盘测精确普通文件通路，D盘测持久缓存预览/续接通路；没有执行个人Windows缓存删除。C卷同期减少839,680字节、D卷增加4096字节，全卷波动不能全部归因于样本清理。
+
+**历史原job本批次已收尾：**正式resume `69e8a4f6-ac31-4bf2-906c-e641177c1a87`一次，selectionOnly=true，原完成回执保留，最终index=9/status=blocked（4项缺证明，不是worker异常）。本次新增删除仅376a328：复用原selection，实时核验选中文件/归档身份、授权、pin与运行引用后，completed=36,323文件、592,590,618逻辑字节；735保护项及目录骨架保留，skipped/ambiguousMissing均0。freeBytes=123120705536 → 123755294720，观测增加634,589,184字节（605.19MiB），不等同逻辑字节或承诺全卷变化均由本工具造成。
+
+024d5b0、5362210、7d11382、d9983bb均明确返回`CLEANUP_SELECTION_REQUIRED`，本轮0删除；缺完整selection且禁止重扫，不能从归档存在、其它候选的证明或历史0/0引用推导删除许可。四项保留，不再反复修专用逻辑/自动重试。十套累计6套的可删选中依赖完成、4套保留；不是整个node_modules根已消失。
+
+376a328审计实读确认cleanup_begin/cleanup_result各1，36,323条delete_intent与36,323条deleted逐路径配对且无重复；原selection首/中/末选中文件抽查不存在，前三个保护项及根目录存在；worker28956留下正常exit 0见证。未重新枚举任何历史依赖树或计算其文件哈希，未删release/staged/事故证据/运行依赖，没有新建或手工覆盖历史job。审计/selection/退出见证仍在正式`D:\Tong\runtime\tong-policy\disk-cleanup-jobs`，不上传原始私有日志。
+
 ## 2026-10-30：历史批次结束本轮尝试；通用Windows清理开发验收
 
 **历史批次新增删除0：**正式App/Manager仍f81d1d0，原job `69e8a4f6-ac31-4bf2-906c-e641177c1a87`仍停在index6、updatedAt=`2026-10-30T11:41:57.849Z`。正式版没有a73ae10的selection复用/安全跳过逻辑，现有resume会重新验证5362210，违反本轮不重扫约束；也没有直接投递376a328旧selection的正式入口。本轮没有resume/cancel/重建此job、没有生成新Plan或扫描历史依赖。`024d5b0/5362210/7d11382/d9983bb`缺完整selection，`376a328`有证明但缺已部署的受管复用入口，5套均保留。按用户要求不再延伸专用清理修复，原blocked证据保留；不把“结束本批次尝试”写成已删/已完成job。
