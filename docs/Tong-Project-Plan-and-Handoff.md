@@ -4,6 +4,9 @@
 
 ### 当前执行入口（2026-10-30，跨对话先读）
 
+**2026-10-30 19:48真实恢复结果：**用户正式PS7受控执行`RecoverMonitor`成功，返回Host PID9264/Runner PID10460、`monitorRecovered:true`；ChatGPT独立验证Task Running、COM=1、Host/Runner对应、runtime_healthy匹配原run、双pin仍`f81d1d0`、三端口监听和连续健康监测`healthy=true`。**监控已恢复，不等于doctor原生`0xC0000409`根因已修复或新版已部署**。原9套清理job`69e8a4f6-ac31-4bf2-906c-e641177c1a87`仍blocked/index2，不新建或恢复；准备最新版诊断发布须新正式预检和单独本机确认。见[维护交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+
+
 **doctor / Login Monitor 专项最新结果（开发已验，生产未恢复）：**已确认 doctor Node native 退出 → Runner/Host 退出 → 零 Monitor；具体崩溃模块和 Scheduler 未重试的原因仍未知。独立监控在异常后约 7 秒已记录 unhealthy，旧 runtime.ready 不是登录监控健康证明。开发区补准确原生状态/脱敏阶段关联、watcher UTC 修正和现有 FullProduction 的独立 `RecoverMonitor`，保留升级必须恰好一个实例的规则；13 个针对性/隔离测试入口通过，含真实 Host+PS7、部署 ACL/junction/hardlink、授权撤权/版本绑定及竞态拒绝。双 pin 仍 f81d1d0、原 run、Task Ready/实例0，未部署、未启停生产或恢复清理。恢复只允许在下一次明确批准后，对精确版本/run/Host hash 投递现有任务一次，重新验证正式 grant；它恢复旧 Runner 已有的有界生命周期权限，不能称为 native 根因修复。**具体证据、假设矩阵、五项审批说明和命令见[最终维护交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。以下升级/清理指令均为历史，不能直接重试旧 CMD 或 resume job。**
 
 **2026-10-30 13:52最新阻塞：**`6353972`本机正式升级返回exit 1，原因是`Expected exactly one live login monitor instance`。只读检查任务`TongLoginRuntime`为Ready/LastTaskResult=1、COM运行实例0、Host0；双pin仍`f81d1d0`，run文件虽写ready但不能据此认定监控健康。生产登录日志显示今天03:34:49前已发生原生doctor退出`0xC0000409`，空输出被包装为`REFUSED`，随后runner_failed，早于升级窗口约10小时。保留回退快照和gate证据，**不要重试原CMD、不要跳过监控校验，不恢复清理worker**。先解决生产doctor/登录监控的受控恢复及单实例健康问题，完整现场证据见[最终清理交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。

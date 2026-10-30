@@ -1,5 +1,15 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30 19:48（本机）：旧版Login Monitor已通过正式受控入口恢复（最新）
+
+**真实操作结果**：用户在独立PS7 ConsoleHost运行已审查`Invoke-TongQuickTrustFullProduction.ps1 -Mode RecoverMonitor`，绑定旧commit `f81d1d0ddcc6da354cb475be628e6b79ca822516`、原run `1f5c6443-b05f-4459-a559-2b17e27f0015`、Host SHA256 `28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718`。受控入口返回`monitorRecovered:true`，hostPid=**9264**、runnerPid=**10460**，没有改变旧双pin。
+
+**ChatGPT通过Tong正式MCP独立检查：**计划任务`TongLoginRuntime`状态`Running`，Task Scheduler COM `GetInstances(0)`恰好1项、EnginePID=9264；Win32_Process确认Host 9264、其子进程pwsh Runner 10460，最新`runtime_healthy`为2026-10-30T10:43:34.512Z且对应Runner 10460和原run。7676/7677/18765均继续监听；App/Manager双pin仍为原`f81d1d0`，runtime.phase=ready。独立健康监测至2026-10-30T10:48:05.305Z连续多次`healthy=true,hostCount=1`，无新增runner_failed。Task LastTaskResult=267009为任务运行中状态，不误解为执行失败。
+
+**未完成/不得误报：**旧Node doctor以`0xC0000409`异常终止的具体底层原因**仍未定位**，Monitor成功恢复5分钟不能证明长期稳定。开发提交`4853123367b2f337eb13a61388035b362dde14c4`的新版doctor脱敏阶段诊断和RecoverMonitor源码尚未被正式部署；之前`6353972`升级确认曾因当时Monitor=0失败，那次确认入口**不要直接原样重试**。当前用户未授权在此次恢复后直接继续生产升级。正常路线：定向观察稳定、基于最新提交准备正式受控发布并单独确认，部署后验证native doctor阶段证据；待生产稳定再用旧jobId `69e8a4f6-ac31-4bf2-906c-e641177c1a87`恢复剩余清理。原清理job仍blocked/index2，已实删两套72,646文件、1,185,181,348逻辑字节，`024d5b0`仍因引用检查拒绝。绝不新建重复清理任务。
+
+
+
 ## 2026-10-30：doctor / Login Monitor 专项结果与待批准恢复
 
 **当前结论：已确认 Node doctor 子进程异常 → Runner exit 1 → Host exit 1 → 零 Monitor 的故障链；未查明 native fast-fail 的具体模块或指令。** 开发区已补准确诊断、独立受控恢复入口和测试；没有恢复生产、部署新源码、重试升级 CMD 或恢复清理 job。本节覆盖下方较早的“等待升级确认/继续清理”动作。
