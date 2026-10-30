@@ -1,10 +1,12 @@
 param(
-  [ValidateSet('Preflight','Deploy','Rollback')][string]$Mode='Preflight',
+  [ValidateSet('Preflight','Deploy','Rollback','RecoverMonitor')][string]$Mode='Preflight',
   [string]$ReleaseRoot='',
   [string]$CandidateRoot='',
   [string]$SnapshotRoot='',
   [string]$ExpectedCommit='',
-  [string]$ExpectedOldCommit=''
+  [string]$ExpectedOldCommit='',
+  [string]$ExpectedRunId='',
+  [string]$ExpectedHostSha256=''
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -224,7 +226,9 @@ function Get-LoginFailure(){
   $pidFailed=$failed[-1].runnerPid
   $causes=@($events|Where-Object { $_.event -eq 'manager_command_failed' -and $_.runnerPid -eq $pidFailed })
   if($causes.Count -and $causes[-1].reason -cmatch '^[A-Z_]{1,64}$' -and $causes[-1].managerAction -cmatch '^[a-z-]{1,32}$'){
-    return ([string]$causes[-1].managerAction+': '+[string]$causes[-1].reason)
+    $message=[string]$causes[-1].managerAction+': '+[string]$causes[-1].reason
+    if($causes[-1].PSObject.Properties['exitHex'] -and [string]$causes[-1].exitHex -cmatch '^0x[A-F0-9]{8}$'){$message+=' '+[string]$causes[-1].exitHex}
+    return $message
   }
   return 'runner_failed (see protected login-management log)'
 }
@@ -315,6 +319,144 @@ function Assert-LoginMonitorAbsent(){
       $_.CommandLine.IndexOf($runnerPath,[StringComparison]::OrdinalIgnoreCase) -ge 0)
   })
   if($unclaimed.Count){throw 'Monitor has an unclaimed live process; rollback refused'}
+}
+function Assert-LoginMonitorExclusive($Identity){
+  $hostPath=Join-Path $root 'login-management\TongLoginHost.exe'
+  $runnerPath=Join-Path $root 'login-management\TongLoginRuntime.ps1'
+  $found=@(Get-CimInstance Win32_Process|Where-Object {
+    ($_.Name -ieq 'TongLoginHost.exe' -and (-not $_.ExecutablePath -or $_.ExecutablePath -ieq $hostPath)) -or
+    ($_.Name -in @('pwsh.exe','powershell.exe') -and $_.CommandLine -and $_.CommandLine.IndexOf($runnerPath,[StringComparison]::OrdinalIgnoreCase) -ge 0)
+  })
+  if($found.Count -ne 2){throw 'Unclaimed login process after recovery'}
+  foreach($process in $found){
+    $actual=Get-LoginProcessIdentity $process
+    $matching=@(@($Identity.hostProcess,$Identity.runner)|Where-Object {($_|ConvertTo-Json -Compress) -ceq ($actual|ConvertTo-Json -Compress)})
+    if($matching.Count -ne 1){throw 'Login process identity changed after recovery'}
+  }
+}
+function Assert-LoginRecoveryDeployment(){
+  # Use the pinned Manager's existing canonical-path, single-link and protected
+  # owner/DACL verifier for the deployment, not just release-tree hashes.
+  $program=@'
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+const root=process.argv[1];
+const {assertProtectedPaths}=await import(pathToFileURL(join(root,'releases','manager','scripts','TongRuntimeSecurity.mjs')).href);
+await assertProtectedPaths([root,join(root,'login-management'),join(root,'login-management','TongLoginHost.exe'),join(root,'login-management','TongLoginRuntime.ps1')]);
+console.log(JSON.stringify({secure:true}));
+'@
+  $result=Native 'verify monitor deployment protection' @('--input-type=module','-e',$program,$root)
+  if(-not $result.secure){throw 'Login recovery deployment protection refused'}
+}
+function Get-LoginRecoveryState(){
+  Assert-LoginRecoveryDeployment
+  foreach($name in @('upgrade-gate.json','backup.freeze')){
+    if(Test-Path -LiteralPath (Join-Path $root ('run\'+$name))){throw 'Maintenance gate present; monitor recovery refused'}
+  }
+  $task=Get-ScheduledTask -TaskName $taskName
+  $hostPath=Join-Path $root 'login-management\TongLoginHost.exe'
+  if((Get-FileHash -LiteralPath $hostPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $ExpectedHostSha256){throw 'Reviewed login host bytes changed'}
+  if(@($task.Actions).Count -ne 1 -or $task.Actions[0].Execute -ine $hostPath -or
+      [string]$task.Actions[0].Arguments -cne '' -or $task.Actions[0].WorkingDirectory -ine $root -or
+      -not $task.Settings.Enabled -or [int]$task.Settings.MultipleInstances -ne 2 -or
+      [string]$task.Principal.LogonType -ne 'Interactive' -or [int]$task.Principal.RunLevel -ne 0){throw 'Login recovery task contract mismatch'}
+  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+  $taskSid=[string]$task.Principal.UserId
+  if($taskSid -cne $sid){$taskSid=([Security.Principal.NTAccount]::new($taskSid)).Translate([Security.Principal.SecurityIdentifier]).Value}
+  if($taskSid -cne $sid){throw 'Login recovery user identity mismatch'}
+  $app=Get-Content -LiteralPath (Join-Path $root 'run\release-pin.json') -Raw|ConvertFrom-Json
+  $pin=Get-Content -LiteralPath (Join-Path $root 'run\manager-pin.json') -Raw|ConvertFrom-Json
+  if($app.commit -cne $expectedOldApp -or $pin.commit -cne $expectedOldApp){throw 'Login recovery pinned version mismatch'}
+  $runner=Join-Path $root 'login-management\TongLoginRuntime.ps1'
+  $runnerHash=(Get-FileHash -LiteralPath $runner -Algorithm SHA256).Hash.ToLowerInvariant()
+  $pinnedRunner=@($pin.sourceFiles|Where-Object path -ceq 'scripts/TongLoginRuntime.ps1')
+  if($pinnedRunner.Count -ne 1 -or $pinnedRunner[0].sha256 -cne $runnerHash){throw 'Installed login runner differs from pinned manager'}
+  $status=CurrentStatus
+  $guardian=Get-Content -LiteralPath (Join-Path $root 'run\guardian.json') -Raw|ConvertFrom-Json
+  if($guardian.runId -cne $status.runId){throw 'Guardian run identity mismatch'}
+  # Bind immutable process identities rather than the frequently updated runtime
+  # JSON bytes. Re-read via CurrentStatus on every acceptance observation.
+  $files=[ordered]@{}
+  foreach($file in @('run\release-pin.json','run\manager-pin.json','profile.json','run\guardian.json','login-management\TongLoginRuntime.ps1','login-management\TongLoginHost.exe')){
+    $path=Join-Path $root $file
+    if((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked recovery binding refused'}
+    $files[$file]=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+  }
+  $files.node=(Get-FileHash -LiteralPath $node -Algorithm SHA256).Hash
+  $binding=[ordered]@{files=$files;supervisor=$status.supervisor;taskXml=[string](Export-ScheduledTask -TaskName $taskName)}
+  return [pscustomobject]@{runId=$status.runId;phase=$status.phase;supervisorAlive=$status.supervisorAlive;guardianAlive=$status.guardianAlive;stopRequested=$status.stopRequested;commit=$pin.commit;taskState=[string]$task.State;runnerSha256=$runnerHash;fingerprint=($binding|ConvertTo-Json -Depth 8 -Compress)}
+}
+function Assert-LoginRecoveryState($State,$Expected=$null){
+  if($State.runId -cne $ExpectedRunId -or $State.phase -cne 'ready' -or -not $State.supervisorAlive -or
+      -not $State.guardianAlive -or $State.stopRequested -or $State.commit -cne $expectedOldApp){throw 'Original live runtime identity changed; recovery refused'}
+  if($null -ne $Expected -and ($State.fingerprint -cne $Expected.fingerprint -or $State.runnerSha256 -cne $Expected.runnerSha256)){throw 'Login recovery binding changed'}
+}
+function Test-LoginRecoveryHealthy($Identity){
+  $path=Join-Path $root 'logs\login-management.jsonl'
+  foreach($line in Get-Content -LiteralPath $path -Tail 40){
+    try{
+      $entry=$line|ConvertFrom-Json
+      if($entry.event -cne 'runtime_healthy' -or $entry.runId -cne $ExpectedRunId -or $entry.runnerPid -ne $Identity.runner.pid){continue}
+      $at=if($entry.at -is [DateTime]){$entry.at.ToUniversalTime()}else{[DateTimeOffset]::Parse([string]$entry.at).UtcDateTime}
+      if($at -ge $monitorWindowStart -and $at -le [DateTime]::UtcNow.AddSeconds(5)){return $true}
+    }catch{continue}
+  }
+  return $false
+}
+function Recover-LoginMonitor(){
+  # Separate controller lock: holding the Runner's lifecycle mutex during Task
+  # dispatch would race its WaitOne(0). Scheduler IgnoreNew is also mandatory.
+  $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+  $controller=[Threading.Mutex]::new($false,('Local\TongLoginMonitorRecovery-'+$sid))
+  $locked=$false;$lifecycleLocked=$false
+  $lifecycle=[Threading.Mutex]::new($false,('Local\TongLoginRuntime-'+$sid))
+  try{
+    try{$locked=$controller.WaitOne(0)}catch [Threading.AbandonedMutexException]{$locked=$true}
+    if(-not $locked){throw 'Another login monitor recovery is running'}
+    try{$lifecycleLocked=$lifecycle.WaitOne(0)}catch [Threading.AbandonedMutexException]{$lifecycleLocked=$true}
+    if(-not $lifecycleLocked){throw 'Another Tong lifecycle operation is running'}
+    $scheduler=New-Object -ComObject Schedule.Service
+    $scheduler.Connect();$definition=$scheduler.GetFolder('\').GetTask($taskName)
+    $baseline=Get-LoginRecoveryState
+    Assert-LoginRecoveryState $baseline
+    if($baseline.taskState -cne 'Ready' -or @($definition.GetInstances(0)).Count){throw 'Recovery requires Ready task with zero instances'}
+    Assert-LoginMonitorAbsent
+    $grant=Native 'verify monitor recovery grant' @($manager,'preflight-login','--root',$root,'--error-json')
+    if(-not $grant.approved -or -not $grant.loginRecoverySupported -or $grant.runnerSha256 -cne $baseline.runnerSha256){throw 'Pinned monitor recovery grant mismatch'}
+    $checked=Get-LoginRecoveryState
+    Assert-LoginRecoveryState $checked $baseline
+    if($checked.taskState -cne 'Ready' -or @($definition.GetInstances(0)).Count){throw 'Monitor appeared before recovery dispatch'}
+    Assert-LoginMonitorAbsent
+    $script:monitorWindowStart=[DateTime]::UtcNow
+    # Resume the installed Runner's existing bounded lifecycle authority, once.
+    # Never stop/enable/reconfigure tasks or compensate by changing service pins.
+    $lifecycle.ReleaseMutex();$lifecycleLocked=$false
+    Start-ScheduledTask -TaskName $taskName
+    $limit=[DateTime]::UtcNow.AddMinutes(2);$identity=$null
+    do{
+      $failure=Get-LoginFailure
+      if($failure){throw ('Monitor recovery failed; evidence retained: '+$failure)}
+      $current=Get-LoginRecoveryState
+      Assert-LoginRecoveryState $current $baseline
+      $instances=@($definition.GetInstances(0))
+      if($instances.Count -gt 1){throw 'Expected exactly one live login monitor instance'}
+      if($instances.Count -eq 1 -and $current.taskState -ceq 'Running' -and
+          @(Get-CimInstance Win32_Process -Filter ('ParentProcessId='+[int]$instances[0].EnginePID)).Count -gt 0){
+        $candidateIdentity=Get-LoginMonitorIdentity $definition
+        if($null -eq $identity){$identity=$candidateIdentity}
+        Assert-LoginMonitorIdentity $definition $identity
+        Assert-LoginMonitorExclusive $identity
+        if(Test-LoginRecoveryHealthy $identity){
+          Assert-LoginRecoveryState (Get-LoginRecoveryState) $baseline
+          Assert-LoginMonitorIdentity $definition $identity
+          Assert-LoginMonitorExclusive $identity
+          return [pscustomobject]@{monitorRecovered=$true;runId=$ExpectedRunId;commit=$expectedOldApp;hostPid=$identity.hostProcess.pid;runnerPid=$identity.runner.pid}
+        }
+      }
+      Start-Sleep -Seconds 1
+    }while([DateTime]::UtcNow -lt $limit)
+    throw 'Monitor recovery acceptance timed out; evidence and old version retained'
+  }finally{if($lifecycleLocked){$lifecycle.ReleaseMutex()};$lifecycle.Dispose();if($locked){$controller.ReleaseMutex()};$controller.Dispose()}
 }
 function Restore-LoginAfterRejectedStop(){
   # An integrity rejection must survive the outer catch. Only re-enable the
@@ -442,6 +584,11 @@ if([Console]::IsInputRedirected -or [Console]::IsOutputRedirected -or -not [Envi
   throw 'Visible, nonredirected PowerShell 7 ConsoleHost required'
 }
 if($PSVersionTable.PSVersion.Major -lt 7){throw 'Use PowerShell 7'}
+if($Mode -eq 'RecoverMonitor'){
+  if(-not $ExpectedOldCommit -or $ExpectedRunId -cnotmatch '^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$' -or $ExpectedHostSha256 -cnotmatch '^[a-f0-9]{64}$' -or @($customBinding).Count){throw 'Monitor recovery requires exact baseline commit/run/host hash only; no upgrade inputs'}
+  Recover-LoginMonitor|ConvertTo-Json -Compress
+  exit 0
+}
 if($Mode -eq 'Rollback'){
   if(-not $ExpectedOldCommit){throw 'Standalone rollback requires explicit baseline binding'}
   Assert-ControlSourceBinding

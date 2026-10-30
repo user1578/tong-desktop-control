@@ -16,6 +16,7 @@ import {pinRuntimeRelease,verifyRuntimeCandidate} from './TongRuntimeCandidate.m
 import {withLoginRecovery,loginRecoveryGrantId} from './TongLoginRecovery.mjs';
 import {acquireRuntimeFreeze,releaseRuntimeFreeze} from './TongLifecycleFreeze.mjs';
 import {borrow024Handoff,is024Borrowed} from './Tong024Handoff.mjs';
+import {createManagerProbeDiagnostic} from './TongManagerProbeDiagnostic.mjs';
 const monitorStages=new Set(['stop_read','descendant_capture','requested_shutdown']);
 const monitorKinds=new Set(['ENOENT','EACCES','EPERM','ETIMEDOUT','EIO','EBUSY']);
 export function diagnoseMonitorFailure(stage,error){
@@ -243,7 +244,18 @@ export async function reconcileStaleRuntime(root){
 export async function runtimeStatus(root,{diagnostics=false}={}){await layout(root);const record=await json(join(root,'run','runtime.json'));if(!record)return {phase:'not_started',supervisorAlive:false};const actual=await processIdentity(record.supervisor?.pid??0,record.runId);const alive=sameProcess(actual,record.supervisor)&&actual.markerMatches;const guardian=await json(join(root,'run','guardian.json'));const guardianAlive=guardian?.runId===record.runId&&sameProcess(await processIdentity(guardian.pid,record.runId),guardian);const stop=await json(join(root,'run','stop.json'));const stale=['starting','ready','stopping'].includes(record.phase)&&!alive;const reconciled=stale&&await reconciliationComplete(root,record,{diagnostics});return {...record,phase:stale?(reconciled?'abnormal_exit':'stale_record'):record.phase,supervisorAlive:alive,guardianAlive,stopRequested:stop?.runId===record.runId,...(reconciled?{reconciled:true}:{})};}
 async function dockHealth(root){const profile=await layout(root);const token=await readSecret(root,'agentdock');const response=await fetch(`http://127.0.0.1:${profile.agentdockPort}/mcp`,{method:'POST',headers:{'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(2000)});await response.body?.cancel();if(response.status!==401)throw fail('AUTH_BOUNDARY_FAILED');const client=new TongAgentDockClient({url:`http://127.0.0.1:${profile.agentdockPort}/mcp`,tokenProvider:()=>token,controlledExecution:true,timeoutMs:2000});try{await client.connect();return {authenticatedMcp:true,toolCount:(await client.listTools()).length};}finally{await client.close();}}
 async function tongHealth(profile){const response=await fetch(`http://127.0.0.1:${profile.gatewayPort}/.well-known/oauth-authorization-server`,{signal:AbortSignal.timeout(2000)});if(!response.ok)throw fail('TONG_HEALTH_FAILED');const metadata=await response.json();if(metadata.issuer!==`${(profile.publicOrigin??`http://127.0.0.1:${profile.gatewayPort}`).replace(/\/$/,'')}/`)throw fail('TONG_HEALTH_FAILED');const rejected=await fetch(`http://127.0.0.1:${profile.gatewayPort}/mcp`,{method:'POST',headers:{'content-type':'application/json',accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'runtime-health',version:'1'}}}),signal:AbortSignal.timeout(2000)});await rejected.body?.cancel();if(rejected.status!==401)throw fail('TONG_AUTH_BOUNDARY_FAILED');return {discovery:true,unauthenticatedRejected:true};}
-export async function runtimeDoctor(root){const profile=await layout(root),status=await runtimeStatus(root);const binaryHash=await hash(AGENTDOCK_EXE);let health=null;try{if(status.phase==='ready'&&status.supervisorAlive)health={...(dockEnabled(profile)?{agentdock:await dockHealth(root)}:{}),...(hasTong(profile)?{tong:await tongHealth(profile)}:{})};}catch{health=null;}return {root,phase:status.phase,healthy:binaryHash===AGENTDOCK_SHA256&&!!health,binaryHash,security:await inspectSecurity([root,...(preserved(profile)?preservedDirs:dirs).map(dir=>join(root,dir))]),health};}
+export async function runtimeDoctor(root,{onStage=()=>{}}={}){
+  onStage('doctor_layout');const profile=await layout(root);
+  onStage('doctor_status');const status=await runtimeStatus(root);
+  onStage('binary_hash');const binaryHash=await hash(AGENTDOCK_EXE);let health=null;
+  try{if(status.phase==='ready'&&status.supervisorAlive){
+    health={};
+    if(dockEnabled(profile)){onStage('agentdock_health');health.agentdock=await dockHealth(root);}
+    if(hasTong(profile)){onStage('tong_health');health.tong=await tongHealth(profile);}
+  }}catch{health=null;}
+  onStage('security_inspect');const security=await inspectSecurity([root,...(preserved(profile)?preservedDirs:dirs).map(dir=>join(root,dir))]);
+  return {root,phase:status.phase,healthy:binaryHash===AGENTDOCK_SHA256&&!!health,binaryHash,security,health};
+}
 async function guardianComplete(root,runId) {
   const guardian=await json(join(root,'run','guardian.json'));
   if(guardian?.runId!==runId)return false;
@@ -511,6 +523,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const [command,...args]=process.argv.slice(2);
   const option=name=>{const index=args.indexOf(name);return index<0?undefined:args[index+1];};
   const root=option('--root');
+  let probe=()=>{};
   async function dispatch(){
     if(command==='preflight-login'){
       const profile=await loadApprovedProfile(root,'start');await verifyRuntimeApproval(profile,'stop');
@@ -546,14 +559,19 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
       process.on('exit',code=>{try{appendFileSync(join(diagnosticRoot,'logs','supervisor.jsonl'),JSON.stringify({at:new Date().toISOString(),runId:option('--run-id'),pid:process.pid,event:'supervisor_exit',exitCode:code})+'\n');}catch{}});
       try{await supervise(root,option('--run-id'));}catch(error){fatal('supervisor_start_failed',error);throw error;}return;
     }
-    const result=command==='init'?await initializeRuntime({root,tongRoot:option('--tong-root'),withTong:args.includes('--with-tong')}):command==='start'?await startRuntime(root,{handoffId:option('--handoff-id')}):command==='stop'?await stopRuntime(root):command==='status'?await runtimeStatus(root):command==='doctor'?await runtimeDoctor(root):null;
+    const result=command==='init'?await initializeRuntime({root,tongRoot:option('--tong-root'),withTong:args.includes('--with-tong')}):command==='start'?await startRuntime(root,{handoffId:option('--handoff-id')}):command==='stop'?await stopRuntime(root):command==='status'?await runtimeStatus(root):command==='doctor'?await runtimeDoctor(root,{onStage:probe}):null;
     if(!result)throw fail('INVALID_COMMAND');return result;
   }
   try{
+    if(command==='doctor'&&option('--diagnostic-id')){
+      const diagnosticRoot=absoluteRoot(root);
+      await assertProtectedPaths([diagnosticRoot,join(diagnosticRoot,'logs')]);
+      probe=createManagerProbeDiagnostic(diagnosticRoot,option('--diagnostic-id'),command);probe('entry');
+    }
     const result=command==='preflight-login'||args.includes('--login-recovery')
-      ?await withLoginRecovery(root,command,dispatch,{grantId:option('--grant-id')})
+      ?await withLoginRecovery(root,command,dispatch,{grantId:option('--grant-id'),onStage:probe})
       :await dispatch();
-    if(result!==undefined)console.log(JSON.stringify(result));
+    probe('result_ready');if(result!==undefined)console.log(JSON.stringify(result));probe('output_written');
   }catch(error){
     const code=['ACL_DENIED','PORT_OCCUPIED','ALREADY_RUNNING','STALE_RECORD','IDENTITY_MISMATCH','INIT_EXISTS','SECRET_UNAVAILABLE','RUNTIME_BUSY','CLEANUP_REQUIRED','STOP_TIMEOUT','START_TIMEOUT','START_FAILED','SUPERVISOR_START_FAILED','BINARY_CHANGED','INVALID_COMMAND','INVALID_ROOT','INVALID_RUN','APPROVAL_DENIED','CANDIDATE_DENIED','RECONCILIATION_DENIED','INVALID_STATE'].includes(error.message)?error.message:'RUNTIME_OPERATION_REFUSED';
     if(args.includes('--error-json'))console.log(JSON.stringify({error:code,...(error.startupFailure?{startupFailure:error.startupFailure}:{}),

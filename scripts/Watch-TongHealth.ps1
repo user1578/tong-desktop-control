@@ -153,19 +153,27 @@ try{
                     $entry=@{source=$name;event=$eventName}
                     if($e.PSObject.Properties['at']){
                         $dt=[datetimeoffset]::MinValue
-                        if([datetimeoffset]::TryParse([string]$e.at,[ref]$dt)){$entry['sourceUtc']=$dt.ToUniversalTime().ToString('o')}
+                        if($e.at -is [datetime]){$entry['sourceUtc']=$e.at.ToUniversalTime().ToString('o')}
+                        elseif([datetimeoffset]::TryParse([string]$e.at,[ref]$dt)){$entry['sourceUtc']=$dt.ToUniversalTime().ToString('o')}
                     }
                     if($e.PSObject.Properties['runId']){
                         $run=Safe-RunId $e.runId
                         if($null -ne $run){$entry['runId']=$run}
                     }
-                    foreach($key in @('reason','phase','role','stage','kind','diagnosticStage','diagnosticKind','managerAction','outputKind')){
+                    foreach($key in @('reason','phase','role','stage','kind','diagnosticStage','diagnosticKind','outputKind')){
                         if(-not $e.PSObject.Properties[$key] -or $null -eq $e.$key){continue}
                         $v=if($key -in @('reason','kind','diagnosticKind')){
                             $code=Safe-Upper $e.$key
                             if($null -ne $code){$code}else{Safe-Label $e.$key}
                         }else{Safe-Label $e.$key}
                         if($null -ne $v){$entry[$key]=$v}
+                    }
+                    if($e.PSObject.Properties['managerAction'] -and [string]$e.managerAction -cmatch '^(status|start|stop-run|doctor|reconcile-stale|preflight-login)$'){$entry['managerAction']=[string]$e.managerAction}
+                    if($e.PSObject.Properties['managerStage'] -and [string]$e.managerStage -cmatch '^(entry|grant_load|envelope_paths|envelope_unseal|descriptor_validate|audit_paths|audit_load|audit_validate|release_verify|operation_audit|handler|doctor_layout|doctor_status|binary_hash|agentdock_health|tong_health|security_inspect|result_ready|output_written|unspecified)$'){$entry['managerStage']=[string]$e.managerStage}
+                    if($e.PSObject.Properties['invocationId']){$call=Safe-RunId $e.invocationId;if($call){$entry['invocationId']=$call}}
+                    if($e.PSObject.Properties['exitHex'] -and [string]$e.exitHex -cmatch '^0x[A-F0-9]{8}$'){$entry['exitHex']=[string]$e.exitHex}
+                    foreach($key in @('managerPid','managerParentPid','runnerPid')){
+                        if($e.PSObject.Properties[$key] -and ($e.$key -is [int] -or $e.$key -is [long]) -and $e.$key -gt 0 -and $e.$key -le [int]::MaxValue){$entry[$key]=[int]$e.$key}
                     }
                     foreach($key in @('nativeExitCode','exitCode')){
                         if($e.PSObject.Properties[$key] -and $e.$key -is [int] -or $e.PSObject.Properties[$key] -and $e.$key -is [long]){$entry[$key]=[long]$e.$key}

@@ -20,6 +20,9 @@ await assert.rejects(api.withLoginRecovery(root,'start',()=>{}),/APPROVAL_DENIED
 await assert.rejects(api.issueSimulationLoginRecovery(createProductionProfile({sourceDigest:'a'.repeat(64),releaseDigest:'b'.repeat(64),agentdockEnabled:true})),/SIMULATION_ONLY/);
 const grant=await api.issueSimulationLoginRecovery(profile);
 assert.equal(grant.enabled,true);assert.equal(grant.expiresAt,undefined);
+const stages=[];
+assert.equal(await api.withLoginRecovery(root,'doctor',()=>42,{onStage:stage=>stages.push(stage)}),42);
+for(const stage of ['grant_load','envelope_unseal','descriptor_validate','audit_validate','release_verify','handler'])assert.ok(stages.includes(stage));
 await api.withLoginRecovery(root,'start',async()=>{
   for(const action of ['start','stop','enable-agentdock'])assert.equal((await verifyRuntimeApproval(profile,action)).grantId,grant.grantId);
   assert.equal((await verifyRuntimeApproval(managerProfile,'manager')).grantId,grant.grantId);

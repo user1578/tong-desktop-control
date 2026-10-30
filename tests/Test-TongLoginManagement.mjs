@@ -22,7 +22,10 @@ const root=process.argv.includes('--root')?process.argv[process.argv.indexOf('--
 const path=join(root,'fixture.json'),s=JSON.parse(readFileSync(path,'utf8')),action=process.argv[2];
 appendFileSync(join(root,'calls.jsonl'),JSON.stringify({action,recovery})+'\n');
 if(s.refuse===action){if(process.argv.includes('--error-json'))console.log(JSON.stringify({error:'APPROVAL_DENIED'}));else console.error('APPROVAL_DENIED');process.exit(1);}
-if(action==='doctor'&&s.nativeDoctorFailure){process.exit(37);}
+if(action==='doctor'&&s.nativeDoctorFailure){
+  if(s.probeStage){const invocationId=process.argv[process.argv.indexOf('--diagnostic-id')+1];writeFileSync(join(root,'logs','login-manager-probe.json'),JSON.stringify({schemaVersion:1,invocationId,action,pid:process.pid,parentPid:process.ppid,rss:process.memoryUsage().rss,stage:s.probeStage,secret:'FAKE_PRIVATE_ERROR_454'}));}
+  process.exit(s.nativeDoctorExitCode??37);
+}
 if(action==='start'&&s.startFailures>0){s.startFailures--;s.phase='abnormal_exit';s.supervisorAlive=false;if(s.requestStopAfterFailure)s.stopRequested=true;if(s.unresolvedCleanup)s.phase='cleanup_required';writeFileSync(path,JSON.stringify(s));console.log(JSON.stringify({error:s.unresolvedCleanup?'CLEANUP_REQUIRED':'START_TIMEOUT'}));process.exit(1);}
 if(action==='start'){s.phase='ready';s.supervisorAlive=true;s.starts=(s.starts??0)+1;s.runId='new-run-'+s.starts;}
 if(action==='stop'||action==='stop-run'){
@@ -135,6 +138,16 @@ t=await runner('native-doctor-exit',{...ready,nativeDoctorFailure:true},'run');
 assert.notEqual(t.result.status,0);assert.match(t.result.stderr,/doctor: REFUSED/);
 const nativeFailure=(await readFile(join(t.dir,'logs','login-management.jsonl'),'utf8')).trim().split('\n').map(JSON.parse).find(e=>e.event==='manager_command_failed');
 assert.equal(nativeFailure.managerAction,'doctor');assert.equal(nativeFailure.nativeExitCode,37);assert.equal(nativeFailure.outputKind,'empty');
+t=await runner('native-fast-fail',{...ready,nativeDoctorFailure:true,nativeDoctorExitCode:-1073740791,probeStage:'envelope_unseal'},'run');
+assert.equal(t.result.status,1);assert.match(t.result.stderr,/doctor: NATIVE_FAST_FAIL/);
+const failureLog=await readFile(join(t.dir,'logs','login-management.jsonl'),'utf8');
+const fastFail=failureLog.trim().split('\n').map(JSON.parse).find(e=>e.event==='manager_command_failed');
+assert.equal(fastFail.nativeExitCode,-1073740791);assert.equal(fastFail.exitHex,'0xC0000409');
+assert.equal(fastFail.outputKind,'empty');assert.equal(fastFail.managerStage,'envelope_unseal');
+assert.ok(fastFail.managerPid>0);assert.match(fastFail.invocationId,/^[a-f0-9-]{36}$/);
+assert.ok(!failureLog.includes('FAKE_PRIVATE_ERROR_454'));
+assert.ok(!t.calls.includes('stop-run')&&!t.calls.includes('start'),'inconclusive native probe cannot restart a healthy service');
+await assert.rejects(readFile(join(t.dir,'run','login-recovery-budget.json')),{code:'ENOENT'});
 t=await runner('requested-stop-in-progress',{...ready,stoppingOnStatusCall:2},'run');
 assert.equal(t.result.status,0,t.result.stderr);assert.ok(!t.calls.includes('start')&&!t.calls.includes('stop-run'));
 t=await runner('in-flight',{phase:'starting',supervisorAlive:true,runId:'old-run',becomeReady:true},'start');

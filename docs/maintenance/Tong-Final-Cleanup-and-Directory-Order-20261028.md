@@ -1,5 +1,72 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30：doctor / Login Monitor 专项结果与待批准恢复
+
+**当前结论：已确认 Node doctor 子进程异常 → Runner exit 1 → Host exit 1 → 零 Monitor 的故障链；未查明 native fast-fail 的具体模块或指令。** 开发区已补准确诊断、独立受控恢复入口和测试；没有恢复生产、部署新源码、重试升级 CMD 或恢复清理 job。本节覆盖下方较早的“等待升级确认/继续清理”动作。
+
+### 本轮重新核实的现场
+
+- 工作树 `D:\Tong\development\tong-024-startup-recovery`，分支 `codex/024-maintenance-adapter-20261024`，起点 `c5bb2ea`。用户已有修改的 `Tong-Five-Root-Consolidation-ChatGPT-Review-20261027.md` 原始 SHA256 为 `52f8d54e08431b04b6d075d5c4ea7ba351b18ace6acbb19b893cbfbe8a192d79`，保持原样，不暂存。
+- App/Manager 双 pin 仍为 `f81d1d0ddcc6da354cb475be628e6b79ca822516`，run `1f5c6443-b05f-4459-a559-2b17e27f0015`。Task 已启用、Ready，COM 实例 0、Host 0，LastTaskResult=1；配置确有 RestartCount=3、RestartInterval=PT1M、MultipleInstances=IgnoreNew。Supervisor 1264、Guardian 17328；7676/7677/18765 仍由原 Gateway/DevSpace/AgentDock 监听。无当前 upgrade-gate.json / backup.freeze。
+- `login-management.jsonl` 原始 `at=2026-10-29T18:34:49.4819361Z`：doctor 的直接 Node 命令返回 `-1073740791 / 0xC0000409`、空输出，随后同 Runner 52740 记录 runner_failed。Host 自身只返回 Runner 退出码；计划任务退出码 1 不能定位 native 崩溃模块。
+- **独立监控实际上及时发现了故障**：`%LOCALAPPDATA%\Tong\HealthMonitor\health.jsonl` 的 sample.utc 在 `18:34:45.179Z` 仍 healthy=true；`18:34:56.594Z` 已 healthy=false、Host0/Task Ready，紧接 `HEALTHY → TONG_UNHEALTHY`，约晚于异常 7 秒。它只记录，不持有恢复权。`runtime.json.ready` 是服务 run 的状态，不包括独立登录监控。
+- 在故障前后时窗的 Application 1000/1001/1026 没有匹配事件，未找到 Node CrashDumps/对应 WER 归档；TaskScheduler/Operational **未启用**。之后没有 runner_started。**为什么 Scheduler 未重试仍未知**，不能声称重试预算耗尽或设置错误；没有启用事件日志或修改任务设置。
+- 旧 watcher 对 PS7 自动解析的 DateTime 再转字符串，导致 sourceUtc 二次偏移约 9 小时。历史取证以源日志原始 at 和 watcher sample.utc 为准；当前运行中的旧 watcher 尚未加载本轮修正。
+
+### 调用链与假设边界
+
+`Task → TongLoginHost.exe → 固定 PS7 TongLoginRuntime.ps1 -Mode run → D:\node\node.exe TongAgentDockRuntime.mjs doctor --login-recovery --error-json`。
+
+CLI 先 `withLoginRecovery`：加载/解封 CurrentUser 恢复许可、验证 descriptor/audit、校验双 pin 和源码/native 文件，然后进入 `runtimeDoctor`。doctor 执行 layout/ACL、runtimeStatus（CIM 精确 Supervisor/Guardian 身份）、AgentDock exe 哈希、AgentDock DPAPI token 的内部受保护管道及认证 MCP connect/listTools/close、Gateway 元数据/未认证 401 检查、最终 ACL 检查。不会执行磁盘删除、Codex 会话创建、账户规则修改或生产升级。这里的 DPAPI/CIM/ACL 使用现有固定 PS5.1 原生助手契约，并非把 PS7 Runner 换回旧 Shell。
+
+| 怀疑路径 | 已有证据与判断 | 缺失证据 / 安全验证 | 具体位置 |
+| --- | --- | --- | --- |
+| doctor Node 主进程 native 终止 | `$LASTEXITCODE` 来自直接执行的 Node；非正常状态且无 JSON，**确认故障进程角色**，未定位 Node 内部阶段 | 无故障 PID、异常参数、模块、栈；先在开发区用阶段记录缩小范围，正式诊断部署另批，不重复运行生产 doctor 碰运气 | Runtime CLI、runtimeDoctor、Runner Runtime |
+| 原生 Addon / Job / 句柄 / 线程 | doctor 自有调用链未执行 better-sqlite3/node-pty 加载；candidate 只读其文件做 hash。当前 live runtimeStatus 不走 stale Job 清理。不能据退出码断言 Addon/栈缓冲区破坏 | 无 dll/线程/句柄栈；未来只有出现指向相应阶段的证据才做对应隔离复现 | RuntimeCandidate、RuntimeSecurity、AgentDockClient |
+| PS 原生助手单独退出 | 助手失败通常转为 SECURITY_UNAVAILABLE/APPROVAL_DENIED 等 JS 异常，CLI 会输出失败 JSON，不能单独充分解释 Node 的直接 fast-fail | 不排除 Node spawn/pipe/退出期间的底层故障；新增 grant/layout/health/security 边界诊断 | RuntimeSecurity、ProductionProfile、LoginRecovery |
+| Gateway / DevSpace / AgentDock 影响 | doctor 通过受限健康请求与服务交互；故障后原服务进程、run、端口仍在，排除“本次所有服务同时退出” | 网络、管道或 SDK 交互触发主进程异常仍未排除；未来按 agentdock_health / tong_health 定向隔离 | dockHealth、tongHealth |
+| 既往相同 0xC0000409 | 10-27/29/30 的登录日志均有 doctor→Runner 失败这一共同应用路径；更早 Gateway fast-fail 是不同进程角色 | 同码不证明同模块/根因，不合并旧 ACL_DENIED、CLEANUP_REQUIRED、MONITOR_FAILED | 各次原始 login/lifecycle 日志 |
+| Monitor 恢复缺口 | native 命令异常直接 throw，绕过 healthy=false 三次计数；FullProduction Preflight/Deploy 必须恰好一个实例；AllowAbsent 仅供 rollback 停止前检查 | **已确认实现缺口**；旧 Install-TongLoginManagement 的 recover 只是 Enable+Start，缺少本次所需绑定，不能拿它盲目恢复 | LoginRuntime Runtime/outer catch、FullProduction Assert-Release/Stop-Login |
+
+微软说明：[`__fastfail`](https://learn.microsoft.com/en-us/cpp/intrinsics/fastfail) 的 0xC0000409 需要结合异常参数/上下文定位；[RestartOnFailure 配置](https://learn.microsoft.com/en-us/windows/win32/taskschd/taskschedulerschema-restartonfailure-settingstype-element) 本身不是本次实际发生重试的证据。
+
+### 开发区改动与实际验证
+
+- `TongLoginRuntime.ps1` 保留原生 signed/hex 状态，区分 NATIVE_FAST_FAIL / NATIVE_ABNORMAL_EXIT 与权限拒绝；不把 native 异常变成普通 false-health，不盲目重试或停止仍健康的服务。
+- `TongManagerProbeDiagnostic.mjs`、Runtime doctor、LoginRecovery：固定阶段/PID/父 PID/调用 UUID/RSS 的小型原子记录。仅 doctor 携带诊断 ID 时启用，失败后 Runner 将匹配 UUID/父 PID 的允许字段复制到原事故日志。不记录 stderr、环境、错误正文或凭据；不改变 CLI 单 JSON 响应。模块加载或初始保护检查之前崩溃仍可能没有阶段记录，不能视作完整 native dump。临时文件的 rename 失败和部分写失败均清理本次自有 scratch。
+- 现有 `Invoke-TongQuickTrustFullProduction.ps1` 新增独立 `RecoverMonitor`；**Preflight/Deploy 的恰好一个实例检查不变**。恢复需要明确旧 commit/run/Host SHA，Ready 且已启用的 IgnoreNew 任务、精确 action/用户/权限、双 pin/Runner/Host/Node/任务 XML/原进程身份、正式 grant，以及部署目录的 canonical path、single-link、owner/DACL 验证。准入先持 lifecycle mutex，投递前释放以避免 Runner 的 WaitOne(0) 失败；另有 recovery controller mutex。任务只 Start 一次；新 runtime_healthy 必须属于新 Runner、原 run，且只有精确的一组 Host/Runner，身份变化/PID 复用/orphan 拒绝。失败不进入升级的 stop/rollback/enable 分支。
+- watcher 保留原生 hex、PID/调用关联及 stop-run 标签，修复 UTC 偏移。其健康样本仍是观察信号，不能代替恢复准入的精确身份验证。
+
+以下均为实际通过的**开发隔离测试**，不是生产恢复验收：
+
+1. `Test-TongLoginNativeFailure.ps1`、`Test-TongManagerProbeDiagnostics.mjs`：准确 native signed/hex、原权限拒绝、阶段白名单、真实小 Node 子进程模拟 0xC0000409、rename/ENOSPC 失败无 scratch 堆积。
+2. `Test-TongLoginManagement.mjs`（PS7）：正常启动/监控、停止、恢复预算、拒绝路径，以及真实模拟 native doctor 空输出退出，保留关联信息、不启动/停止原健康 run、不花费服务恢复预算。
+3. `Test-TongLoginMonitorRecovery.ps1`：同 run 只投递一次，以及 17 类实例数、身份/版本/授权/竞态拒绝。`Test-TongLoginRecoveryBindings.ps1`：实际小文件哈希及 14 类绑定拒绝。
+4. `Test-TongLoginRecoveryDeployment.ps1`：实际现有 native security helper，普通安全目录通过，foreign ACL、父 junction、Host hardlink 拒绝；只修改新夹具 ACL。
+5. `Test-TongLoginRunnerStop.ps1`：**真实新建 Host.exe + PS7 子进程**，恢复接受后精确身份验证和正常退出；Scheduler、grant、原服务状态由隔离适配器提供，无生产任务注册。
+6. `Test-TongLoginRecoveryAuthorization.mjs`：正式模块的隔离恢复许可、阶段回调、版本绑定/篡改拒绝/撤权、撤权后的只读 status 与生命周期拒绝。
+7. `Test-TongHealthWatcher.ps1`、`Test-TongLoginRunnerIdentity.ps1`、`Test-TongQuickTrustFullProduction.ps1`、`Test-TongRuntimeFailureDiagnostics.mjs`、`Test-TongUpgradeControlBinding.mjs`：健康异常识别、脱敏和 UTC、原单实例/停止/回退及控制字节绑定回归。
+
+独立只读复核已完成；发现的部署保护缺口、测试 mutex 未隔离和诊断 scratch 失败路径均已修正并验证。新测试的 mutex 使用各自 fixture 前缀。未重复全量构建或复制完整依赖；新产物仅小夹具、Host 编译与一次无完整依赖的授权测试。未做新 release/candidate/snapshot；未验证真实长期稳定性、Scheduler 重试或新补丁生产效果。
+
+### 下一次正式生产操作的可审查对象（本轮未执行）
+
+1. **允许做什么**：仅用本轮已审查的 `RecoverMonitor` 对现有 `TongLoginRuntime` 投递一次，恢复原 f81d1d0 登录监控；不使用旧升级 CMD。执行时由正式 `preflight-login` 再验证持久恢复许可，任何失败即停止。当前只读检查已通过原版本/run/安装 Runner/任务定义绑定，grant 未在本轮生产实测，须进入该受控入口验证。
+2. **影响范围**：正式 `D:\Tong\runtime` 的现有 Task/Host/Runner 与登录日志。**恢复后旧 Runner 会重新获得其已经批准的、有预算的 start/stop-run/reconcile-stale 生命周期能力**；若交接时服务发生变化，Runner 本身可能按旧规则恢复服务。不能承诺任意竞态下服务绝对不变，也不能称为 reattach-only 模式。新 doctor 诊断源码不会因此自动安装。
+3. **授权性质**：属于本次稳定性任务后续生产恢复，**尚未批准的实际生产操作**。开发/提交授权不涵盖该投递，不涵盖新版本部署、任务设置、ACL、预算重置或磁盘清理。
+4. **最坏结果与恢复**：旧 doctor 再次 fast-fail、Monitor 再次失败，或旧 Runner 在合法范围内恢复服务并被同-run 验收拒绝。入口不自动补偿、不重试、不清证据；保留 f81d1d0 和原回退快照 `quick-trust-full-cutover-20261029171354604-a9ba92e9`。若原 run 身份已变，必须重新只读取证并另批对应恢复，不能强杀或手改 pin；未安装新源码，因此没有源码回滚步骤。
+5. **时效与验收**：授权仅覆盖一次维护窗口内一次投递和有界验收，不能延伸到后续升级/删除。要求 Task Running、COM=1、精确 Host/Runner、原 run 的新 runtime_healthy、双 pin 不变、原三端口，以及观察期内不出现新 runner_failed。未达到即记录失败；一次成功不证明 fast-fail 根因修好。
+
+批准后在本人独立、可见且未重定向的 PS7 ConsoleHost 中使用以下入口；**本轮未打开窗口或执行该命令**。若任一绑定已变，先更新审批对象，禁止删参数或放宽检查：
+
+```powershell
+pwsh.exe -NoProfile -File D:\Tong\development\tong-024-startup-recovery\scripts\Invoke-TongQuickTrustFullProduction.ps1 -Mode RecoverMonitor -ExpectedOldCommit f81d1d0ddcc6da354cb475be628e6b79ca822516 -ExpectedRunId 1f5c6443-b05f-4459-a559-2b17e27f0015 -ExpectedHostSha256 28d5db5e41d7ea079550d04377f383dc858dd126f57ce9a1b1f51cea00d33718
+```
+
+恢复入口文件 SHA256：`8d0c0b482b34d66be7fa6e255c31df440282779c720939aaaec49d82d58ecef0`。正式安装 Runner SHA256：`43062e2cc9276396d8488ed48849fb6caa76c8740e43fee0ba54629af1937f0e`。两个开发入口文档所在 Git 提交与最终推送回执一起交付。
+
+**后续顺序**：先获批受控恢复并真实验收；再根据新增证据决定诊断源码的独立版本化部署/安全 native 复现，查明底层根因。稳定性阻塞解除后，仍继续原清理 job `69e8a4f6-ac31-4bf2-906c-e641177c1a87`，不新建、不在本轮 resume；原已删 72,646 文件/1,185,181,348 逻辑字节、024d5b0 引用拒绝与 1a78e48 blocked 现场保留。最后再回历史目录归类、Codex Desktop 原生会话、Windows 能力和其它 Agent 路线。
+
 ## 2026-10-30 13:52（本机）：6353972升级门禁失败，生产Login Monitor此前已退出（最新）
 
 **用户本机确认窗口实际输出：**`Production cutover failed: Expected exactly one live login monitor instance`，原升级脚本返回exit code 1，并打印保留快照、回执、不清gate/不改授权/不强杀。**本次升级没有成功，不能重复启动相同确认CMD，更不能删监控检查。**

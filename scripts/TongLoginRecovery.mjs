@@ -52,24 +52,30 @@ export async function loginRecoveryDescriptor(root){
   if(!/^[a-f0-9]{40}$/.test(pin.commit??'')||critical.some(name=>!pin.sourceFiles.some(file=>file.path==='scripts/'+name)))throw fail('CANDIDATE_DENIED');
   return validateLoginRecoveryDescriptor({schemaVersion:1,purpose,root,runtimeProfile:profile,managerProfile,runnerSha256:pin.sourceFiles.find(file=>file.path==='scripts/TongLoginRuntime.ps1').sha256,components,operations});
 }
-async function loadGrant(root,expectedId){
+async function loadGrant(root,expectedId,onStage){
   formalOnly(root);
   let stage='envelope_paths';
   try{
+    onStage?.(stage);
     const path=loginRecoveryPath(root);await assertRuntimeApprovalPaths(root,[path]);
     stage='envelope_unseal';
+    onStage?.(stage);
     const grant=await runLoginRecoveryHelper('login-recovery-unseal',{path});
     stage='descriptor_validate';
+    onStage?.(stage);
     const descriptor=validateLoginRecoveryDescriptor(grant.descriptor);
     if(grant.schemaVersion!==1||grant.purpose!==purpose||grant.enabled!==true||descriptor.root!==root
       ||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(grant.grantId??'')||expectedId!==undefined&&grant.grantId!==expectedId
       ||!Number.isFinite(Date.parse(grant.issuedAt))||Date.parse(grant.issuedAt)>Date.now()+5000||grant.expiresAt!==undefined
       ||Object.keys(grant).sort().join(',')!=='descriptor,enabled,grantId,issuedAt,purpose,schemaVersion')throw fail('APPROVAL_DENIED');
     stage='audit_paths';
+    onStage?.(stage);
     const auditPath=loginRecoveryAuditPath(root);await assertRuntimeApprovalPaths(root,[auditPath]);
     stage='audit_load';
+    onStage?.(stage);
     const events=(await readFile(auditPath,'utf8')).trim().split(/\r?\n/).filter(Boolean).map(JSON.parse).filter(event=>event.root===root&&event.grantId===grant.grantId);
     stage='audit_validate';
+    onStage?.(stage);
     // A retained revocation also rejects an accidentally restored old envelope.
     // An interrupted enable without a committed audit cannot grant capability.
     if(!events.some(event=>event.event==='enabled'&&event.phase==='committed')||events.some(event=>event.event==='revoked'))throw fail('APPROVAL_DENIED');
@@ -90,17 +96,21 @@ async function audit(root,event,action,grant){
 }
 // No environment variable enables this context. Each process must explicitly
 // enter it with the CurrentUser sealed grant, then verify both pinned releases.
-export async function withLoginRecovery(root,action,fn,{grantId}={}){
+export async function withLoginRecovery(root,action,fn,{grantId,onStage}={}){
   formalOnly(root);if(!entryActions.has(action))throw fail('APPROVAL_DENIED');
   let grant,stage='grant_load';
   try{
-    grant=await loadGrant(root,grantId);
+    onStage?.(stage);
+    grant=await loadGrant(root,grantId,onStage);
     return await scope.run(grant,async()=>{
       stage='release_verify';
+      onStage?.(stage);
       await verifyRuntimeCandidate(grant.descriptor.runtimeProfile);await verifyRuntimeCandidate(grant.descriptor.runtimeProfile,{manager:true});
       stage='operation_audit';
+      onStage?.(stage);
       if(operations.includes(action))await audit(root,'authorized',action,grant);
       stage='handler';
+      onStage?.(stage);
       return fn(grant);
     });
   }catch(error){

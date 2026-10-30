@@ -11,11 +11,28 @@ function Write-RuntimeEvent([string]$Event,$Status,[string]$Reason,$Details) {
     if($Details){foreach($key in $Details.Keys){$entry[$key]=$Details[$key]}}
     [IO.File]::AppendAllText((Join-Path $runtime 'logs\login-management.jsonl'),(($entry|ConvertTo-Json -Compress)+"`n"),[Text.UTF8Encoding]::new($false))
 }
+function Read-ManagerProbeDiagnostic([string]$InvocationId){
+    $path=Join-Path $runtime 'logs\login-manager-probe.json'
+    try{
+        $item=Get-Item -LiteralPath $path -Force
+        if($item.Length -gt 2048 -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){return @{}}
+        $probe=[IO.File]::ReadAllText($path)|ConvertFrom-Json
+        if($probe.schemaVersion -ne 1 -or $probe.invocationId -cne $InvocationId -or $probe.action -cne 'doctor' -or $probe.pid -le 0 -or $probe.parentPid -ne $PID){return @{}}
+        $details=@{managerPid=[int]$probe.pid;managerParentPid=[int]$probe.parentPid}
+        if(($probe.rss -is [int] -or $probe.rss -is [long]) -and $probe.rss -gt 0){$details['managerRss']=[long]$probe.rss}
+        if($probe.stage -cmatch '^(entry|grant_load|envelope_paths|envelope_unseal|descriptor_validate|audit_paths|audit_load|audit_validate|release_verify|operation_audit|handler|doctor_layout|doctor_status|binary_hash|agentdock_health|tong_health|security_inspect|result_ready|output_written|unspecified)$'){$details['managerStage']=[string]$probe.stage}
+        return $details
+    }catch{return @{}}
+}
 function Runtime([string]$Action,[string]$ExpectedRunId) {
     # Standalone status uses the manager's existing ACL-checked readonly path.
     # Lifecycle queries still require the recovery grant before any side effect.
-    if($Action -ceq 'status' -and $Mode -eq 'status'){$raw=& $node $manager $Action --root $runtime --error-json}
-    elseif($Action -ceq 'stop-run'){$raw=& $node $manager $Action --root $runtime --run-id $ExpectedRunId --login-recovery --error-json}else{$raw=& $node $manager $Action --root $runtime --login-recovery --error-json}
+    $arguments=@($manager,$Action,'--root',$runtime,'--error-json')
+    if($Action -cne 'status' -or $Mode -ne 'status'){$arguments+='--login-recovery'}
+    if($Action -ceq 'stop-run'){$arguments+=@('--run-id',$ExpectedRunId)}
+    $diagnosticId=$null
+    if($Action -ceq 'doctor'){$diagnosticId=[guid]::NewGuid().ToString();$arguments+=@('--diagnostic-id',$diagnosticId)}
+    $raw=& $node @arguments
     $nativeExitCode=$LASTEXITCODE
     if($nativeExitCode -ne 0){
         $reason='REFUSED';$outputKind=if([string]::IsNullOrWhiteSpace(($raw -join "`n"))){'empty'}else{'unstructured'}
@@ -24,6 +41,12 @@ function Runtime([string]$Action,[string]$ExpectedRunId) {
         # REFUSED alone cannot distinguish authorization denial from a native
         # Node exit. Retain bounded metadata, never arbitrary stdout/stderr.
         $details=@{managerAction=$Action;nativeExitCode=$nativeExitCode;exitHex=('0x{0:X8}' -f ([long]$nativeExitCode -band 0xffffffffL));outputKind=$outputKind}
+        if(([long]$nativeExitCode -band 0xffffffffL) -eq 0xC0000409L){$reason='NATIVE_FAST_FAIL'}
+        elseif(([long]$nativeExitCode -band 0x80000000L) -ne 0){$reason='NATIVE_ABNORMAL_EXIT'}
+        if($diagnosticId){
+            $details['invocationId']=$diagnosticId
+            foreach($key in ($probe=Read-ManagerProbeDiagnostic $diagnosticId).Keys){$details[$key]=$probe[$key]}
+        }
         if($reason -ceq 'APPROVAL_DENIED' -and $null -ne $failure -and $failure.PSObject.Properties['diagnostic']){
             $stage=[string]$failure.diagnostic.stage
             $kind=[string]$failure.diagnostic.kind
@@ -37,6 +60,7 @@ function Runtime([string]$Action,[string]$ExpectedRunId) {
         Write-RuntimeEvent 'manager_command_failed' $null $reason $details
         $failureException=[InvalidOperationException]::new(('Tong manager refused '+$Action+': '+$reason))
         $failureException.Data['managerAction']=$Action;$failureException.Data['managerCode']=$reason
+        $failureException.Data['nativeExitCode']=$nativeExitCode;$failureException.Data['exitHex']=$details.exitHex
         throw $failureException
     }
     return ($raw|ConvertFrom-Json)
