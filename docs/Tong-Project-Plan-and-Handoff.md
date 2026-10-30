@@ -4,6 +4,9 @@
 
 ### 当前执行入口（2026-10-30，跨对话先读）
 
+**2026-10-30 13:52最新阻塞：**`6353972`本机正式升级返回exit 1，原因是`Expected exactly one live login monitor instance`。只读检查任务`TongLoginRuntime`为Ready/LastTaskResult=1、COM运行实例0、Host0；双pin仍`f81d1d0`，run文件虽写ready但不能据此认定监控健康。生产登录日志显示今天03:34:49前已发生原生doctor退出`0xC0000409`，空输出被包装为`REFUSED`，随后runner_failed，早于升级窗口约10小时。保留回退快照和gate证据，**不要重试原CMD、不要跳过监控校验，不恢复清理worker**。先解决生产doctor/登录监控的受控恢复及单实例健康问题，完整现场证据见[最终清理交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
+
+
 **最新发布准备（仅候选与回退，正式未切换）：**诊断补丁 `6353972` 已准备新release/candidate、Hash校验通过；`f81d1d0`回退快照 `D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029171354604-a9ba92e9` 已生成且正式Preflight PASS。用户本人须打开快照内`Open-Upgrade-Confirmation.cmd`完成正式本机哈希确认；升级后继续原批job `69e8a4f6-ac31-4bf2-906c-e641177c1a87`一次，读取新增退出诊断。**补丁尚未Deploy、并未修好worker崩溃根因、新增真实删除0。**详见[最终清理与目录归并交接顶部](maintenance/Tong-Final-Cleanup-and-Directory-Order-20261028.md)。
 
 

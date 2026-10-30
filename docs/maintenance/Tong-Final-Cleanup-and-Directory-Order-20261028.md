@@ -1,5 +1,20 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-30 13:52（本机）：6353972升级门禁失败，生产Login Monitor此前已退出（最新）
+
+**用户本机确认窗口实际输出：**`Production cutover failed: Expected exactly one live login monitor instance`，原升级脚本返回exit code 1，并打印保留快照、回执、不清gate/不改授权/不强杀。**本次升级没有成功，不能重复启动相同确认CMD，更不能删监控检查。**
+
+只读现场核对（2026-10-30 13:54–13:58，本机+09:00）：
+
+- 正式App/Manager双pin均仍`f81d1d0ddcc6da354cb475be628e6b79ca822516`，旧run `1f5c6443-b05f-4459-a559-2b17e27f0015` 的`runtime.json.phase=ready`；**但这不证明独立Monitor健康**。
+- Task Scheduler `TongLoginRuntime` 状态`Ready`、`LastTaskResult=1`；COM `GetInstances(0)` 数量=**0**，`TongLoginHost`进程数=**0**。三个端口`7676/7677/18765`仍在监听，所有者分别为node、node和agentdock；未将监听误判为Login Monitor。
+- 快照`D:\Tong\state\p27-autonomy-candidate-20261017\quick-trust-full-cutover-20261029171354604-a9ba92e9`的`snapshot.json.stage=snapshotted`、`native-window-result.json.stage=native-window-failed-or-cancelled`；`upgrade-gate.json`和`backup.freeze`在当次检查中均不存在。保留所有证据，不手工重置。
+- 生产`D:\Tong\runtime\logs\login-management.jsonl`最后两项真实记录：UTC `2026-10-29T18:34:49.4819361Z`（本机2026-10-30 03:34:49）`manager_command_failed`，`managerAction=doctor`、`nativeExitCode=-1073740791`/`exitHex=0xC0000409`、`outputKind=empty`、`reason=REFUSED`；随后 `runner_failed`。这比本次13:52确认早约10小时，说明**启动升级前Login Monitor已失效**，不能误判为“升级产生重复监控”。同一时窗Application/System事件筛选未找到对应记录，尚不能认定原生fastfail的具体组件/根因。
+- 原9套持久清理任务`69e8a4f6-ac31-4bf2-906c-e641177c1a87`仍blocked/recoverable于index=2，不启动新任务或反复resume；两套完成的删除回执仍保留。
+
+**正确下一步**：优先定向诊断`0xC0000409`的生产doctor/Runner/原生模块链路，核对Login Monitor原生任务身份、保留pin/Task/服务监听、恢复预算与事故证据。准备并验证**专用受控Login Monitor恢复**，最终必须有且仅有一个有效COM任务实例、匹配Host/Runner、生产doctor健康、Task Running且无重复服务，然后再基于固定版本/快照做新的正式Preflight和本机授权升级（若需要），**不能直接重试旧确认脚本，也不能在无监控前提下跳过守卫**。日后再使用原批job恢复验证worker退出诊断，继续安全清理；整体路线（历史目录归类、Codex原生会话、其他Agent）不变。
+
+
 ## 2026-10-30：worker退出诊断补丁已准备正式升级（**尚待本机确认**）
 
 - 代码commit `635397252a9884862e47ad8ce42cd2016d80ee57` 已推送`codex/024-maintenance-adapter-20261024`，改动只涉及`scripts/TongCleanupJobs.mjs`诊断、`tests/Test-TongCleanupJobs.mjs`和交接MD。测试通过：Node语法、清理核心、跨MCP进程、worker多目标/退出诊断、MCP Gateway与元数据。**这是诊断能力，非worker崩溃根因修复。**
