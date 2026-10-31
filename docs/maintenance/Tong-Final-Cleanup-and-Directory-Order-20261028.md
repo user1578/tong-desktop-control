@@ -1,5 +1,91 @@
 # 生产升级、最终清理与目录归并交接（2026-10-28）
 
+## 2026-10-31：五根目录安全归并及旧依赖清理
+
+**同日18时收尾复核：**接手时下述迁移、159项清理及两份交接更新已经存在于实际工作树；本次复用记录、验证实物并收尾，不重复搬迁或删除，新增删除0。逐项核验159个删除位置全部不存在、开发区159个对应位置全部存在；PoC三项旧位置不存在、归档位置存在，ZIP及SHA文件哈希与下述记录一致。归档Git的HEAD、42 refs和clean detached状态一致，`git fsck --connectivity-only --no-dangling`通过。旧Tong仍50项tracked修改/13项untracked，计算器仍main及2项untracked，三个共享node_modules junction未变。
+
+正式Manager再次实测doctor exit 0、healthy=true、phase=ready、authenticatedMcp=true、discovery=true/unauthenticatedRejected=true；双pin及原run仍为8655ffab/df9e7581-177b-4795-9669-747ead7c00e1，任务Running、COM实例1、ngrok Running，独立监测healthy=true/checkErrors=[]。真实Tong MCP项目列表、C/D容量查询成功；原生会话查询再次返回INVALID_ARGUMENT，此接口未通过。只读SQLite仅查询cwd计数，规范化Windows扩展路径前缀后确认Tong根59个、旧Tong28个、计算器1个会话，工作目录均存在；未读取对话正文或修改原生会话。当前聊天可继续，不等于逐个历史会话续接已验收。
+
+D卷最新只读观测空闲126,675,537,920字节（约117.98GiB）；相对本次接手首次126,675,677,184字节减少139,264字节。本次复核没有清理，不把该后台波动记作收益；下述382,562,304字节为已有删除窗口的观测增量。两处PoC缓存的既有拒绝继续保留，不换工具重试，不重扫历史Quick Trust依赖。
+
+本轮复用2026-10-27五根盘点和 `cbb86fb` 交接，**完成下列可安全迁移与清理，四个旧根未整根撤销**。没有重扫已清理的10套Quick Trust依赖、安装依赖、创建完整项目副本、修改生产路径/授权/服务/计划任务，未改main。原有复核文档的用户未提交修改保持原样。
+
+### 五根的当前去向
+
+| 原根 | 本轮实际结果 / 最终保留位置 | 不能整根迁移的原因 |
+| --- | --- | --- |
+| `D:\Tong` | app/runtime/development/state/tools原位保留；新增下述archives子目录 | 正式生产、共享Git/依赖、pin及事故/恢复材料仍使用现有路径 |
+| `D:\agentdock-poc-20261010` | `agentdock`、`agentdock_windows_amd64.zip`、同名`.sha256`已同盘移至 `D:\Tong\archives\legacy-agentdock-poc-20261010`；旧根其余内容保留 | 原projectId仍绑定旧根；isolated/runtime、历史审批/测试绝对路径与原报告、脚本需保持。两处缓存正式Plan拒绝，见下文 |
+| `D:\tong-desktop-control` | 独立Git、50项tracked修改、13项untracked及源码原位；仅删除下列159个重复依赖子目录 | Codex Desktop项目及28个原生Session cwd仍指旧根；注册迁移未获当前可用入口。后续目标仍为 `D:\Tong\development\legacy\tong-desktop-control` |
+| `D:\tong-codex-acceptance-20261010` | 原根、main、未跟踪calculator.py/tests及.venv原位 | 1个原生Session cwd与metadata项目登记仍指旧根，.venv亦非可直接搬移环境；后续目标 `D:\Tong\development\acceptance\tong-codex-20261010` |
+| `D:\tong-agentdock-local` | 全部原位保留 | 含DPAPI/旧profile、运行态、备份/还原及独有dirty验收仓库；旧绝对路径和恢复链未脱离。后续目标 `D:\Tong\archives\legacy-agentdock-local`，需受支持迁移与恢复验证 |
+
+**迁移实证：**上游仓库953文件/16,224,149字节，迁前后树摘要SHA-256均为 `647c405b7e2ba86f21c83f37618e5c4d894c57ddb1ea70f584c820d27f89774c`（相对路径、长度、逐文件SHA组合），包括.git；HEAD `255000078e399be2fdff986ae65d4c24290425b9`、42 refs、clean detached状态及NTFS目录fileId `562949954157443`不变。ZIP 29,230,453字节，SHA-256 `2938e38c9eede531c00b991e435ce6d5032b266adbd1e0b455e6beb4d5b22119`；校验文件94字节，SHA-256 `a739979449d42afc35ee42c78da28a77bc6088eb7d63782db65a98eb6863b69a`。3个旧位置均不存在，原父根存在。源码和ZIP的继承ACE在同盘Move后转为显式/protected，owner、主体与访问掩码相同，未扩大当前访问权限；**不声称ACL字节不变或它是受限敏感归档**。只归档公开上游材料，未修改ACL或迁移敏感运行态。同盘移动45,454,696字节不计作空间释放。
+
+### 实际清理与恢复位置
+
+仅对本轮旧仓库依赖做一次定向比较：38,175文件/601,062,479字节，与 `D:\Tong\development\tong-desktop-control\node_modules` 比较，38,173文件字节一致、0缺失、2差异。差异 `.package-lock.json`（SHA `2973251444b4c03597db1f9d954e9d0a96750dc1461acc90a376d0397f85de1c`）及 `@waishnav\devspace\dist\server.js`（SHA `b71a8e616ffb337c38cba6109f922e163d82bcfa34f1bdf94a830130bcc5979c`）原位保留。项目package-lock在旧仓库、当前开发、生产App三处SHA一致；本次未重算Quick Trust历史依赖。
+
+删除单元只选完整同字节、无现役任务/服务/进程引用、无重解析点及硬保护内容的子目录；使用现有 `cleanupProtectedName(...,{dependency:true})` 名称规则核对，Agent规则/配置和含保护项的包整组保留，不为清理放宽规则。Python DirEntry快速stat的nlink返回0，不能作为多硬链接证据；选中目录改由Node真实lstat核验均nlink=1，并用os.stat抽查确认。执行前已独立核对所有绝对目标均在旧node_modules内、保留对应目录存在，相关进程元数据无unknown。
+
+7条PS7精确 `Remove-Item -LiteralPath ... -Recurse -Force` 命令均exit 0，共删除**159个子目录、4,601文件、376,036,768逻辑字节（358.62MiB）**。事后159个旧子目录全部不存在、159个保留对应目录全部存在、旧仓库及node_modules父骨架存在。大项如下；所有路径均相对于 `D:\tong-desktop-control\node_modules`：
+
+| 已删除相对目录 | 文件数 | 逻辑字节 |
+| --- | ---: | ---: |
+| `@anthropic-ai\claude-agent-sdk-win32-x64` | 4 | 256156384 |
+| `better-sqlite3` | 50 | 12308233 |
+| `react-dom` | 43 | 8063782 |
+| `zod` | 840 | 6140311 |
+| `@anthropic-ai\claude-agent-sdk` | 19 | 5509635 |
+| `node-forge` | 59 | 1647637 |
+| `@shikijs\themes` | 135 | 1484289 |
+| `@modelcontextprotocol\ext-apps` | 40 | 1363724 |
+| `node-pty\prebuilds` | 28 | 60632144 |
+| `lucide\dist\umd` | 4 | 9711054 |
+| 下列149个小包合计 | 3379 | 13019575 |
+
+其余149个精确删除目录（同一旧node_modules根，名称不是通配模式）：
+
+```text
+@babel\runtime  @clack\core  @clack\prompts  @hono\node-server  @opencode-ai\sdk  @pierre\theme
+@pierre\theming  @shikijs\core  @shikijs\engine-javascript  @shikijs\engine-oniguruma  @shikijs\primitive
+@shikijs\transformers  @shikijs\types  @shikijs\vscode-textmate  @stablelib\base64  @standard-schema\spec
+@types\hast  @types\mdast  @types\unist  ajv  ajv-formats  base64-js  better-result  bindings  bl  body-parser
+buffer  call-bind-apply-helpers  call-bound  ccount  character-entities-html4  character-entities-legacy
+chownr  commander  content-disposition  cors  cross-spawn  debug  decompress-response  deep-extend  dequal
+detect-libc  devlop  dunder-proto  ee-first  encodeurl  end-of-stream  es-define-property  es-errors
+es-object-atoms  escape-html  eventsource  eventsource-parser  expand-template  express  express-rate-limit
+fast-deep-equal  fast-sha256  fast-string-truncated-width  fast-string-width  fast-wrap-ansi  fs-constants
+get-intrinsic  get-proto  github-from-package  gopd  has-symbols  hasown  hast-util-to-html
+hast-util-whitespace  html-void-elements  iconv-lite  ieee754  inherits  ini  ip-address  ipaddr.js
+is-promise  isexe  jose  json-schema-to-ts  json-schema-typed  lru_map  math-intrinsics  mdast-util-to-hast
+merge-descriptors  micromark-util-character  micromark-util-encode  micromark-util-sanitize-uri
+micromark-util-symbol  micromark-util-types  mimic-response  minimist  mkdirp-classic  ms  negotiator
+node-abi  node-addon-api  object-assign  object-inspect  once  oniguruma-parser  oniguruma-to-es  path-key
+path-to-regexp  pkce-challenge  prebuild-install  property-information  raw-body  rc  react  regex
+regex-recursion  regex-utilities  require-from-string  safe-buffer  scheduler  semver  send  serve-static
+setprototypeof  shebang-command  shebang-regex  side-channel  side-channel-list  side-channel-map
+side-channel-weakmap  simple-concat  sisteransi  standardwebhooks  string_decoder  stringify-entities
+strip-json-comments  tar-stream  trim-lines  ts-algebra  tunnel-agent  unist-util-is  unist-util-position
+unist-util-stringify-position  unist-util-visit  unist-util-visit-parents  vfile  vfile-message  which  wrappy
+yaml  zod-to-json-schema  zwitch
+```
+
+恢复这159个子目录不需要下载或重新安装：从上述保留的开发node_modules复制**同一相对路径**即可；本轮未创建该副本。旧仓库源码/Git和会话cwd仍可用，但旧依赖已精简，**不再视为可直接启动的完整历史应用环境**。当前生产、开发及三个worktree共享依赖没有删除或替换。含保护项的剩余包、两处差异和历史.bin入口保持原位。
+
+**明确保留的拒绝项：**正式Tong Plan对 `D:\agentdock-poc-20261010\npm-cache` 返回 `CLEANUP_UNRECOGNIZED_CONTENT`，对其 `__pycache__` 返回 `CLEANUP_PROTECTED_CONTENT`（含mcp_client.pyc）；两处均未删除、未通过PS7/换工具绕过。原10套Quick Trust任务、selection、审计、残留保护骨架与release均未动。
+
+### 空间、运行与会话核验
+
+- 本轮开始D卷空闲126,394,015,744字节；删除前126,393,339,904，删除后126,775,902,208。删除窗口观测增加382,562,304字节（364.84MiB），相对任务开始净增381,886,464字节（364.20MiB）。这是全卷观测，可能包含后台变化，不等同376,036,768逻辑删除量。
+- 删除后正式Manager doctor实际exit 0：healthy=true、phase=ready、AgentDock authenticatedMcp=true、Tong discovery=true/unauthenticatedRejected=true；正式MCP项目列表与容量查询成功。双pin仍8655ffab、原run `df9e7581-177b-4795-9669-747ead7c00e1`；TongLoginRuntime Running且COM实例1，独立监测healthy=true、hostCount=1、checkErrors=[]。不宣称历史native fast-fail根因已修复或长期稳定性已验收。
+- 前后双pin、runtime/profile、App config、agentdock-access、disk-cleanup-grants的文件SHA及TongLoginRuntime XML SHA一致；原项目登记/能力和三个共享依赖junction不变。没有创建迁移junction冒充旧授权根。
+- Codex Desktop项目列表、当前原生聊天及只读SQLite元数据核实旧Tong28个、计算器1个Session的cwd存在且未改；未读会话正文、未改会话库/锁、未新建替代Session或强制resume历史Writer。Tong会话查询返回INVALID_ARGUMENT，不能以此声称该接口正常；本次只验证cwd/登记保持与当前会话继续，未逐个做29个历史会话交互续接测试。
+- Git只提交本轮两份现有交接MD；旧仓库dirty/untracked、历史refs及原独立复核MD不纳入提交。分支仍 `codex/024-maintenance-adapter-20261024`，提交/推送结果以本轮Git回执为准。没有新增重复报告、生产发布或测试环境。
+
+后续仅在需要完成整根归并时处理受管projectId/root与同Session cwd迁移、历史绝对路径/恢复链和敏感运行态一致性；当前不具备安全入口的部分按用户约束保留，不强行搬迁。
+
+
 ## 2026-10-31：用户明确改用独立PS7，5个完整node_modules已删除
 
 用户明确选择“改用独立PS7，删除五个完整目录”，本批次替代此前仅走Tong正式接口/保留内部保护项的限制；仅含024d5b0、376a328、5362210、7d11382、d9983bb各自完整node_modules（含376a328残留），不涉及目录外文件、release、staged、生产和事故证据。没有修改清理器或伪造selection。
